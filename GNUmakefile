@@ -325,22 +325,20 @@ spirit/libs/example/slex/lexer.o: spirit/libs/example/slex/lexer.hpp
 spirit/libs/example/slex/lextest.o: spirit/libs/example/slex/lexer.hpp
 spirit/libs/example/xml/ast_xml.o: spirit/libs/example/xml/xml_grammar.hpp
 spirit/libs/example/xml/xml.o: spirit/libs/example/xml/xml_grammar.hpp
-rh-persistent-connections.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-persistent-connections.o: libscheduler/pollvector.hh HTTPRequest.hh
-rh-persistent-connections.o: config.hh log.hh
 rh-terminate.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
 rh-read-request-line.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-line.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-read-request-line.o: HTTPParser.hh urldecode.hh log.hh
-rh-setup-reply.o: system-error/system-error.hh RequestHandler.hh
-rh-setup-reply.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-setup-reply.o: HTTPRequest.hh timestamp-to-string.hh
+rh-setup-reply.o: system-error/system-error.hh HTTPParser.hh HTTPRequest.hh
+rh-setup-reply.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-setup-reply.o: libscheduler/pollvector.hh timestamp-to-string.hh
 rh-setup-reply.o: escape-html-specials.hh urldecode.hh config.hh log.hh
 rh-read-request-header.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-header.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-read-request-header.o: HTTPParser.hh log.hh
 rh-standard-replies.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-standard-replies.o: libscheduler/pollvector.hh HTTPRequest.hh
-rh-standard-replies.o: escape-html-specials.hh config.hh log.hh
+rh-standard-replies.o: HTTPParser.hh escape-html-specials.hh
+rh-standard-replies.o: timestamp-to-string.hh config.hh log.hh
 test.o: HTTPParser.hh HTTPRequest.hh log.hh
