@@ -33,13 +33,13 @@ class Tracer
   public:
     Tracer(const char* funcname) : name(funcname)
 	{
-	trace("%sEntering %s() ...", indent.c_str(), name);
+	trace("%sEntering %s ...", indent.c_str(), name);
 	indent.append("    ");
 	}
     ~Tracer()
 	{
 	indent.erase(indent.size()-4, std::string::npos);
-	trace("%sLeaving %s() ...", indent.c_str(), name);
+	trace("%sLeaving %s ...", indent.c_str(), name);
 	}
 
   private:
