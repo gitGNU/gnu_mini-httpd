@@ -14,10 +14,19 @@ bool RequestHandler::write_remaining_data()
 
     if (write_buffer.empty())
         {
-        debug(("%d: Nothing left to write; going into terminate state.", sockfd));
-        state = TERMINATE;
-        if (shutdown(sockfd, SHUT_RDWR) == -1)
-            delete this;
+        if (is_persistent_connection())
+            {
+            debug(("%d: Persistent connection; starting over in GET_REQUEST_LINE state.", sockfd));
+            init();
+            return true;
+            }
+        else
+            {
+            debug(("%d: Nothing left to write; going into terminate state.", sockfd));
+            state = TERMINATE;
+            if (shutdown(sockfd, SHUT_RDWR) == -1)
+                delete this;
+            }
         }
     return false;
     }

@@ -23,10 +23,7 @@ void RequestHandler::fd_is_writable(int)
             else if (rc == 0)
                 throw runtime_error("peer closed the connection");
             else
-                {
                 write_buffer.erase(0, rc);
-                bytes_sent += rc;
-                }
             }
 
         // Call state handler.

@@ -26,17 +26,9 @@ const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
     };
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: state(READ_REQUEST_LINE), mysched(sched), sockfd(fd), filefd(-1),
-          user_agent("-"), referer("-"), returned_status_code(0),
-          returned_object_size(0), minor_version(0), major_version(0),
-          if_modified_since(0), bytes_sent(0), bytes_received(0)
+	: mysched(sched), sockfd(fd), filefd(-1)
     {
     TRACE();
-
-    // Get the current time so that we can calculate our run-time
-    // later.
-
-    gettimeofday(&connection_start, 0);
 
     // Store the peer's address as ASCII string; we'll need that
     // again later.
@@ -55,13 +47,37 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
         throw system_error("Can set non-blocking mode");
 
+    // Initialize internal variables.
+
+    init();
+    ++instances;
+    }
+
+void RequestHandler::init()
+    {
+    // Init the class' internal variables. May be used in persistent
+    // connections.
+
+    state = READ_REQUEST_LINE;
+    if (filefd >= 0)
+        {
+	close(filefd);
+        filefd = -1;
+        }
+    user_agent           = "-";
+    referer              = "-";
+    returned_status_code = 0;
+    returned_object_size = 0;
+    minor_version        = 0;
+    major_version        = 0;
+    if_modified_since    = 0;
+
     // Register ourselves with the scheduler.
 
     scheduler::handler_properties prop;
     prop.poll_events   = POLLIN;
     prop.read_timeout  = config->network_read_timeout;
     mysched.register_handler(sockfd, *this, prop);
-    ++instances;
     }
 
 RequestHandler::~RequestHandler()
@@ -69,10 +85,6 @@ RequestHandler::~RequestHandler()
     TRACE();
 
     --instances;
-
-    timeval now, runtime;
-    gettimeofday(&now, 0);
-    timersub(&now, &connection_start, &runtime);
 
     mysched.remove_handler(sockfd);
     close(sockfd);

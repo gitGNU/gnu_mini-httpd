@@ -7,7 +7,7 @@
 #define HTTPD_HH
 
 #include <string>
-#include <sys/time.h>
+#include <ctime>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,6 +21,8 @@ class RequestHandler : public scheduler::event_handler
     virtual ~RequestHandler();
 
   private:
+    void init();
+
     virtual void fd_is_readable(int);
     virtual void fd_is_writable(int);
     virtual void read_timeout(int);
@@ -93,9 +95,6 @@ class RequestHandler : public scheduler::event_handler
     size_t returned_object_size;
     unsigned int minor_version, major_version;
     time_t if_modified_since;
-
-    size_t bytes_sent, bytes_received;
-    timeval connection_start;
 
   public:
     static unsigned int instances;

@@ -32,10 +32,7 @@ void RequestHandler::fd_is_readable(int)
         else if (rc == 0)
             throw runtime_error("peer closed the connection");
         else
-            {
             read_buffer.append(buf, rc);
-            bytes_received += rc;
-            }
 
         // Call the state handler.
 
