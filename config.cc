@@ -11,18 +11,21 @@ using namespace std;
 #define sec * 1
 
 // Timeouts.
-unsigned int configuration::network_read_timeout        = 30 sec;
-unsigned int configuration::network_write_timeout       = 30 sec;
-unsigned int configuration::file_read_timeout           =  0 sec;
+unsigned int configuration::network_read_timeout         = 30 sec;
+unsigned int configuration::network_write_timeout        = 30 sec;
+unsigned int configuration::file_read_timeout            =  0 sec;
+
+unsigned int configuration::hard_poll_interval_threshold = 32;
+int configuration::hard_poll_interval                    = 60 sec;
 
 // Buffer sizes.
-unsigned int configuration::io_buffer_size              =  4 kb;
+unsigned int configuration::io_buffer_size               =  4 kb;
 
 // Paths.
-char* configuration::document_root                      = DOCUMENT_ROOT;
+char* configuration::document_root                       = DOCUMENT_ROOT;
 
 // Miscellaneous.
-char* configuration::default_content_type		= "application/octet-stream";
+char* configuration::default_content_type                = "application/octet-stream";
 
 configuration::configuration()
     {

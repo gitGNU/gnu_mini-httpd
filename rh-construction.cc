@@ -12,6 +12,8 @@
 #include "system-error.hh"
 #include "config.hh"
 
+unsigned int RequestHandler::instances = 0;
+
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
 
@@ -25,34 +27,54 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     data       = buffer;
     data_end   = buffer;
 
-    // Store the peer's address as ASCII string; we'll need that
-    // again later.
+    try
+	{
+	// Store the peer's address as ASCII string; we'll need that
+	// again later.
 
-    if (inet_ntop(AF_INET, &sin.sin_addr, peer_addr_str, sizeof(peer_addr_str)) == NULL)
-	strcpy(peer_addr_str, "unknown");
+	if (inet_ntop(AF_INET, &sin.sin_addr, peer_addr_str, sizeof(peer_addr_str)) == NULL)
+	    strcpy(peer_addr_str, "unknown");
 
-    // Set socket parameters.
+	// Set socket parameters.
 
-    linger ling;
-    ling.l_onoff  = 0;
-    ling.l_linger = 0;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
-	throw system_error("Can't switch LINGER mode off");
+	linger ling;
+	ling.l_onoff  = 0;
+	ling.l_linger = 0;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
+	    throw system_error("Can't switch LINGER mode off");
 
-    if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
-	throw system_error("Can set non-blocking mode");
+	if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
+	    throw system_error("Can set non-blocking mode");
 
-    // Register ourselves with the scheduler.
+	// Register ourselves with the scheduler.
 
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLIN;
-    prop.read_timeout  = config->network_read_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+	scheduler::handler_properties prop;
+	prop.poll_events   = POLLIN;
+	prop.read_timeout  = config->network_read_timeout;
+	mysched.register_handler(sockfd, *this, prop);
+	if (instances++ == config->hard_poll_interval_threshold)
+	    {
+	    debug("We have more than %d connections: Switching to a hard poll interval of %d seconds.",
+		  config->hard_poll_interval_threshold, config->hard_poll_interval);
+	    mysched.set_poll_interval(config->hard_poll_interval * 1000);
+	    }
+	}
+    catch(...)
+	{
+	delete[] buffer;
+	throw;
+	}
     }
 
 RequestHandler::~RequestHandler()
     {
     TRACE();
+    if (--instances == config->hard_poll_interval_threshold)
+	{
+	debug("We have %d active connections: Switching back to an accurate poll interval.",
+	      config->hard_poll_interval_threshold);
+	mysched.use_accurate_poll_interval();
+	}
     mysched.remove_handler(sockfd);
     close(sockfd);
     if (filefd >= 0)

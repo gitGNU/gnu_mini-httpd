@@ -56,6 +56,8 @@ class RequestHandler : public scheduler::event_handler
     char* data;
     char* data_end;
 
+    static unsigned int instances;
+
     static const RegExp full_get_port_regex;
     static const RegExp full_get_regex;
     static const RegExp get_regex;

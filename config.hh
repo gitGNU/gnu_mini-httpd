@@ -19,6 +19,8 @@ class configuration
     static unsigned int network_read_timeout;
     static unsigned int network_write_timeout;
     static unsigned int file_read_timeout;
+    static unsigned int hard_poll_interval_threshold;
+    static int hard_poll_interval;
 
     // Buffer sizes.
     static unsigned int io_buffer_size;
