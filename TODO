@@ -9,3 +9,5 @@
 - Allow names of users and groups rather than the numerical id.
 
 - Do not log via syslog.
+
+- Make sure the host name exists before writing anything to the log file.
