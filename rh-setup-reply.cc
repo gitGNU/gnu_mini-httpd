@@ -99,7 +99,7 @@ bool RequestHandler::setup_reply()
         if (filefd == -1)
             {
             info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-            file_not_found(filename.c_str());
+            file_not_found(path.c_str());
             return false;
             }
         returned_object_size = sbuf.st_size;
