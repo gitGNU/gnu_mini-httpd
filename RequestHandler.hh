@@ -57,7 +57,7 @@ class RequestHandler : public scheduler::event_handler
     char* buffer_end;
     char* data;
     char* data_end;
-    FileCache::buffer_object_t cached_file;
+    FileCache::file_object cached_file;
 
     static unsigned int instances;
 

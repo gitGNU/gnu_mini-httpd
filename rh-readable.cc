@@ -105,7 +105,7 @@ void RequestHandler::fd_is_readable(int)
 
 		    if (sbuf.st_size <= config->cached_file_max_size)
 			{
-			try { cached_file = cache->get_file(filename); }
+			try { cached_file = cache->get_file(filename.c_str()); }
 			catch(...)
 			    {
 			    // TODO

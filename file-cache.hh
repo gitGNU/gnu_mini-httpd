@@ -17,38 +17,27 @@ class FileCache
     explicit FileCache();
     ~FileCache();
 
-    typedef std::pair<refcount_auto_ptr<char>,size_t> buffer_object_t;
-    buffer_object_t get_file(const std::string& name);
+    struct file_object
+	{
+	refcount_auto_ptr<char> data;
+	size_t data_len;
+	};
+    const file_object get_file(const char* name);
 
   private:
     FileCache(const FileCache&);
     FileCache& operator= (const FileCache&);
 
-    buffer_object_t load_file(const std::string& name);
-
-    struct fdsentry
+    struct cached_object : public file_object
 	{
-	fdsentry(int fd_arg) : fd(fd_arg) { }
-	~fdsentry() { if (fd >= 0) close(fd); }
-	operator int () const throw() { return fd; }
-	int fd;
-	};
+	cached_object();
+	cached_object(refcount_auto_ptr<char> buf, size_t len);
 
-    struct object
-	{
-	explicit object()
-		: data(0), data_len(0), accesses(0)
-	    {
-	    }
-	explicit object(refcount_auto_ptr<char> buf, size_t len)
-		: data(buf), data_len(len), accesses(0)
-	    {
-	    }
-	refcount_auto_ptr<char> data;
-	size_t data_len;
 	mutable size_t accesses;
 	};
-    typedef std::map<std::string,object> objectmap_t;
+    cached_object load_file(const char* name);
+
+    typedef std::map<std::string,cached_object> objectmap_t;
     objectmap_t objects;
     size_t total_size;
     };
