@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-#include <cstdio>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
