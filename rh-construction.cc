@@ -27,7 +27,7 @@ const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 	: state(READ_REQUEST_LINE), mysched(sched), sockfd(fd), filefd(-1),
-          referrer("-"), useragent("-"), returned_status_code(0),
+          user_agent("-"), referer("-"), returned_status_code(0),
           returned_object_size(0), bytes_sent(0), bytes_received(0)
     {
     TRACE();

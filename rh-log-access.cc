@@ -51,8 +51,8 @@ void RequestHandler::log_access() const throw()
 
         fprintf(fh, "%s - - [%s] \"%s %s HTTP/1.1\" %u %u \"%s\" \"%s\"\n",
                 peer_addr_str, timestamp.c_str(), method.c_str(), path.c_str(),
-                returned_status_code, returned_object_size, referrer.c_str(),
-                useragent.c_str());
+                returned_status_code, returned_object_size, referer.c_str(),
+                user_agent.c_str());
 
         fclose(fh);
         }

@@ -81,6 +81,7 @@ bool RequestHandler::setup_reply()
                  time_to_ascii(time(0)).c_str());
         write_buffer = buf;
         returned_status_code = 200;
+        returned_object_size = 0;
         }
     else if (method == "GET")
         {
@@ -108,6 +109,7 @@ bool RequestHandler::setup_reply()
                  time_to_ascii(sbuf.st_mtime).c_str());
         write_buffer = buf;
         returned_status_code = 200;
+        returned_object_size = sbuf.st_size;
         }
 
     scheduler::handler_properties prop;

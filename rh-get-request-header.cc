@@ -12,8 +12,10 @@ using namespace spirit;
 
 const RequestHandler::header_parser_t RequestHandler::header_parsers[] =
     {
-    { "host", &RequestHandler::parse_host_header },
-    { 0, 0 }
+    { "host",       &RequestHandler::parse_host_header       },
+    { "user-agent", &RequestHandler::parse_user_agent_header },
+    { "referer",    &RequestHandler::parse_referer_header    },
+    { 0, 0 }                    // end of array
     };
 
 bool RequestHandler::get_request_header()
@@ -86,4 +88,22 @@ bool RequestHandler::parse_host_header()
         protocol_error("Malformed <tt>Host</tt> header.\r\n");
 
     return false;
+    }
+
+bool RequestHandler::parse_user_agent_header()
+    {
+    TRACE();
+
+    debug(("%d: User-Agent header: data = '%s'", sockfd, http_parser.res_data.c_str()));
+    user_agent = http_parser.res_data;
+    return true;
+    }
+
+bool RequestHandler::parse_referer_header()
+    {
+    TRACE();
+
+    debug(("%d: Referer header: data = '%s'", sockfd, http_parser.res_data.c_str()));
+    referer = http_parser.res_data;
+    return true;
     }
