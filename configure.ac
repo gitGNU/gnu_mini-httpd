@@ -33,6 +33,23 @@ dnl     AC_LIBOBJ(libgetopt/getopt)
 dnl     AC_LIBOBJ(libgetopt/getopt1)
 dnl fi
 
+dnl Enable/disable debugging.
+dnl
+AC_MSG_CHECKING(whether to include debugging capabilities)
+AC_ARG_WITH(debug, [  --with-debug            Support debugging? (default: yes)],
+    [
+    if test "$withval" = "no"; then
+       AC_MSG_RESULT(no)
+    elif test "$withval" = "yes"; then
+       CPPFLAGS="$CPPFLAGS -DDEBUG"
+       AC_MSG_RESULT(yes)
+    fi
+    ],
+    [
+    CPPFLAGS="$CPPFLAGS -DDEBUG"
+    AC_MSG_RESULT(yes)
+    ])
+
 dnl Write results.
 dnl
 AC_CONFIG_AUX_DIR(spirit)

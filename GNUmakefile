@@ -7,7 +7,7 @@ DESTDIR		=
 
 OPTIMFLAGS     +=
 WARNFLAGS      +=
-DEFS	       += -DDEBUG
+DEFS	       +=
 CPPFLAGS       += -Ispirit
 CXXFLAGS       +=
 LDFLAGS	       +=
@@ -33,7 +33,7 @@ httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
 config.o:	config.cc
-	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\"              \
+	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" \
 	       -DLOGFILE=\"/home/simons/projects/httpd/logfiles/%s-access\" \
 		$(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
