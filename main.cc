@@ -5,15 +5,16 @@
 
 #include <stdexcept>
 #include <csignal>
-
 #include "tcp-listener.hh"
 #include "request-handler.hh"
 #include "log.hh"
 #include "config.hh"
+#include "file-cache.hh"
 using namespace std;
 
 const configuration* config;
 bool got_terminate_sig = false;
+FileCache* cache;
 
 void set_sig_term(int)
     {
@@ -26,6 +27,10 @@ try
     // Create our configuration.
 
     config = new configuration;
+
+    // Initialize the file cache.
+
+    cache = new FileCache;
 
     // Install signal handler.
 
@@ -44,6 +49,7 @@ try
 
     // Exit gracefully.
 
+    delete cache;
     delete config;
     return 0;
     }

@@ -102,16 +102,31 @@ void RequestHandler::fd_is_readable(int)
 			return;
 			}
 
-		    filefd = open(filename.c_str(), O_RDONLY, 0);
-		    if (filefd == -1)
+		    if (sbuf.st_size <= config->cached_file_max_size)
 			{
-			info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			file_not_found(filename.c_str());
-			return;
+			try { cached_file = cache->get_file(filename); }
+			catch(...)
+			    {
+			    // TODO
+			    throw;
+			    }
+			state = WRITE_CACHED_FILE;
+			debug("%d: Retrieved file from cache: Going into WRITE_CACHED_FILE state.", sockfd);
 			}
+		    else
+			{
+			filefd = open(filename.c_str(), O_RDONLY, 0);
+			if (filefd == -1)
+			    {
+			    info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+			    file_not_found(filename.c_str());
+			    return;
+			    }
+			state = COPY_FILE;
+			debug("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd);
+			}
+
 		    log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
-		    debug("%d: Going into COPY_FILE state.", sockfd);
-		    state = COPY_FILE;
 		    int len = snprintf(buffer, buffer_end - buffer,
 				       "HTTP/1.0 200 OK\r\n"     \
 				       "Content-Type: %s\r\n"    \

@@ -33,6 +33,7 @@ void RequestHandler::file_not_found(const char* url)
     else
         throw runtime_error("Internal error: Our internal buffer is too small!");
     state = WRITE_REMAINING_DATA;
+    debug("%d: Going into WRITE_REMAINING_DATA state.", sockfd);
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
     prop.write_timeout = config->network_write_timeout;
@@ -68,6 +69,7 @@ void RequestHandler::protocol_error(const char* message)
     else
         throw runtime_error("Internal error: Our internal buffer is too small!");
     state = WRITE_REMAINING_DATA;
+    debug("%d: Going into WRITE_REMAINING_DATA state.", sockfd);
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
     prop.write_timeout = config->network_write_timeout;
@@ -101,6 +103,7 @@ void RequestHandler::moved_permanently(const char* url)
     else
         throw runtime_error("Internal error: Our internal buffer is too small!");
     state = WRITE_REMAINING_DATA;
+    debug("%d: Going into WRITE_REMAINING_DATA state.", sockfd);
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
     prop.write_timeout = config->network_write_timeout;

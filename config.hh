@@ -24,6 +24,8 @@ class configuration
 
     // Buffer sizes.
     static unsigned int io_buffer_size;
+    static int cached_file_max_size;
+    static unsigned int max_cache_size;
 
     // Paths.
     static char* document_root;

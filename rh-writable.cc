@@ -23,23 +23,31 @@ void RequestHandler::fd_is_writable(int)
 	    data_end = data + rc;
 	    if (rc == 0)
 		{
-		debug("%d: The complete file is copied, we're done.", sockfd);
+		debug("%d: The complete file is copied: going into WRITE_REMAINING_DATA state.", sockfd);
 		state = WRITE_REMAINING_DATA;
 		close(filefd);
 		filefd = -1;
 		}
 	    }
 
-	if ((state == COPY_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
+	if ((state == COPY_FILE || state == WRITE_CACHED_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
 	    {
 	    size_t rc = mywrite(sockfd, data, data_end - data);
 	    data += rc;
 	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
 	    }
 
+	if (state == WRITE_CACHED_FILE && data == data_end)
+	    {
+	    data     = cached_file.first.get();
+	    data_end = data + cached_file.second;
+	    state    = WRITE_REMAINING_DATA;
+	    debug("%d: Wrote header successfully: Going into WRITE_REMAINING_DATA state.", sockfd);
+	    }
+
 	if (state == WRITE_REMAINING_DATA && data == data_end)
 	    {
-	    debug("%d: Done. Terminate the connection.", sockfd);
+	    debug("%d: Done. Going into TERMINATE state.", sockfd);
 	    state = TERMINATE;
 	    if (shutdown(sockfd, SHUT_RDWR) == -1)
 		delete this;
