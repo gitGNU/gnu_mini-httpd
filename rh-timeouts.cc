@@ -8,27 +8,27 @@
 void RequestHandler::read_timeout(int)
     {
     TRACE();
-    info("%d: Read timout; terminating connection.", sockfd);
+    debug("%d: Read timout; terminating connection.", sockfd);
     delete this;
     }
 
 void RequestHandler::write_timeout(int)
     {
     TRACE();
-    info("%d: Write timout; terminating connection.", sockfd);
+    debug("%d: Write timout; terminating connection.", sockfd);
     delete this;
     }
 
 void RequestHandler::error_condition(int)
     {
     TRACE();
-    info("%d: poll() reported an error condition; terminating connection.", sockfd);
+    debug("%d: poll() reported an error condition; terminating connection.", sockfd);
     delete this;
     }
 
 void RequestHandler::pollhup(int)
     {
     TRACE();
-    info("%d: poll() says the other end aborted; terminating connection.", sockfd);
+    debug("%d: poll() says the other end aborted; terminating connection.", sockfd);
     delete this;
     }

@@ -48,13 +48,13 @@ void RequestHandler::fd_is_writable(int)
  	}
     catch(const exception& e)
  	{
- 	info("%d: Caught exception: %s", sockfd, e.what());
+ 	debug("%d: Caught exception: %s", sockfd, e.what());
  	delete this;
  	return;
  	}
     catch(...)
  	{
- 	info("%d: Caught unknown exception. Terminating.", sockfd);
+ 	debug("%d: Caught unknown exception. Terminating.", sockfd);
  	delete this;
  	return;
  	}

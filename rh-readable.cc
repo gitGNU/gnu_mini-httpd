@@ -39,7 +39,7 @@ void RequestHandler::fd_is_readable(int)
 	debug("%d: Read %d bytes from network peer.", sockfd, rc);
 	if (rc == 0)
 	    {
-	    info("%d: Connection was dropped by the peer. Aborting.", sockfd);
+	    debug("%d: Connection was dropped by the peer. Aborting.", sockfd);
 	    delete this;
 	    return;
 	    }
@@ -146,13 +146,13 @@ void RequestHandler::fd_is_readable(int)
 	}
     catch(const exception& e)
 	{
-	info("%d: Caught exception: %s", sockfd, e.what());
+	debug("%d: Caught exception: %s", sockfd, e.what());
 	delete this;
 	return;
 	}
     catch(...)
 	{
-	info("%d: Caught unknown exception. Terminating.", sockfd);
+	debug("%d: Caught unknown exception. Terminating.", sockfd);
 	delete this;
 	return;
 	}
