@@ -61,7 +61,7 @@ class TCPListener : public scheduler::event_handler
 	log(INFO, "Listening on TCP port %d for incoming requests ...", port_no);
 	}
 
-    ~TCPListener()
+    virtual ~TCPListener()
 	{
 	log(INFO, "Shutting TCP listener down.");
 	mysched.remove_handler(sockfd);
@@ -75,7 +75,7 @@ class TCPListener : public scheduler::event_handler
 	int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
 	if (streamfd == -1)
 	    {
-	    log(ERROR, "TCPListener: Failed to accept new connection with accept(). Continuing.");
+	    log(ERROR, "TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
 	    return;
 	    }
 	try
