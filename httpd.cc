@@ -52,8 +52,7 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     prop.poll_events   = POLLIN;
     prop.read_timeout  = 30;
     prop.write_timeout = 0;
-    if (sockfd > 35)
-	log(DEBUG, "About to Register handler for socket %d.", sockfd);
+    log(DEBUG, "About to Register handler for socket %d.", sockfd);
     mysched.register_handler(sockfd, *this, prop);
     log(DEBUG, "Registered handler for socket %d.", sockfd);
     }
