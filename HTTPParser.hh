@@ -12,6 +12,8 @@
 #include <boost/spirit/utility/chset.hpp>
 #include <boost/spirit/symbols/symbols.hpp>
 
+using namespace boost;
+
 #include "HTTPRequest.hh"
 
 class HTTPParser
