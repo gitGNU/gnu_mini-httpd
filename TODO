@@ -8,4 +8,4 @@
 
 - Allow names of users and groups rather than the numerical id.
 
-- Add default hostname.
+- Do not log via syslog.
