@@ -5,31 +5,15 @@
 
 #include <stdexcept>
 #include <cstdio>
-#include <ctime>
 #include "system-error/system-error.hh"
 #include "RequestHandler.hh"
-#include "config.hh"
 #include "timestamp-to-string.hh"
+#include "escape-char.hh"
+#include "config.hh"
 #include "log.hh"
 
 using namespace std;
 
-namespace
-    {
-    inline string escape_quotes(const string& str)
-        {
-        string tmp = str;
-        for (string::size_type pos = 0; pos < tmp.size(); ++pos)
-            {
-            if (tmp[pos] == '"')
-                {
-                tmp.replace(pos, 1, "\\\"");
-                ++pos;
-                }
-            }
-        return tmp;
-        }
-    }
 #if 0
 void RequestHandler::log_access() const throw()
     {
