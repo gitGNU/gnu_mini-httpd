@@ -53,10 +53,15 @@ using namespace spirit;
 // Proxy class that will assign a parser result via a pointer to classT.
 
 template<typename classT>
-struct var_assign
+class var_assign
     {
+  public:
     var_assign(classT** i) : instance(i) { }
-    void operator() (const classT& val) const  { *instance = val; }
+    void operator() (const classT& val) const
+        {
+        *instance = val;
+        }
+  private:
     classT** instance;
     };
 
@@ -65,13 +70,15 @@ struct var_assign
 // string, not a std::string directly.
 
 template<>
-struct var_assign<string>
+class var_assign<string>
     {
+  public:
     var_assign(string** i) : instance(i) { }
     void operator() (const char*& first, const char*& last) const
         {
         **instance = string(first, last - first);
         }
+  private:
     string** instance;
     };
 
@@ -79,10 +86,18 @@ struct var_assign<string>
 // member variable and a pointer to the class instance.
 
 template<typename classT, typename memberT>
-struct member_assign
+class member_assign
     {
-    member_assign(classT** i, memberT classT::* m) : instance(i), member(m) { }
-    void operator() (const memberT& val) const { (*instance)->*member = val; }
+  public:
+    member_assign(classT** i, memberT classT::* m)
+            : instance(i), member(m)
+        {
+        }
+    void operator() (const memberT& val) const
+        {
+        (*instance)->*member = val;
+        }
+  private:
     classT** instance;
     memberT classT::* member;
     };
@@ -91,39 +106,37 @@ struct member_assign
 // resetable_variable<memberT>.
 
 template<typename classT, typename memberT>
-struct member_assign< classT, resetable_variable<memberT> >
+class member_assign< classT, resetable_variable<memberT> >
     {
-    member_assign(classT** i, resetable_variable<memberT> classT::* m) : instance(i), member(m) { }
-    void operator() (const memberT& val) const { (*instance)->*member = val; }
+  public:
+    member_assign(classT** i, resetable_variable<memberT> classT::* m)
+            : instance(i), member(m)
+        {
+        }
+    void operator() (const memberT& val) const
+        {
+        (*instance)->*member = val;
+        }
+  private:
     classT** instance;
     resetable_variable<memberT> classT::* member;
-    };
-
-// And again a specialized version in case memberT happens to be
-// resetable_string<std::string>.
-
-template<typename classT>
-struct member_assign< classT, resetable_variable<string> >
-    {
-    member_assign(classT** i, resetable_variable<string> classT::* m) : instance(i), member(m) { }
-    void operator() (const char*& first, const char*& last) const
-        {
-        (*instance)->*member = string(first, last - first);
-        }
-    classT** instance;
-    resetable_variable<string> classT::* member;
     };
 
 // One more specialized version for a memberT of std::string.
 
 template<typename classT>
-struct member_assign<classT, string>
+class member_assign<classT, string>
     {
-    member_assign(classT** i, string classT::* m) : instance(i), member(m) { }
+  public:
+    member_assign(classT** i, string classT::* m)
+            : instance(i), member(m)
+        {
+        }
     void operator() (const char*& first, const char*& last) const
         {
         (*instance)->*member = string(first, last - first);
         }
+  private:
     classT** instance;
     string classT::* member;
     };
@@ -152,12 +165,20 @@ member_assign<classT,memberT> assign(classT** dst, memberT classT::* var)
 // symbol tables use another parameter syntax to return the result.
 
 template <typename classT>
-struct ref_assigner
+class ref_assigner
     {
+  public:
     ref_assigner(classT& r) : ref(r) { }
-    void operator()(const char*&, const char*, const classT& val) const { ref = val; }
+    void operator()(const char*&, const char*, const classT& val) const
+        {
+        ref = val;
+        }
     classT& ref;
     };
+
+// Function expression that will return an apropriate instance of
+// ref_assign.
+
 template <typename classT>
 ref_assigner<classT> assign(classT& r)
     {
