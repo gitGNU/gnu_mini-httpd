@@ -21,8 +21,8 @@
 void trace(const char* fmt, ...) throw();
 void debug(const char* fmt, ...) throw();
 #else
-inline void trace(const char* fmt, ...) throw() { }
-inline void debug(const char* fmt, ...) throw() { }
+#  define trace(fmt,...) if (false)
+#  define debug(fmt,...) if (false)
 #endif
 
 void info(const char* fmt, ...)  throw();
