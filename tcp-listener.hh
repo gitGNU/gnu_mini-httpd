@@ -21,7 +21,7 @@ template<class connection_handlerT>
 class TCPListener : public scheduler::event_handler
     {
   public:
-    explicit TCPListener(scheduler& sched, u_int16_t port_no, int queue_backlog = 50)
+    explicit TCPListener(scheduler& sched, short port_no, int queue_backlog = 50)
 	    : mysched(sched)
 	{
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
