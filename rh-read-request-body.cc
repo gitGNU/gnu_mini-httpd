@@ -14,7 +14,7 @@ bool RequestHandler::get_request_body()
 
     // We ain't reading any bodies yet.
 
-    debug(("No request body; going into SETUP_REPLY state."));
+    debug(("%d: No request body; going into SETUP_REPLY state.", sockfd));
     state = SETUP_REPLY;
     return true;
     }
