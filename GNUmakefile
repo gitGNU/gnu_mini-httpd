@@ -52,7 +52,7 @@ clean::
 	@find . -name '*.a'   -exec rm -f {} \;
 	@find . -name '*.o'   -exec rm -f {} \;
 	@find . -name '*.so'  -exec rm -f {} \;
-	@rm -f httpd
+	@rm -f httpd test
 	@echo All dependent files have been removed.
 
 distclean:: clean
