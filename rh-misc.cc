@@ -112,3 +112,23 @@ size_t RequestHandler::mywrite(int fd, const void* buf, size_t size)
 	}
     return rc;
     }
+
+bool RequestHandler::write_buffer_or_queue()
+    {
+    TRACE();
+    size_t rc = mywrite(sockfd, buffer.data(), buffer.size());
+    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
+    if (rc < buffer.size())
+	{
+	debug("%d: Could not write all %d bytes at once, using buffer for remaining %d bytes.",
+	      sockfd, buffer.size(), buffer.size()-rc);
+	buffer.erase(0, rc);
+	register_network_write_handler();
+	return false;
+	}
+    else
+	{
+	debug("%d: Wrote the whole buffer contents.", sockfd);
+	return true;
+	}
+    }

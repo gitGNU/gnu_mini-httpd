@@ -30,8 +30,10 @@ class RequestHandler : public scheduler::event_handler
 
     static size_t myread(int, void*, size_t);
     static size_t mywrite(int, const void*, size_t);
+    bool write_buffer_or_queue();
 
-    void file_not_found(const std::string& file);
+    void file_not_found(const std::string& url);
+    void moved_permanently(const std::string& url);
     void protocol_error(const std::string& message);
 
     bool process_input(const char* begin, const char* end);

@@ -92,16 +92,7 @@ void RequestHandler::fd_is_readable(int fd)
 			buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
 			buffer += config->get_content_type(filename);
 			buffer += "\r\n\r\n";
-			rc = mywrite(sockfd, buffer.data(), buffer.size());
-			debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
-			if (rc < buffer.size())
-			    {
-			    debug("%d: Could not write all %d bytes at once, using buffer for remaining %d bytes.",
-				  sockfd, buffer.size(), buffer.size()-rc);
-			    buffer.erase(0, rc);
-			    register_network_write_handler();
-			    }
-			else
+			if (write_buffer_or_queue())
 			    {
 			    buffer.clear();
 			    register_file_read_handler();

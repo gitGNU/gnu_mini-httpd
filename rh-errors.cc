@@ -6,10 +6,10 @@
 #include "request-handler.hh"
 using namespace std;
 
-void RequestHandler::file_not_found(const string& file)
+void RequestHandler::file_not_found(const string& url)
     {
     TRACE();
-    debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, file.c_str());
+    debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, url.c_str());
     buffer = \
 	"HTTP/1.0 404 Not Found\r\n" \
 	"Content-Type: text/html\r\n" \
@@ -20,31 +20,19 @@ void RequestHandler::file_not_found(const string& file)
 	"</head>\r\n" \
 	"<body>\r\n" \
 	"The requested page <tt>";
-    buffer += file;
+    buffer += url;
     buffer += "</tt> does not exist on this server ...\r\n" \
 	"</body>\r\n" \
 	"</html>\r\n";
     state = TERMINATE;
-    size_t rc = mywrite(sockfd, buffer.data(), buffer.size());
-    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
-    if (rc < buffer.size())
-	{
-	debug("%d: Could not write all %d bytes at once, using buffer for remaining %d bytes.",
-	      sockfd, buffer.size(), buffer.size()-rc);
-	buffer.erase(0, rc);
-	register_network_write_handler();
-	}
-    else
-	{
-	debug("%d: Wrote the whole page. Terminating.", sockfd);
+    if (write_buffer_or_queue())
 	delete this;
-	}
     }
 
 void RequestHandler::protocol_error(const string& message)
     {
     TRACE();
-    debug("%d: Create protocol-error page for in buffer and write it back to the user.", sockfd);
+    debug("%d: Create protocol-error page in buffer and write it back to the user.", sockfd);
     buffer = \
 	"HTTP/1.0 400 Bad Request\r\n" \
 	"Content-Type: text/html\r\n" \
@@ -61,18 +49,32 @@ void RequestHandler::protocol_error(const string& message)
 	"</body>\r\n" \
 	"</html>\r\n";
     state = TERMINATE;
-    size_t rc = mywrite(sockfd, buffer.data(), buffer.size());
-    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
-    if (rc < buffer.size())
-	{
-	debug("%d: Could not write all %d bytes at once, using buffer for remaining %d bytes.",
-	      sockfd, buffer.size(), buffer.size()-rc);
-	buffer.erase(0, rc);
-	register_network_write_handler();
-	}
-    else
-	{
-	debug("%d: Wrote the whole page. Terminating.", sockfd);
+    if (write_buffer_or_queue())
 	delete this;
-	}
+    }
+
+void RequestHandler::moved_permanently(const string& url)
+    {
+    TRACE();
+    debug("%d: Create page-has-moved page in buffer and write it back to the user.", sockfd);
+    buffer = \
+	"HTTP/1.0 301 Moved Permanently\r\n" \
+	"Location: ";
+    buffer += url;
+    buffer += "\r\n" \
+	"Content-Type: text/html\r\n" \
+	"\r\n" \
+	"<html>\r\n" \
+	"<head>\r\n" \
+	"  <title>Page has moved permanently!</title>\r\n" \
+	"</head>\r\n" \
+	"<body>\r\n" \
+	"The document has moved <a href=\"";
+    buffer += url;
+    buffer += "\">here</a>.\r\n" \
+	"</body>\r\n" \
+	"</html>\r\n";
+    state = TERMINATE;
+    if (write_buffer_or_queue())
+	delete this;
     }
