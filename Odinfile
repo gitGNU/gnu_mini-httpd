@@ -1,9 +1,9 @@
 # Build the http daemon.
 
 httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
-		      +lib=(libscheduler/libscheduler.a) \
-                      +define='ENABLE_TRACER DEBUG' \
-		      +optimize=0 \
+                      +lib=(libscheduler/libscheduler.a) \
+                      +define='DISABLE_TRACER NDEBUG' \
+                      +optimize=0 \
                       :exe
 
 %httpd.cc.sm == <<
