@@ -25,9 +25,11 @@ unsigned int configuration::max_line_length              =  4 kb;
 // Paths.
 char* configuration::document_root                       = DOCUMENT_ROOT;
 char* configuration::default_page                        = "index.html";
+char* configuration::logfile                             = LOGFILE;
 
 // Miscellaneous.
 char* configuration::default_content_type                = "application/octet-stream";
+unsigned int configuration::http_port                    = 8080;
 
 configuration::configuration()
     {

@@ -35,9 +35,11 @@ class configuration
     // Paths.
     static char* document_root;
     static char* default_page;
+    static char* logfile;
 
     // Miscellaneous.
     static char* default_content_type;
+    static unsigned int http_port;
 
     // Content-type mapping.
     const char* get_content_type(const char* filename) const;

@@ -65,6 +65,8 @@ class RequestHandler : public scheduler::event_handler
     void file_not_found(const char*);
     void moved_permanently(const char*);
 
+    void log_access() const throw();
+
     scheduler& mysched;
     int sockfd;
     int filefd;
@@ -72,7 +74,9 @@ class RequestHandler : public scheduler::event_handler
     std::string read_buffer, write_buffer;
 
     char peer_addr_str[32];
-    std::string method, host, path;
+    std::string method, host, path, referrer, useragent;
+    unsigned int returned_status_code;
+    size_t returned_object_size;
 
     size_t bytes_sent, bytes_received;
     timeval connection_start;

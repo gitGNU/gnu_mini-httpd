@@ -16,7 +16,8 @@ OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
 		  rh-copy-file.o rh-errors.o rh-get-request-body.o     \
 		  rh-get-request-header.o rh-get-request-line.o        \
 		  rh-readable.o rh-setup-reply.o rh-terminate.o        \
-		  rh-timeouts.o rh-writable.o rh-write-remaining-data.o
+		  rh-timeouts.o rh-writable.o rh-log-access.o          \
+		  rh-write-remaining-data.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -32,7 +33,9 @@ httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
 config.o:	config.cc
-	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
+	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\"              \
+	       -DLOGFILE=\"/home/simons/projects/httpd/logfiles/%s-access\" \
+		$(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
 configure:	configure.ac
 	autoconf

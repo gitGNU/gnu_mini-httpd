@@ -13,7 +13,9 @@
 
 using namespace std;
 
-inline string time_to_ascii(time_t t)
+namespace
+    {
+    inline string time_to_ascii(time_t t)
         {
         char buffer[1024];
         size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
@@ -21,6 +23,7 @@ inline string time_to_ascii(time_t t)
             throw std::logic_error("strftime() failed because an internal buffer is too small!");
         return buffer;
         }
+    }
 
 bool RequestHandler::setup_reply()
     {
@@ -77,6 +80,7 @@ bool RequestHandler::setup_reply()
                  config->get_content_type(filename.c_str()),
                  time_to_ascii(time(0)).c_str());
         write_buffer = buf;
+        returned_status_code = 200;
         }
     else if (method == "GET")
         {
@@ -103,6 +107,7 @@ bool RequestHandler::setup_reply()
                  time_to_ascii(time(0)).c_str(),
                  time_to_ascii(sbuf.st_mtime).c_str());
         write_buffer = buf;
+        returned_status_code = 200;
         }
 
     scheduler::handler_properties prop;

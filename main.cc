@@ -39,7 +39,7 @@ try
 
     bool using_accurate_poll_interval = true;
     scheduler sched;
-    TCPListener<RequestHandler> listener(sched, 8080);
+    TCPListener<RequestHandler> listener(sched, config->http_port);
     while(!got_terminate_sig && !sched.empty())
         {
 	sched.schedule();

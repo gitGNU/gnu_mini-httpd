@@ -31,6 +31,7 @@ void RequestHandler::protocol_error(const char* message)
              "</html>\r\n",
              message);
     write_buffer = buf;
+    returned_status_code = 400;
     state = WRITE_REMAINING_DATA;
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
@@ -44,7 +45,7 @@ void RequestHandler::file_not_found(const char* url)
     debug(("%d: file '%s' not found; going into WRITE_REMAINING_DATA state.", sockfd, url));
     char buf[4096];
     snprintf(buf, sizeof(buf),
-                       "HTTP/1.0 404 Not Found\r\n"                                             \
+                       "HTTP/1.1 404 Not Found\r\n"                                             \
                        "Content-Type: text/html\r\n"                                            \
                        "\r\n"                                                                   \
                        "<html>\r\n"                                                             \
@@ -57,6 +58,7 @@ void RequestHandler::file_not_found(const char* url)
                        "</html>\r\n",
                        url);
     write_buffer = buf;
+    returned_status_code = 404;
     state = WRITE_REMAINING_DATA;
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
@@ -70,7 +72,7 @@ void RequestHandler::moved_permanently(const char* url)
     debug(("%d: Requested page has moved to '%s'; going into WRITE_REMAINING_DATA state.", sockfd, url));
     char buf[4096];
     snprintf(buf, sizeof(buf),
-                       "HTTP/1.0 301 Moved Permanently\r\n"                             \
+                       "HTTP/1.1 301 Moved Permanently\r\n"                             \
                        "Location: %s\r\n"                                               \
                        "Content-Type: text/html\r\n"                                    \
                        "\r\n"                                                           \
@@ -84,6 +86,7 @@ void RequestHandler::moved_permanently(const char* url)
                        "</html>\r\n",
                        url, url);
     write_buffer = buf;
+    returned_status_code = 301;
     state = WRITE_REMAINING_DATA;
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
