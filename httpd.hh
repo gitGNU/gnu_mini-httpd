@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "libscheduler/scheduler.hh"
+#include "RegExp/RegExp.hh"
 
 class RequestHandler : public scheduler::event_handler
     {
@@ -27,7 +28,11 @@ class RequestHandler : public scheduler::event_handler
     int sockfd;
     char peer_addr_str[32];
     scheduler::handler_properties prop;
-    string request;
+    string buffer;
+    string host, uri;
+    static const RegExp full_get_regex;
+    static const RegExp get_regex;
+    static const RegExp host_regex;
     };
 
 #endif

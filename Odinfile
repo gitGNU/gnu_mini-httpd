@@ -1,6 +1,8 @@
 # Build the http daemon.
 
-httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) +debug :exe
+httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) \
+                      +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
+                      :exe
 
 %httpd.cc.sm == <<
     main.cc
