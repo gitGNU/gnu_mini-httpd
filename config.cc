@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
 #include <getopt.h>
@@ -39,6 +40,13 @@ resetable_variable<uid_t> configuration::setuid_user;
 resetable_variable<gid_t> configuration::setgid_group;
 bool configuration::debugging                            = false;
 
+#define USAGE_MSG \
+    "Usage: httpd [-h | --help] [--version] [-d | --debug]\n" \
+    "    [-p number | --port number] [-r path | --change-root path]\n" \
+    "    [--document-root path] [-l path | --logfile-directory path]\n" \
+    "    [-s string | --server-string string] [-u uid | --uid uid]\n" \
+    "    [-g gid | --gid gid] [--default-page filename]\n"
+
 configuration::configuration(int argc, char** argv)
     {
     TRACE();
@@ -68,8 +76,7 @@ configuration::configuration(int argc, char** argv)
         switch(rc)
             {
             case 'h':
-                fprintf(stderr, "Usage: httpd [-h | --help] [--version] [-d | --debug] [-a | --accept]\n" \
-                        "              [--cookie cookie] [-c config | --config-file config] [mail...]\n");
+                fprintf(stderr, USAGE_MSG);
                 throw no_error();
             case 'v':
                 printf("httpd version %s\n", VERSION);
@@ -104,8 +111,7 @@ configuration::configuration(int argc, char** argv)
                 server_string = optarg;
                 break;
             default:
-                fprintf(stderr, "Usage: httpd [-h | --help] [--version] [-d | --debug] [-a | --accept]\n" \
-                        "              [--cookie cookie] [-c config | --config-file config] [mail...]\n");
+                fprintf(stderr, USAGE_MSG);
                 throw runtime_error("Incorrect command line syntax.");
             }
 
