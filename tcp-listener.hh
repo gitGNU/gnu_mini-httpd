@@ -16,6 +16,7 @@
 #include "ScopeGuard/ScopeGuard.hh"
 #include "system-error/system-error.hh"
 #include "libscheduler/scheduler.hh"
+#include "log.hh"
 
 template<class connection_handlerT>
 class TCPListener : public scheduler::event_handler
