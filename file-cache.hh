@@ -9,7 +9,7 @@
 #include <string>
 #include <map>
 #include <unistd.h>
-#include "refcount_auto_ptr/refcount_auto_ptr.hh"
+#include "refcount-auto-ptr/refcount-auto-ptr.hh"
 
 class FileCache
     {
