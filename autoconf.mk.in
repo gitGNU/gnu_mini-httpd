@@ -1,0 +1,28 @@
+#
+# autoconf-dependent part of the httpd build system
+#
+# @configure_input@
+#
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+bindir		= @bindir@
+mandir		= @mandir@
+sysconfdir	= @sysconfdir@
+includedir	= @includedir@
+libdir          = @libdir@
+
+CC		= @CC@
+CXX		= @CXX@
+AR		= ar
+RANLIB		= @RANLIB@
+MKDIR		= $(SHELL) .shtool mkdir
+INSTALL		= $(SHELL) .shtool install
+
+DEFS		= @DEFS@
+CPPFLAGS	= @CPPFLAGS@
+CFLAGS		= @CFLAGS@
+CXXFLAGS	= @CXXFLAGS@
+LDFLAGS		= @LDFLAGS@
+
+LIBS		= @LIBS@
+LIBSOBJS	= @LIBOBJS@

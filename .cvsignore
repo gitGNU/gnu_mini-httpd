@@ -1,2 +1,4 @@
 httpd
+autoconf.mk config.log config.status configure
 gmon.out
+*.rpo
