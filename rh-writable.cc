@@ -15,10 +15,7 @@ void RequestHandler::fd_is_writable(int)
  	{
         // If there is output waiting in the write buffer, write it.
 
-        debug(("%d: write_buffer contains %d characters.", sockfd, write_buffer.size()));
-
         ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
-        debug(("%d: write() returned %d.", sockfd, rc));
         if (rc < 0)
             throw system_error("read() failed");
         else if (rc == 0)

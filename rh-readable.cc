@@ -27,7 +27,6 @@ void RequestHandler::fd_is_readable(int)
 
         char buf[4096];
         ssize_t rc = read(sockfd, buf, sizeof(buf));
-        debug(("%d: read() returned %d.", sockfd, rc));
         if (rc < 0)
             throw system_error("read() failed");
         else if (rc == 0)

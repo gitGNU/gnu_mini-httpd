@@ -77,6 +77,7 @@ class RequestHandler : public scheduler::event_handler
     size_t bytes_sent, bytes_received;
     timeval connection_start;
 
+  public:
     static unsigned int instances;
     };
 

@@ -59,28 +59,19 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     prop.poll_events   = POLLIN;
     prop.read_timeout  = config->network_read_timeout;
     mysched.register_handler(sockfd, *this, prop);
-    if (instances++ == config->hard_poll_interval_threshold)
-        {
-        debug(("We have more than %d connections: Switching to a hard poll interval of %d seconds.",
-              config->hard_poll_interval_threshold, config->hard_poll_interval));
-        mysched.set_poll_interval(config->hard_poll_interval * 1000);
-        }
+    ++instances;
     }
 
 RequestHandler::~RequestHandler()
     {
     TRACE();
 
+    --instances;
+
     timeval now, runtime;
     gettimeofday(&now, 0);
     timersub(&now, &connection_start, &runtime);
 
-    if (--instances == config->hard_poll_interval_threshold)
-	{
-	debug(("We have %d active connections: Switching back to an accurate poll interval.",
-	      config->hard_poll_interval_threshold));
-	mysched.use_accurate_poll_interval();
-	}
     mysched.remove_handler(sockfd);
     close(sockfd);
     if (filefd >= 0)

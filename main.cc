@@ -37,10 +37,34 @@ try
 
     // Start-up scheduler and listener.
 
+    bool using_accurate_poll_interval = true;
     scheduler sched;
     TCPListener<RequestHandler> listener(sched, 8080);
     while(!got_terminate_sig && !sched.empty())
+        {
 	sched.schedule();
+
+        if (RequestHandler::instances > config->hard_poll_interval_threshold)
+            {
+            if (using_accurate_poll_interval)
+                {
+                debug(("We have %d active connections: Switching to a hard poll interval of %d seconds.",
+                       RequestHandler::instances, config->hard_poll_interval));
+                sched.set_poll_interval(config->hard_poll_interval * 1000);
+                using_accurate_poll_interval = false;
+                }
+            }
+        else
+            {
+            if (!using_accurate_poll_interval)
+                {
+                debug(("We have %d active connections: Switching back to an accurate poll interval.",
+                       RequestHandler::instances));
+                sched.use_accurate_poll_interval();
+                using_accurate_poll_interval = true;
+                }
+            }
+        }
 
     // Exit gracefully.
 
