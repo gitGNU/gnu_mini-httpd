@@ -23,6 +23,20 @@ namespace
             throw length_error("strftime() failed because the internal buffer is too small");
         return buffer;
         }
+
+    inline string escape_quotes(const string& str)
+        {
+        string tmp = str;
+        for (string::size_type pos = 0; pos < tmp.size(); ++pos)
+            {
+            if (tmp[pos] == '"')
+                {
+                tmp.replace(pos, 1, "\\\"");
+                ++pos;
+                }
+            }
+        return tmp;
+        }
     }
 
 void RequestHandler::log_access() const throw()
@@ -50,9 +64,11 @@ void RequestHandler::log_access() const throw()
             throw system_error("Can't open logfile");
 
         fprintf(fh, "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %u \"%s\" \"%s\"\n",
-                peer_addr_str, timestamp.c_str(), method.c_str(), path.c_str(),
-                major_version, minor_version, returned_status_code,
-                returned_object_size, referer.c_str(), user_agent.c_str());
+                peer_addr_str, timestamp.c_str(), method.c_str(),
+                escape_quotes(path).c_str(), major_version, minor_version,
+                returned_status_code, returned_object_size,
+                escape_quotes(referer).c_str(),
+                escape_quotes(user_agent).c_str());
 
         fclose(fh);
         }
