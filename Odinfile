@@ -19,4 +19,4 @@ httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi' \
     rh-errors.cc
 
 %clean ! == !<<
-    rm -f httpd libscheduler/libscheduler.a
+    rm -f httpd libscheduler/libscheduler.a gmon.out
