@@ -61,6 +61,7 @@ class RequestHandler : public scheduler::event_handler
     bool parse_user_agent_header();
     bool parse_referer_header();
     bool parse_connection_header();
+    bool parse_keep_alive_header();
 
     typedef bool (RequestHandler::*parse_header_fun_t)();
     struct header_parser_t
