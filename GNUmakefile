@@ -40,7 +40,7 @@ config.o:	config.cc
 configure:	configure.ac
 	autoconf
 
-autoconf.mk:	autoconf.mk.in configure GNUmakefile
+autoconf.mk:	autoconf.mk.in configure
 	${HTTPD_AC_VARS} $(SHELL) configure ${HTTPD_AC_ARGS}
 
 install:	httpd
