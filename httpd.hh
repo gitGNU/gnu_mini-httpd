@@ -25,6 +25,8 @@ class RequestHandler : public scheduler::event_handler
     virtual void fd_is_writable(int);
     virtual void read_timeout(int);
     virtual void write_timeout(int);
+    virtual void error_condition(int);
+    virtual void pollhup(int);
 
     void read_request();
     void read_file();

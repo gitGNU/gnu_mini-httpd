@@ -125,13 +125,13 @@ void RequestHandler::fd_is_writable(int)
 	    }
 	if (buffer.size() < config->min_buffer_fill_size)
 	    {
-	    debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
+	    debug("%d: Write buffer contains %d bytes; engage read handler (on fd %d) again.", sockfd, buffer.size(), filefd);
 	    prop.poll_events   = POLLIN;
 	    prop.read_timeout  = config->file_read_timeout;
 	    mysched.register_handler(filefd, *this, prop);
 	    }
 	}
-    if (state == TERMINATE && buffer.empty())
+    else if (state == TERMINATE && buffer.empty())
 	{
 	debug("%d: Buffer is empty and we're in TERMINATE state ... terminating.", sockfd);
 	delete this;
@@ -149,6 +149,20 @@ void RequestHandler::write_timeout(int)
     {
     TRACE();
     info("%d: Write timout; terminating connection.", sockfd);
+    delete this;
+    }
+
+void RequestHandler::error_condition(int)
+    {
+    TRACE();
+    info("%d: poll() reported an error condition; terminating connection.", sockfd);
+    delete this;
+    }
+
+void RequestHandler::pollhup(int)
+    {
+    TRACE();
+    info("%d: poll() says the other end aborted; terminating connection.", sockfd);
     delete this;
     }
 
@@ -237,7 +251,7 @@ void RequestHandler::read_request()
 	    buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
 	    buffer += config->get_content_type(filename);
 	    buffer += "\r\n\r\n";
-	    debug("%d: Registering read-handler to read from file; going into WRITE_ANSWER state.", sockfd);
+	    debug("%d: Registering read-handler to read from file (fd %d); going into WRITE_ANSWER state.", sockfd, filefd);
 	    prop.poll_events  = POLLIN;
 	    prop.read_timeout = config->file_read_timeout;
 	    mysched.register_handler(filefd, *this, prop);

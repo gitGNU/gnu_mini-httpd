@@ -62,6 +62,7 @@ class TCPListener : public scheduler::event_handler
 
     virtual ~TCPListener()
 	{
+	TRACE();
 	info("Shutting TCP listener down.");
 	mysched.remove_handler(sockfd);
 	close(sockfd);
@@ -100,6 +101,16 @@ class TCPListener : public scheduler::event_handler
     virtual void write_timeout(int)
         {
         throw logic_error("This routine should not be called.");
+        }
+    virtual void error_condition(int)
+        {
+	error("TCPListener get on error condition on the socket. Terminating.");
+	delete this;
+        }
+    virtual void pollhup(int)
+        {
+	error("TCPListener get on error condition on the socket. Terminating.");
+	delete this;
         }
 
     scheduler&   mysched;
