@@ -79,7 +79,7 @@ class TCPListener : public scheduler::event_handler
 	    return;
 	    }
 	try { new connection_handlerT(mysched, streamfd, sin); }
-	catch(const exception& e)
+	catch(const std::exception& e)
 	    {
 	    error("TCPListener: Caught exception while creating connection handler: %s", e.what());
 	    close(streamfd);
@@ -92,15 +92,15 @@ class TCPListener : public scheduler::event_handler
 	}
     virtual void fd_is_writable(int)
         {
-        throw logic_error("This routine should not be called.");
+        throw std::logic_error("This routine should not be called.");
         }
     virtual void read_timeout(int)
         {
-        throw logic_error("This routine should not be called.");
+        throw std::logic_error("This routine should not be called.");
         }
     virtual void write_timeout(int)
         {
-        throw logic_error("This routine should not be called.");
+        throw std::logic_error("This routine should not be called.");
         }
     virtual void error_condition(int)
         {

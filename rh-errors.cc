@@ -7,10 +7,10 @@
 #include "config.hh"
 using namespace std;
 
-void RequestHandler::file_not_found(const string& url)
+void RequestHandler::file_not_found(const char* url)
     {
     TRACE();
-    debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, url.c_str());
+    debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, url);
     int len = snprintf(buffer, buffer_end - buffer,
                        "HTTP/1.0 404 Not Found\r\n"                                             \
                        "Content-Type: text/html\r\n"                                            \
@@ -23,7 +23,7 @@ void RequestHandler::file_not_found(const string& url)
                        "The requested page <tt>%s</tt> does not exist on this server ...\r\n"   \
                        "</body>\r\n"                                                            \
                        "</html>\r\n",
-                       url.c_str());
+                       url);
     debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
     if (len > 0 && len <= buffer_end - buffer)
         {
@@ -39,7 +39,7 @@ void RequestHandler::file_not_found(const string& url)
     mysched.register_handler(sockfd, *this, prop);
     }
 
-void RequestHandler::protocol_error(const string& message)
+void RequestHandler::protocol_error(const char* message)
     {
     TRACE();
     debug("%d: Create protocol-error page in buffer and write it back to the user.", sockfd);
@@ -58,7 +58,7 @@ void RequestHandler::protocol_error(const string& message)
                        "</blockquote>\r\n"                                              \
                        "</body>\r\n"                                                    \
                        "</html>\r\n",
-                       message.c_str());
+                       message);
     debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
     if (len > 0 && len <= buffer_end - buffer)
         {
@@ -74,10 +74,10 @@ void RequestHandler::protocol_error(const string& message)
     mysched.register_handler(sockfd, *this, prop);
     }
 
-void RequestHandler::moved_permanently(const string& url)
+void RequestHandler::moved_permanently(const char* url)
     {
     TRACE();
-    debug("%d: Create page-has-moved page to URL %s in buffer and write it back to the user.", sockfd, url.c_str());
+    debug("%d: Create page-has-moved page to URL %s in buffer and write it back to the user.", sockfd, url);
     int len = snprintf(buffer, buffer_end - buffer,
                        "HTTP/1.0 301 Moved Permanently\r\n"                             \
                        "Location: %s\r\n"                                               \
@@ -91,7 +91,7 @@ void RequestHandler::moved_permanently(const string& url)
                        "The document has moved <a href=\"%s\">here</a>.\r\n"            \
                        "</body>\r\n"                                                    \
                        "</html>\r\n",
-                       url.c_str(), url.c_str());
+                       url, url);
     debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
     if (len > 0 && len <= buffer_end - buffer)
         {

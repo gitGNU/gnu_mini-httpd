@@ -89,16 +89,16 @@ void RequestHandler::fd_is_readable(int)
 		    if (stat(filename.c_str(), &sbuf) == -1)
 			{
 			info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			file_not_found(url);
+			file_not_found(url.c_str());
 			return;
 			}
 
 		    if (S_ISDIR(sbuf.st_mode))
 			{
 			if (url[url.size()-1] == '/')
-			    moved_permanently(url + "index.html");
+			    moved_permanently((url + "index.html").c_str());
 			else
-			    moved_permanently(url + "/index.html");
+			    moved_permanently((url + "/index.html").c_str());
 			return;
 			}
 
@@ -106,7 +106,7 @@ void RequestHandler::fd_is_readable(int)
 		    if (filefd == -1)
 			{
 			info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			file_not_found(filename);
+			file_not_found(filename.c_str());
 			return;
 			}
 		    log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);

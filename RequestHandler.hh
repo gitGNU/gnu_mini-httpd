@@ -32,9 +32,9 @@ class RequestHandler : public scheduler::event_handler
     static size_t mywrite(int, const void*, size_t);
     bool write_buffer_or_queue();
 
-    void file_not_found(const std::string& url);
-    void moved_permanently(const std::string& url);
-    void protocol_error(const std::string& message);
+    void file_not_found(const char* url);
+    void moved_permanently(const char* url);
+    void protocol_error(const char* message);
     bool process_input(const char* begin, const char* end);
 
     enum state_t

@@ -4,14 +4,13 @@
  */
 
 #include <stdexcept>
-#include <string>
 #include <csignal>
 
-using namespace std;
 #include "tcp-listener.hh"
 #include "request-handler.hh"
 #include "log.hh"
 #include "config.hh"
+using namespace std;
 
 const configuration* config;
 bool got_terminate_sig = false;
