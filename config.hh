@@ -17,10 +17,14 @@ class configuration
     static unsigned int network_read_timeout;
     static unsigned int network_write_timeout;
     static unsigned int file_read_timeout;
-    static unsigned int file_read_buffer_size;
-    static unsigned int network_read_buffer_size;
-    static unsigned int buffer_too_empty_threshold;
+    //
+    static unsigned int read_block_size;
+    static unsigned int min_buffer_fill_size;
+    static unsigned int max_buffer_fill_size;
+    //
     static std::string document_root;
+    //
+    static int syslog_facility;
     };
 extern const configuration* config;
 
