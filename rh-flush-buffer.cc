@@ -17,6 +17,7 @@ bool RequestHandler::flush_buffer()
         log_access();
         if (use_persistent_connection)
             {
+            debug(("%d: Connection is persistent; restarting.", sockfd));
             reset();
             return true;
             }
