@@ -7,7 +7,7 @@
 #define HTTPREQUEST_HH
 
 #include <string>
-#include <ostream>
+#include <iostream>
 #include <ctime>
 
 // This is a wrapper class about variables where you want to keep
