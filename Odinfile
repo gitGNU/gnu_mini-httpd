@@ -3,9 +3,8 @@
 httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
 		      +lib=(libscheduler/libscheduler.a) \
                       +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
-                      +define='ENABLE_TRACER' \
-		      +optimize=0 \
-		      +debug \
+                      +define='DONT_ENABLE_TRACER' \
+		      +optimize \
                       :exe
 
 %httpd.cc.sm == <<
