@@ -9,7 +9,6 @@ OPTIMFLAGS     +=
 WARNFLAGS      +=
 DEFS	       += -DSPIRIT_DEBUG
 CPPFLAGS       +=
-CFLAGS	       +=
 CXXFLAGS       +=
 LDFLAGS	       +=
 
