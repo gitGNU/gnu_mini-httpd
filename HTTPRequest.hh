@@ -81,7 +81,7 @@ struct HTTPRequest
     resetable_variable<unsigned int> port;
     resetable_variable<std::string>  connection;
     resetable_variable<std::string>  keep_alive;
-    resetable_variable<time_t>       if_not_modified_since;
+    resetable_variable<time_t>       if_modified_since;
     resetable_variable<std::string>  user_agent;
     resetable_variable<std::string>  referer;
     };
