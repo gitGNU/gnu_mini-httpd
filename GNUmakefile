@@ -17,7 +17,7 @@ OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
 		  rh-read-request-header.o rh-read-request-line.o      \
 		  rh-setup-reply.o rh-terminate.o rh-flush-buffer.o    \
 		  rh-io-callbacks.o rh-read-request-body.o
-LIBOBJS	       += libscheduler/scheduler.o
+LIBOBJS	       +=
 LIBS	       +=
 
 .SUFFIXES:
@@ -85,12 +85,12 @@ depend::
 # Dependencies
 
 HTTPParser.o: HTTPParser.hh HTTPRequest.hh resetable-variable.hh
-config.o: log.hh version.h config.hh resetable-variable.hh
+config.o: log.hh config.hh resetable-variable.hh
 log.o: log.hh config.hh resetable-variable.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
 main.o: libscheduler/pollvector.hh RequestHandler.hh HTTPRequest.hh
-main.o: resetable-variable.hh log.hh config.hh version.h
+main.o: resetable-variable.hh log.hh config.hh
 rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
 rh-construction.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-construction.o: libscheduler/pollvector.hh HTTPRequest.hh
@@ -133,6 +133,4 @@ rh-terminate.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-terminate.o: resetable-variable.hh log.hh
 test.o: HTTPParser.hh HTTPRequest.hh resetable-variable.hh log.hh
-libscheduler/scheduler.o: libscheduler/scheduler.hh
-libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
