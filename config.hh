@@ -6,13 +6,7 @@
 #ifndef CONFIG_HH
 #define CONFIG_HH
 
-#if defined(HAVE_EXT_HASH_MAP)
-#  include <ext/hash_map>
-#elif defined(HAVE_HASH_MAP)
-#  include <hash_map>
-#else
-#  error Do not know how to include a hash map
-#endif
+#include <map>
 #include <string>
 #include <sys/types.h>
 #include "resetable-variable.hh"
@@ -65,7 +59,7 @@ class configuration
 	bool operator()(const char* lhs, const char* rhs) const
 	    { return strcasecmp(lhs, rhs) == 0; }
 	};
-    typedef std::hash_map<const char*,const char*,std::hash<const char*>,eqstr> map_t;
+    typedef std::map<const char*, const char*, eqstr> map_t;
     map_t content_types;
     };
 extern const configuration* config;

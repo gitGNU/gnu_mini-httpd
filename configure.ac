@@ -19,13 +19,6 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
-dnl What kind of std::hash_map do we have and where does the
-dnl system header for it live.
-dnl
-AC_LANG_PUSH(C++)
-AC_CHECK_HEADERS(ext/hash_map hash_map)
-AC_LANG_POP(C++)
-
 dnl If the system misses the getopt.h include or the getopt_long()
 dnl function, we use the version included in the distribution.
 dnl
