@@ -15,7 +15,6 @@
 #include "libscheduler/scheduler.hh"
 #include "RegExp/RegExp.hh"
 #include "log.hh"
-#include "file-cache.hh"
 
 class RequestHandler : public scheduler::event_handler
     {
@@ -43,7 +42,6 @@ class RequestHandler : public scheduler::event_handler
 	{
 	READ_REQUEST,
 	COPY_FILE,
-	WRITE_CACHED_FILE,
 	WRITE_REMAINING_DATA,
 	TERMINATE
 	};
@@ -59,7 +57,6 @@ class RequestHandler : public scheduler::event_handler
     char* buffer_end;
     char* data;
     char* data_end;
-    FileCache::file_object cached_file;
 
     size_t bytes_sent, bytes_received;
     size_t read_calls, write_calls;

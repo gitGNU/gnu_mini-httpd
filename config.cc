@@ -21,8 +21,6 @@ int configuration::hard_poll_interval                    = 60 sec;
 
 // Buffer sizes.
 unsigned int configuration::io_buffer_size               =  4 kb;
-int configuration::cached_file_max_size			 = 99 kb;
-unsigned int configuration::max_cache_size		 = 10 mb;
 
 // Paths.
 char* configuration::document_root                       = DOCUMENT_ROOT;

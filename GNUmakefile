@@ -15,7 +15,7 @@ LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o rh-construction.o rh-misc.o \
 		  rh-process-input.o rh-readable.o rh-timeouts.o \
-		  rh-writable.o rh-errors.o file-cache.o
+		  rh-writable.o rh-errors.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -65,37 +65,27 @@ depend::
 # Dependencies
 
 config.o: config.hh log.hh
-file-cache.o: system-error/system-error.hh log.hh file-cache.hh
-file-cache.o: refcount-auto-ptr/refcount-auto-ptr.hh
 log.o: log.hh
 main.o: tcp-listener.hh system-error/system-error.hh
 main.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
-main.o: request-handler.hh RegExp/RegExp.hh file-cache.hh
-main.o: refcount-auto-ptr/refcount-auto-ptr.hh config.hh
+main.o: request-handler.hh RegExp/RegExp.hh config.hh
 rh-construction.o: system-error/system-error.hh request-handler.hh
 rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-construction.o: RegExp/RegExp.hh log.hh file-cache.hh
-rh-construction.o: refcount-auto-ptr/refcount-auto-ptr.hh config.hh
+rh-construction.o: RegExp/RegExp.hh log.hh config.hh
 rh-errors.o: request-handler.hh libscheduler/scheduler.hh
-rh-errors.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-errors.o: file-cache.hh refcount-auto-ptr/refcount-auto-ptr.hh config.hh
+rh-errors.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh config.hh
 rh-misc.o: system-error/system-error.hh request-handler.hh
 rh-misc.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-misc.o: RegExp/RegExp.hh log.hh file-cache.hh
-rh-misc.o: refcount-auto-ptr/refcount-auto-ptr.hh config.hh
+rh-misc.o: RegExp/RegExp.hh log.hh config.hh
 rh-process-input.o: request-handler.hh libscheduler/scheduler.hh
 rh-process-input.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-process-input.o: file-cache.hh refcount-auto-ptr/refcount-auto-ptr.hh
 rh-readable.o: request-handler.hh libscheduler/scheduler.hh
-rh-readable.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-readable.o: file-cache.hh refcount-auto-ptr/refcount-auto-ptr.hh
-rh-readable.o: config.hh urldecode.hh
+rh-readable.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh config.hh
+rh-readable.o: urldecode.hh
 rh-timeouts.o: request-handler.hh libscheduler/scheduler.hh
 rh-timeouts.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-timeouts.o: file-cache.hh refcount-auto-ptr/refcount-auto-ptr.hh
 rh-writable.o: request-handler.hh libscheduler/scheduler.hh
 rh-writable.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-writable.o: file-cache.hh refcount-auto-ptr/refcount-auto-ptr.hh
 libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh

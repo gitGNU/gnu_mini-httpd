@@ -30,22 +30,13 @@ void RequestHandler::fd_is_writable(int)
 		}
 	    }
 
-	if ((state == COPY_FILE || state == WRITE_CACHED_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
+	if ((state == COPY_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
 	    {
 	    size_t rc = mywrite(sockfd, data, data_end - data);
 	    bytes_sent += rc;
 	    data       += rc;
 	    ++write_calls;
 	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
-	    }
-
-	if (state == WRITE_CACHED_FILE && data == data_end)
-	    {
-	    delete[] buffer; buffer = 0;
-	    data     = const_cast<char*>(cached_file.data.get());
-	    data_end = data + cached_file.data_len;
-	    state    = WRITE_REMAINING_DATA;
-	    debug("%d: Wrote header successfully: Going into WRITE_REMAINING_DATA state.", sockfd);
 	    }
 
 	if (state == WRITE_REMAINING_DATA && data == data_end)
