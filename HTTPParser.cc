@@ -56,6 +56,7 @@ HTTPParser::HTTPParser()
     field_name    = token;
     Header        = ( field_name[ref(res_name)] >> *LWS >> ":" >> *LWS >> !( field_value[ref(res_data)] ) ) >> CRLF;
 
+    Host_Header   = Host[ref(res_host)] >> !( ":" >> uint_p[ref(res_port)] );
 
 #if 0
     CRLF            = CR >> LF;
@@ -180,9 +181,6 @@ HTTPParser::HTTPParser()
 
     general_header  = Connection | Date | Transfer_Encoding;
 
-    Host            = str_p("Host") >> *LWS >> ":" >> *LWS >>
-                      host[ref(HTTPRequest::host)] >>
-                      !( ":" >> uint_p[ref(HTTPRequest::port)] );
 
     request_header  = Host;
 

@@ -51,6 +51,16 @@ class RequestHandler : public scheduler::event_handler
     typedef bool (RequestHandler::*state_fun_t)();
     static const state_fun_t state_handlers[];
 
+    bool parse_host_header();
+
+    typedef bool (RequestHandler::*parse_header_fun_t)();
+    struct header_parser_t
+        {
+        const char*        name;
+        parse_header_fun_t parser;
+        };
+    static const header_parser_t header_parsers[];
+
     void protocol_error(const char*);
     void file_not_found(const char*);
     void moved_permanently(const char*);

@@ -37,7 +37,7 @@ class HTTPParser
         uric, Query, http_URL, Request_URI, HTTP_Version,
         Request_Line, CTL, TEXT, separators, token, LWS,
         quoted_pair, qdtext, quoted_string, field_content,
-        field_value, field_name, Header;
+        field_value, field_name, Header, Host_Header;
 
     static bool have_complete_header_line(std::string::const_iterator begin, std::string::const_iterator end)
         {
