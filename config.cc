@@ -23,15 +23,18 @@ int configuration::hard_poll_interval                    = 60 sec;
 unsigned int configuration::max_line_length              =  4 kb;
 
 // Paths.
-char* configuration::document_root                       = DOCUMENT_ROOT;
-char* configuration::default_page                        = "index.html";
-char* configuration::logfile                             = LOGFILE;
+string configuration::document_root                      = PREFIX "/htdocs";
+string configuration::default_page                       = "index.html";
+string configuration::logfile_directory                  = PREFIX "/logs";
+string configuration::chroot_directory                   = PREFIX;
 
 // Miscellaneous.
+string configuration::server_string                      = "peti-httpd";
 char* configuration::default_content_type                = "application/octet-stream";
 unsigned int configuration::http_port                    = 8080;
 uid_t configuration::setuid_user                         = 2;
 gid_t configuration::setgid_group                        = 2;
+
 
 configuration::configuration()
     {
@@ -156,3 +159,22 @@ configuration::~configuration()
     {
     TRACE();
     }
+
+const char* configuration::get_content_type(const char* filename) const
+    {
+    const char* last_dot;
+    const char* current;
+    for (current = filename, last_dot = 0; *current != '\0'; ++current)
+	if (*current == '.')
+	    last_dot = current;
+    if (last_dot == 0)
+	return default_content_type;
+    else
+	++last_dot;
+    map_t::const_iterator i = content_types.find(last_dot);
+    if (i != content_types.end())
+ 	return i->second;
+    else
+	return default_content_type;
+    }
+

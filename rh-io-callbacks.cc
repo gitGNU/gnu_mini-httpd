@@ -32,10 +32,9 @@ void RequestHandler::fd_is_readable(int)
             return;
             }
 
-        // Read sockfd stuff into the buffer.
+        // Read sockfd stuff into the line buffer.
 
-        char buf[4096];
-        ssize_t rc = read(sockfd, buf, sizeof(buf));
+        ssize_t rc = read(sockfd, line_buffer, config->max_line_length);
         if (rc < 0)
             throw system_error("read() failed");
         else if (rc == 0)
@@ -44,7 +43,7 @@ void RequestHandler::fd_is_readable(int)
             state = TERMINATE;
             }
         else
-            read_buffer.append(buf, rc);
+            read_buffer.append(line_buffer, rc);
 
         // Call the state handler.
 
@@ -140,4 +139,20 @@ void RequestHandler::pollhup(int)
         info("Connection to %s was terminated by peer.", peer_address);
         delete this;
         }
+    }
+
+void RequestHandler::go_to_read_mode()
+    {
+    scheduler::handler_properties prop;
+    prop.poll_events   = POLLIN;
+    prop.read_timeout  = config->network_read_timeout;
+    mysched.register_handler(sockfd, *this, prop);
+    }
+
+void RequestHandler::go_to_write_mode()
+    {
+    scheduler::handler_properties prop;
+    prop.poll_events   = POLLOUT;
+    prop.write_timeout = config->network_write_timeout;
+    mysched.register_handler(sockfd, *this, prop);
     }

@@ -4,9 +4,16 @@
  */
 
 #include "RequestHandler.hh"
+#include "escape-html-specials.hh"
 #include "config.hh"
 #include "log.hh"
 using namespace std;
+
+void RequestHandler::make_standard_header(ostringstream& os)
+    {
+
+
+    }
 
 void RequestHandler::protocol_error(const string& message)
     {
@@ -30,15 +37,13 @@ void RequestHandler::protocol_error(const string& message)
         << "</body>\r\n"
         << "</html>\r\n";
     write_buffer = buf.str();
-    request_status_code = 400;
+    request.status_code = 400;
+    request.object_size = 0;
     state = FLUSH_BUFFER_AND_TERMINATE;
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_write_mode();
     }
 
-void RequestHandler::file_not_found(const string& url)
+void RequestHandler::file_not_found()
     {
     TRACE();
     //debug(("%d: file '%s' not found; going into FLUSH_BUFFER_AND_TERMINATE state.", sockfd, url));
@@ -53,19 +58,17 @@ void RequestHandler::file_not_found(const string& url)
         << "  <title>Page does not exist!</title>\r\n"
         << "</head>\r\n"
         << "<body>\r\n"
-        << "<p>The requested page <tt>" << url << "</tt> does not exist on this server ...</p>\r\n"
+        << "<p>The requested page <tt></tt> does not exist on this server ...</p>\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
     write_buffer = buf.str();
-    request_status_code = 404;
+    request.status_code = 404;
+    request.object_size = 0;
     state = FLUSH_BUFFER_AND_TERMINATE;
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_write_mode();
     }
 
-void RequestHandler::moved_permanently(const string& url)
+void RequestHandler::moved_permanently(const string& path)
     {
     TRACE();
     //debug(("%d: Requested page has moved to '%s'; going into FLUSH_BUFFER_AND_TERMINATE state.", sockfd, url));
@@ -73,7 +76,7 @@ void RequestHandler::moved_permanently(const string& url)
     ostringstream buf;
     buf << "HTTP/1.1 301 Moved Permanently\r\n"
         << "Location: http://" << request.host;
-    buf << url << "\r\n"
+    buf << path << "\r\n"
         << "Content-Type: text/html\r\n"
         << "Connection: close\r\n"
         << "\r\n"
@@ -85,16 +88,14 @@ void RequestHandler::moved_permanently(const string& url)
         << "The document has moved <a href=\"http://" << request.host;
     if (request.port != 80)
         buf << ":" << request.port;
-    buf << url << "\">here</a>.\r\n"
+    buf << path << "\">here</a>.\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
-    write_buffer = buf.str();
-    request_status_code = 301;
+    write_buffer        = buf.str();
+    request.status_code = 301;
+    request.object_size = 0;
     state = FLUSH_BUFFER_AND_TERMINATE;
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_write_mode();
     }
 
 void RequestHandler::not_modified()
@@ -106,10 +107,7 @@ void RequestHandler::not_modified()
     buf << "HTTP/1.1 304 Not Modified\r\n";
     buf << "\r\n";
     write_buffer = buf.str();
-    request_status_code = 304;
+    request.status_code = 304;
     state = FLUSH_BUFFER_AND_TERMINATE;
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_write_mode();
     }

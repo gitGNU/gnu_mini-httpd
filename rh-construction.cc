@@ -3,14 +3,19 @@
  * All rights reserved.
  */
 
+#include <stdexcept>
+#include <cstdlib>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include "ScopeGuard/ScopeGuard.hh"
 #include "system-error/system-error.hh"
 #include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"
+
+using namespace std;
 
 unsigned int RequestHandler::instances = 0;
 
@@ -47,11 +52,19 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
         throw system_error("Can set non-blocking mode");
 
+    // Allocate our line buffer for reading.
+
+    line_buffer = static_cast<char*>(malloc(config->max_line_length));
+    if (line_buffer == 0)
+        throw runtime_error("Failed to allocate memory for the internal line buffer.");
+    ScopeGuard sg_line_buffer = MakeGuard(free, line_buffer);
+
     // Initialize internal variables.
 
     reset();
     debug(("%d: Accepted new connection from peer '%s'.", sockfd, peer_address));
     ++instances;
+    sg_line_buffer.Dismiss();
     }
 
 void RequestHandler::reset()
@@ -69,13 +82,9 @@ void RequestHandler::reset()
         }
 
     request = HTTPRequest();
+    request.start_up_time = time(0);
 
-    // Register ourself with the scheduler.
-
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLIN;
-    prop.read_timeout  = config->network_read_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_read_mode();
     }
 
 RequestHandler::~RequestHandler()
@@ -87,7 +96,11 @@ RequestHandler::~RequestHandler()
     --instances;
 
     mysched.remove_handler(sockfd);
+
     close(sockfd);
+
     if (filefd >= 0)
 	close(filefd);
+
+    free(line_buffer);
     }

@@ -62,10 +62,10 @@ inline std::ostream& operator<< (std::ostream& os, const resetable_variable<varT
 
 struct URL
     {
-    resetable_variable<std::string>  host;
+    std::string                      host;
     resetable_variable<unsigned int> port;
     std::string                      path;
-    resetable_variable<std::string>  query;
+    std::string                      query;
     };
 
 
@@ -73,17 +73,20 @@ struct URL
 
 struct HTTPRequest
     {
+    time_t                           start_up_time;
     std::string                      method;
     URL                              url;
     unsigned int                     major_version;
     unsigned int                     minor_version;
-    resetable_variable<std::string>  host;
+    std::string                      host;
     resetable_variable<unsigned int> port;
-    resetable_variable<std::string>  connection;
-    resetable_variable<std::string>  keep_alive;
+    std::string                      connection;
+    std::string                      keep_alive;
     resetable_variable<time_t>       if_modified_since;
-    resetable_variable<std::string>  user_agent;
-    resetable_variable<std::string>  referer;
+    std::string                      user_agent;
+    std::string                      referer;
+    resetable_variable<unsigned int> status_code;
+    resetable_variable<size_t>       object_size;
     };
 
 #endif // !defined(HTTPREQUEST_HH)

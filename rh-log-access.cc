@@ -34,7 +34,7 @@ void RequestHandler::log_access()
 
     // Construct the path of the logfile.
 
-    string logfile = config->logfile_directory;
+    string logfile = config->logfile_directory + "/";
     if (request.host.empty())
         logfile += "no-hostname";
     else
@@ -46,7 +46,7 @@ void RequestHandler::log_access()
 
     char object_size[32];
     if (request.object_size.empty())
-        strcpy("-", object_size);
+        strcpy(object_size, "-");
     else
         {
         int len = snprintf(object_size, sizeof(object_size), "%u", request.object_size.data());

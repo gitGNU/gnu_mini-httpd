@@ -13,11 +13,10 @@ CXXFLAGS       +=
 LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
-		  rh-copy-file.o rh-errors.o rh-read-request-body.o    \
+		  rh-copy-file.o rh-standard-replies.o rh-log-access.o \
 		  rh-read-request-header.o rh-read-request-line.o      \
 		  rh-setup-reply.o rh-terminate.o rh-flush-buffer.o    \
-		  rh-io-callbacks.o rh-log-access.o
-
+		  rh-io-callbacks.o rh-read-request-body.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -36,9 +35,7 @@ httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
 config.o:	config.cc
-	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" \
-	       -DLOGFILE=\"/home/simons/projects/httpd/logfiles/%s-access\" \
-		$(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
+	$(CXX) -DPREFIX=\"$(prefix)\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
 configure:	configure.ac
 	autoconf
@@ -192,27 +189,27 @@ main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
 main.o: libscheduler/pollvector.hh log.hh RequestHandler.hh HTTPRequest.hh
 main.o: config.hh
-rh-construction.o: system-error/system-error.hh RequestHandler.hh
-rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-construction.o: HTTPRequest.hh config.hh log.hh
+rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
+rh-construction.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-construction.o: libscheduler/pollvector.hh HTTPRequest.hh config.hh
+rh-construction.o: log.hh
 rh-copy-file.o: system-error/system-error.hh RequestHandler.hh
 rh-copy-file.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 rh-copy-file.o: HTTPRequest.hh log.hh
-rh-errors.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-errors.o: libscheduler/pollvector.hh HTTPRequest.hh config.hh log.hh
 rh-read-request-line.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-line.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-read-request-line.o: HTTPParser.hh urldecode.hh log.hh
 rh-log-access.o: system-error/system-error.hh RequestHandler.hh
 rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-log-access.o: HTTPRequest.hh timestamp-to-string.hh escape-char.hh
-rh-log-access.o: config.hh log.hh
+rh-log-access.o: HTTPRequest.hh timestamp-to-string.hh
+rh-log-access.o: search-and-replace.hh config.hh log.hh
 rh-persistent-connections.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-persistent-connections.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-persistent-connections.o: config.hh log.hh
 rh-setup-reply.o: system-error/system-error.hh RequestHandler.hh
 rh-setup-reply.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-setup-reply.o: HTTPRequest.hh timestamp-to-string.hh config.hh log.hh
+rh-setup-reply.o: HTTPRequest.hh timestamp-to-string.hh
+rh-setup-reply.o: escape-html-specials.hh urldecode.hh config.hh log.hh
 rh-terminate.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
 rh-read-request-body.o: RequestHandler.hh libscheduler/scheduler.hh
@@ -338,6 +335,9 @@ spirit/libs/example/xml/xml.o: spirit/libs/example/xml/xml_grammar.hpp
 rh-read-request-header.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-header.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-read-request-header.o: HTTPParser.hh log.hh
+rh-standard-replies.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-standard-replies.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-standard-replies.o: escape-html-specials.hh config.hh log.hh
 test.o: HTTPParser.hh HTTPRequest.hh log.hh
 rh-flush-buffer.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-flush-buffer.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh

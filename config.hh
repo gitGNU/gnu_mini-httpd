@@ -28,21 +28,23 @@ class configuration
     static unsigned int network_write_timeout;
     static unsigned int file_read_timeout;
     static unsigned int hard_poll_interval_threshold;
-    static int hard_poll_interval;
+    static int          hard_poll_interval;
 
     // Buffer sizes.
     static unsigned int max_line_length;
 
     // Paths.
-    static char* document_root;
-    static char* default_page;
-    static char* logfile;
+    static std::string  document_root;
+    static std::string  default_page;
+    static std::string  logfile_directory;
+    static std::string  chroot_directory;
 
     // Miscellaneous.
-    static char* default_content_type;
+    static char*        default_content_type;
     static unsigned int http_port;
-    static uid_t setuid_user;
-    static gid_t setgid_group;
+    static std::string  server_string;
+    static uid_t        setuid_user;
+    static gid_t        setgid_group;
 
     // Content-type mapping.
     const char* get_content_type(const char* filename) const;
@@ -60,23 +62,5 @@ class configuration
     map_t content_types;
     };
 extern const configuration* config;
-
-inline const char* configuration::get_content_type(const char* filename) const
-    {
-    const char* last_dot;
-    const char* current;
-    for (current = filename, last_dot = 0; *current != '\0'; ++current)
-	if (*current == '.')
-	    last_dot = current;
-    if (last_dot == 0)
-	return default_content_type;
-    else
-	++last_dot;
-    map_t::const_iterator i = content_types.find(last_dot);
-    if (i != content_types.end())
- 	return i->second;
-    else
-	return default_content_type;
-    }
 
 #endif

@@ -45,6 +45,11 @@ class RequestHandler : public scheduler::event_handler
     virtual void error_condition(int fd);
     virtual void pollhup(int fd);
 
+    // Helper functions to save some typing.
+
+    void go_to_read_mode();
+    void go_to_write_mode();
+
   private:
     // The whole class is implemented as a state machine. Depending on
     // the contents of the state variable, the appropriate state
@@ -88,9 +93,15 @@ class RequestHandler : public scheduler::event_handler
     // replies of the server. The names should be rather descriptive.
 
     void protocol_error(const std::string& message);
-    void file_not_found(const std::string& url);
-    void moved_permanently(const std::string& url);
+    void moved_permanently(const std::string& path);
+    void file_not_found();
     void not_modified();
+    void make_standard_header(std::ostringstream& os);
+
+  private:
+    // The routine for making the logfile entries.
+
+    void log_access();
 
   private:
     // Our I/O interface.
@@ -99,14 +110,13 @@ class RequestHandler : public scheduler::event_handler
     int         sockfd;
     std::string read_buffer;
     std::string write_buffer;
+    char*       line_buffer;
 
   private:
     // Information associated with the HTTP request.
 
     char         peer_address[64];
     HTTPRequest  request;
-    unsigned int request_status_code;
-    size_t       object_size;
 
   private:
     // Information about the file associated with the request.

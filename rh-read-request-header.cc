@@ -41,7 +41,7 @@ bool RequestHandler::get_request_header()
                     }
                 else
                     debug(("%d: Read Host header: host = '%s', port = %d", sockfd,
-                           request.host.data().c_str(),
+                           request.host.c_str(),
                            ((request.port.empty()) ? -1 : static_cast<int>(request.port.data()))));
                 }
             else if (strcasecmp("If-Modified-Since", name.c_str()) == 0)

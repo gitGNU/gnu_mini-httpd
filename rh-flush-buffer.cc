@@ -15,7 +15,7 @@ bool RequestHandler::flush_buffer_and_reset()
     if (write_buffer.empty())
         {
         debug(("%d: Request is finished; restarting handler.", sockfd));
-        //log_access();
+        log_access();
         reset();
         return true;
         }
@@ -29,7 +29,7 @@ bool RequestHandler::flush_buffer_and_terminate()
 
     if (write_buffer.empty())
         {
-        //log_access();
+        log_access();
         debug(("%d: Request is finished; going into TERMINATE state.", sockfd));
         state = TERMINATE;
         if (shutdown(sockfd, SHUT_RDWR) == -1)

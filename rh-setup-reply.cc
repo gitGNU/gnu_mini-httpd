@@ -53,7 +53,7 @@ bool RequestHandler::setup_reply()
     // Now that we have the whole request, we can get to work. Let's
     // start by testing whether we understand the request at all.
 
-    if (request.method == "GET" && request.method != "HEAD")
+    if (request.method != "GET" && request.method != "HEAD")
         {
         protocol_error(string("<p>This server does not support an HTTP request called <tt>")
                        + escape_html_specials(request.method) + "</tt>.</p>\r\n");
