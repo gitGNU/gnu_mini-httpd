@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <cstdio>
 #include "request-handler.hh"
 #include "config.hh"
 using namespace std;
