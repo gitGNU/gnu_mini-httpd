@@ -35,7 +35,7 @@ class RequestHandler : public scheduler::event_handler
     void file_not_found(const char* url);
     void moved_permanently(const char* url);
     void protocol_error(const char* message);
-    bool process_input(const char* begin, const char* end);
+    bool process_input(char* begin, char* end);
 
     enum state_t
 	{
