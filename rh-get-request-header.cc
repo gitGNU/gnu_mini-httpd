@@ -12,11 +12,12 @@ using namespace spirit;
 
 const RequestHandler::header_parser_t RequestHandler::header_parsers[] =
     {
-    { "host",       &RequestHandler::parse_host_header       },
-    { "user-agent", &RequestHandler::parse_user_agent_header },
-    { "referer",    &RequestHandler::parse_referer_header    },
-    { "connection", &RequestHandler::parse_connection_header },
-    { "keep-alive", &RequestHandler::parse_keep_alive_header },
+    { "host",                   &RequestHandler::parse_host_header              },
+    { "user-agent",             &RequestHandler::parse_user_agent_header        },
+    { "referer",                &RequestHandler::parse_referer_header           },
+    { "connection",             &RequestHandler::parse_connection_header        },
+    { "keep-alive",             &RequestHandler::parse_keep_alive_header        },
+    { "if-modified-since",      &RequestHandler::parse_if_modified_since_header },
     { 0, 0 }                    // end of array
     };
 
@@ -125,5 +126,13 @@ bool RequestHandler::parse_keep_alive_header()
 
     debug(("%d: Keep-Alive header: data = '%s'", sockfd, http_parser.res_data.c_str()));
     keep_alive = http_parser.res_data;
+    return true;
+    }
+
+bool RequestHandler::parse_if_modified_since_header()
+    {
+    TRACE();
+    debug(("%d: If-Modified-Since header: data = '%s'", sockfd, http_parser.res_data.c_str()));
+
     return true;
     }

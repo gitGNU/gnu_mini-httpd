@@ -62,6 +62,7 @@ class RequestHandler : public scheduler::event_handler
     bool parse_referer_header();
     bool parse_connection_header();
     bool parse_keep_alive_header();
+    bool parse_if_modified_since_header();
 
     typedef bool (RequestHandler::*parse_header_fun_t)();
     struct header_parser_t
@@ -89,6 +90,7 @@ class RequestHandler : public scheduler::event_handler
     unsigned int returned_status_code;
     size_t returned_object_size;
     unsigned int minor_version, major_version;
+    time_t if_modified_since;
 
     size_t bytes_sent, bytes_received;
     timeval connection_start;
