@@ -39,6 +39,7 @@ void RequestHandler::fd_is_writable(int)
 
 	if (state == WRITE_CACHED_FILE && data == data_end)
 	    {
+	    delete[] buffer; buffer = 0;
 	    data     = const_cast<char*>(cached_file.data.get());
 	    data_end = data + cached_file.data_len;
 	    state    = WRITE_REMAINING_DATA;

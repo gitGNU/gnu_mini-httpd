@@ -79,5 +79,6 @@ RequestHandler::~RequestHandler()
     close(sockfd);
     if (filefd >= 0)
 	close(filefd);
-    delete[] buffer;
+    if (buffer != 0)
+	delete[] buffer;
     }
