@@ -193,7 +193,7 @@ HTTPParser::HTTPParser()
     hostname      = *( domainlabel >> '.' ) >> toplabel >> !ch_p('.');
     IPv4address   = (+digit_p >> '.' ).repeat(3) >> +digit_p;
     Host          = hostname | IPv4address;
-    Method        = str_p("GET") | "HEAD";
+    Method        = token;
     uric          = reserved | unreserved | escaped;
     Query         = *uric;
     http_URL      = nocase_d["http://"]
