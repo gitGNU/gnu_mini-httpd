@@ -3,8 +3,8 @@ have to do is the usual routine:</para>
 
   <screen>
 ./configure
-make
-make install</screen>
+gmake
+gmake install</screen>
 
   <para>Be adviced, though, that the <command>configure</command> script
 included in this distribution does not behave exactly like you will know from
