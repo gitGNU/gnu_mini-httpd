@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "libscheduler/scheduler.hh"
 #include "HTTPRequest.hh"
 
@@ -112,6 +114,7 @@ class RequestHandler : public scheduler::event_handler
     std::string document_root;
     std::string filename;
     int         filefd;
+    struct stat file_stat;
 
   public:
     // The number of instantiated RequestHandlers.
