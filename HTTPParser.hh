@@ -6,8 +6,15 @@
 #ifndef HTTPPARSER_HH
 #define HTTPPARSER_HH
 
+#include <string>
 #include <boost/spirit/spirit_rule.hpp>
 #include <boost/spirit/utility/chset.hpp>
+
+struct HTTPRequest
+    {
+    unsigned int major_version, minor_version;
+    std::string method;
+    };
 
 class HTTPParser
     {
@@ -20,8 +27,9 @@ class HTTPParser
     typedef spirit::parse_info<iterator_type>     parse_info_type;
 
     HTTPParser();
-    bool operator() (iterator_type begin, iterator_type end)
+    bool operator() (iterator_type begin, iterator_type end, HTTPRequest& request) const
         {
+        req = &request;
         return parse(begin, end, Request).full;
         }
 
@@ -43,6 +51,9 @@ class HTTPParser
         wkday, date1, date2, date3, month, time, weekday, product,
         product_version, Host, extension_header, message_header,
         field_value, field_content, extension_method;
+
+  private:
+    mutable HTTPRequest* req;
     };
 
 #endif // !defined(HTTPPARSER_HH)

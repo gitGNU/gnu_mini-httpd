@@ -5,23 +5,38 @@
  */
 
 #include "HTTPParser.hh"
+#include <boost/spirit/utility/numerics.hpp>
+#include <boost/spirit/attr/semantics.hpp>
 
 using namespace std;
 using namespace spirit;
+
+class assign
+    {
+  public:
+    assign(string& dst_) : dst(dst_) { }
+    void operator() (const char* begin, const char* end) const
+        {
+        dst = string(begin, end);
+        }
+  private:
+    string& dst;
+    };
 
 HTTPParser::HTTPParser()
         : SP   (32),
           CR   (13),
           LF   (10),
           HT   (9),
-          CHAR (0, 127)
+          CHAR (0, 127),
+          req(0)
     {
     Request         = Request_Line
                       >> *(( general_header | request_header | entity_header ) >> CRLF )
                       >> CRLF
                       >> !message_body;
 
-    Request_Line    = Method >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
+    Request_Line    = Method[ref(req->method)] >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
 
     Method          = str_p("OPTIONS")
                       | "GET"
@@ -35,7 +50,8 @@ HTTPParser::HTTPParser()
 
     extension_method = token;
 
-    HTTP_Version    = str_p("HTTP") >> '/' >> +digit_p >> '.' >> +digit_p;
+    HTTP_Version    = str_p("HTTP") >> '/' >> uint_p[ref(req->major_version)] >>
+                      '.' >> uint_p[ref(req->minor_version)];
 
     Request_URI     = '*' | absoluteURI | abs_path | authority;
 

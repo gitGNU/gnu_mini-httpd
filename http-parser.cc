@@ -36,7 +36,8 @@ try
 
     // Parse it.
 
-    if (parser(buffer.data(), buffer.data() + buffer.size()))
+    HTTPRequest request;
+    if (parser(buffer.data(), buffer.data() + buffer.size(), request))
         cout << "The request is correct." << endl;
     else
         cout << "Syntax error in request." << endl;
