@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 #include "request-handler.hh"
+#include "system-error.hh"
 using namespace std;
 
 void RequestHandler::register_network_read_handler()
@@ -94,7 +95,7 @@ size_t RequestHandler::myread(int fd, void* buf, size_t size)
 	if (errno == EAGAIN || errno == EINTR)
 	    return 0;
 	else
-	    throw runtime_error("read() failed with an error");
+	    throw system_error("read() failed with an error");
 	}
     return rc;
     }
@@ -108,7 +109,7 @@ size_t RequestHandler::mywrite(int fd, const void* buf, size_t size)
 	if (errno == EAGAIN || errno == EINTR)
 	    return 0;
 	else
-	    throw runtime_error("write() failed with an error");
+	    throw system_error("write() failed with an error");
 	}
     return rc;
     }
