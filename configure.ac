@@ -52,7 +52,5 @@ AC_ARG_WITH(debug, [  --with-debug            Support debugging? (default: yes)]
 
 dnl Write results.
 dnl
-AC_CONFIG_AUX_DIR(spirit)
-AC_CONFIG_SUBDIRS(spirit)
 AC_CONFIG_FILES(autoconf.mk)
 AC_OUTPUT
