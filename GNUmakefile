@@ -5,9 +5,9 @@ include autoconf.mk
 
 DESTDIR		=
 
-OPTIMFLAGS     += -O0
+OPTIMFLAGS     +=
 WARNFLAGS      +=
-DEFS	       += -DSPIRIT_DEBUG
+DEFS	       += #-DSPIRIT_DEBUG
 CPPFLAGS       +=
 CFLAGS	       +=
 CXXFLAGS       +=
@@ -15,7 +15,7 @@ LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o rh-construction.o rh-misc.o \
 		  rh-process-input.o rh-readable.o rh-timeouts.o \
-		  rh-writable.o rh-errors.o uri.o
+		  rh-writable.o rh-errors.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -30,7 +30,7 @@ all:		httpd http-parser
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
-http-parser:	http-parser.o uri.o
+http-parser:	http-parser.o
 	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
 config.o:	config.cc
@@ -95,5 +95,4 @@ libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 RegExp/test.o: RegExp/RegExp.hh
-http-parser.o: uri.hh
-uri.o: uri.hh
+http-parser.o: system-error/system-error.hh
