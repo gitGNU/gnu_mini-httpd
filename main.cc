@@ -27,11 +27,11 @@ try
     }
 catch(const exception& e)
     {
-    log(ERROR, "Caught exception: %s", e.what());
+    error("Caught exception: %s", e.what());
     return 1;
     }
 catch(...)
     {
-    log(ERROR, "Caught unknown exception.");
+    error("Caught unknown exception.");
     return 1;
     }

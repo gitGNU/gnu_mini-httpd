@@ -58,12 +58,12 @@ class TCPListener : public scheduler::event_handler
 	prop.write_timeout = 0;
 	mysched.register_handler(sockfd, *this, prop);
 
-	log(INFO, "Listening on TCP port %d for incoming requests ...", port_no);
+	info("Listening on TCP port %d for incoming requests ...", port_no);
 	}
 
     virtual ~TCPListener()
 	{
-	log(INFO, "Shutting TCP listener down.");
+	info("Shutting TCP listener down.");
 	mysched.remove_handler(sockfd);
 	close(sockfd);
 	}
@@ -75,23 +75,18 @@ class TCPListener : public scheduler::event_handler
 	int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
 	if (streamfd == -1)
 	    {
-	    log(ERROR, "TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
+	    error("TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
 	    return;
 	    }
-	try
-	    {
-	    log(INFO, "Will create connection handler for the new connecton on fd %d.", streamfd);
-	    new connection_handlerT(mysched, streamfd, sin);
-	    log(INFO, "Created it.");
-	    }
+	try { new connection_handlerT(mysched, streamfd, sin); }
 	catch(const exception& e)
 	    {
-	    log(ERROR, "TCPListener: Caught exception while creating connection handler: %s", e.what());
+	    error("TCPListener: Caught exception while creating connection handler: %s", e.what());
 	    close(streamfd);
 	    }
 	catch(...)
 	    {
-	    log(ERROR, "TCPListener: Caught unknown exception while creating connection handler.");
+	    error("TCPListener: Caught unknown exception while creating connection handler.");
 	    close(streamfd);
 	    }
 	}
