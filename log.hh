@@ -32,7 +32,7 @@ void error(const char* fmt, ...) throw();
 
 inline void log_access(bool success, const char* host, const char* url, const char* peer,
 		       int sock, const timeval& runtime, size_t received, size_t sent,
-		       size_t read_calls, size_t write_calls)
+		       size_t read_calls, size_t write_calls) throw()
     {
     info("%s: host = '%s'; url = '%s'; peer = '%s'; socket = %d; runtime = %u.%u; " \
 	 "received = %u; sent = %u; read calls = %u; write calls = %u",
