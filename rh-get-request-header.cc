@@ -130,27 +130,64 @@ bool RequestHandler::parse_keep_alive_header()
     return true;
     }
 
+static inline bool is_consistent_date(struct tm& date)
+    {
+    if (date.tm_year < 1970)
+        return false;           // Can't be converted to time_t.
+    if (date.tm_hour > 23)
+        return false;
+    if (date.tm_min > 59)
+        return false;
+    if (date.tm_sec > 59)
+        return false;
+
+    switch(date.tm_mon)
+        {
+        case 0:
+        case 2:
+        case 4:
+        case 6:
+        case 7:
+        case 9:
+        case 11:
+            if (date.tm_mday > 31)
+                return false;
+            break;
+        case 1:
+            if (date.tm_mday > 30) // Only an approximation ... But who cares?
+                return false;
+            break;
+        case 3:
+        case 5:
+        case 8:
+        case 10:
+            if (date.tm_mday > 30)
+                return false;
+            break;
+        default:
+            throw logic_error("The month in HTTPParser::res_date is screwed badly.");
+        }
+    return true;
+    }
+
 bool RequestHandler::parse_if_modified_since_header()
     {
     TRACE();
-    debug(("%d: If-Modified-Since header: data = '%s'", sockfd, http_parser.res_data.c_str()));
 
-    HTTPParser::parse_info_t info = parse(http_parser.res_data.data(),
+    memset(&http_parser.res_date, 0, sizeof(http_parser.res_date));
+
+    HTTPParser::parse_info_t pinfo = parse(http_parser.res_data.data(),
                                           http_parser.res_data.data() + http_parser.res_data.size(),
                                           http_parser.If_Modified_Since_Header);
-    if (info.full)
+
+    if (pinfo.full && is_consistent_date(http_parser.res_date))
         {
-#if 0
-        time_t tmp = mktime(&http_parser.res_date);
-        if (tmp >= 0)
-            {
-            if_modified_since = tmp;
-            return true;
-            }
-#else
+        http_parser.res_date.tm_year -= 1900; // prepare for mktime()
+        if_modified_since = mktime(&http_parser.res_date);
         return true;
-#endif
         }
-    protocol_error("Malformed <tt>If-Modified-Since</tt> header.\r\n");
+
+    info("%s: Ignoring malformed If-Modified-Since header: '%s'.",
+         peer_addr_str, http_parser.res_data.c_str());
     return false;
     }
