@@ -40,7 +40,8 @@ class RequestHandler : public scheduler::event_handler
     enum state_t
 	{
 	READ_REQUEST,
-	WRITE_ANSWER,
+	COPY_FILE,
+	WRITE_REMAINING_DATA,
 	TERMINATE
 	};
     state_t state;

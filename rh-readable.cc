@@ -39,7 +39,7 @@ void RequestHandler::fd_is_readable(int)
 	debug("%d: Read %d bytes from network peer.", sockfd, rc);
 	if (rc == 0)
 	    {
-	    debug("%d: Connection was dropped by the peer. Aborting.", sockfd);
+	    debug("%d: Peer has shut down his channel of the connection.", sockfd);
 	    delete this;
 	    return;
 	    }
@@ -110,16 +110,14 @@ void RequestHandler::fd_is_readable(int)
 			return;
 			}
 		    log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
-		    debug("%d: Going into WRITE_ANSWER state.", sockfd);
-		    state = WRITE_ANSWER;
-		    debug("%d: The snprintf() call may use %d bytes in the buffer.", sockfd, buffer_end - buffer);
+		    debug("%d: Going into COPY_FILE state.", sockfd);
+		    state = COPY_FILE;
 		    int len = snprintf(buffer, buffer_end - buffer,
 				       "HTTP/1.0 200 OK\r\n"     \
 				       "Content-Type: %s\r\n"    \
 				       "Content-Length: %ld\r\n" \
 				       "\r\n",
 				       config->get_content_type(filename.c_str()), sbuf.st_size);
-		    debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
 		    if (len > 0 && len <= buffer_end - buffer)
 			{
 			data     = buffer;

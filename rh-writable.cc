@@ -12,39 +12,43 @@ void RequestHandler::fd_is_writable(int)
     TRACE();
     try
  	{
-	size_t rc;
-	if (state == WRITE_ANSWER)
+	if (state == COPY_FILE && data_end == data)
 	    {
-	    if (data_end == data)
-		{
-		// Buffer is empty. Read new data from file before
-		// continuing.
+	    // Buffer is empty. Read new data from file before
+	    // continuing.
 
-		rc = myread(filefd, buffer, buffer_end - buffer);
-		debug("%d: Read %d bytes from file.", sockfd, rc);
-		data     = buffer;
-		data_end = data + rc;
-		if (rc == 0)
-		    {
-		    debug("%d: The complete file is copied, we're done.", sockfd);
-		    state = TERMINATE;
-		    close(filefd);
-		    filefd = -1;
-		    }
+	    size_t rc = myread(filefd, buffer, buffer_end - buffer);
+	    debug("%d: Read %d bytes from file.", sockfd, rc);
+	    data     = buffer;
+	    data_end = data + rc;
+	    if (rc == 0)
+		{
+		debug("%d: The complete file is copied, we're done.", sockfd);
+		state = WRITE_REMAINING_DATA;
+		close(filefd);
+		filefd = -1;
 		}
 	    }
 
-	if (data < data_end)
+	if ((state == COPY_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
 	    {
-	    rc = mywrite(sockfd, data, data_end - data);
+	    size_t rc = mywrite(sockfd, data, data_end - data);
 	    data += rc;
 	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
 	    }
-	else
+
+	if (state == WRITE_REMAINING_DATA && data == data_end)
 	    {
 	    debug("%d: Done. Terminate the connection.", sockfd);
-	    delete this;
+	    state = TERMINATE;
+	    if (shutdown(sockfd, SHUT_RDWR) == -1)
+		delete this;
+	    else
+		return;
 	    }
+
+	if (state == TERMINATE)
+	    delete this;
  	}
     catch(const exception& e)
  	{
