@@ -10,7 +10,9 @@
 
 #ifdef ENABLE_TRACER
 #  define TRACE() Tracer T(__PRETTY_FUNCTION__)
-#  define DEBUG
+#  ifndef DEBUG
+#    define DEBUG
+#  endif
 #else
 #  define TRACE() if (false)
 #endif
