@@ -2,3 +2,6 @@
   Maybe normalize the htdocs path in configuration() to begin with.
 
 - Make custom version of escape_quotes().
+
+- Add code that will detach the process from the terminal. Also add -D
+  switch to disable detaching.
