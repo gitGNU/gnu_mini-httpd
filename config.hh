@@ -22,7 +22,7 @@ class configuration
     static unsigned int file_read_timeout;
 
     // Buffer sizes.
-    static unsigned int read_block_size;
+    static unsigned int io_buffer_size;
 
     // Paths.
     static std::string document_root;

@@ -16,7 +16,7 @@ unsigned int configuration::network_write_timeout       = 30 sec;
 unsigned int configuration::file_read_timeout           =  0 sec;
 
 // Buffer sizes.
-unsigned int configuration::read_block_size             =  1 kb;
+unsigned int configuration::io_buffer_size              =  4 kb;
 
 // Paths.
 std::string configuration::document_root                = DOCUMENT_ROOT;
