@@ -3,15 +3,32 @@
  * All rights reserved.
  */
 
+#include <climits>
+#include <cstdlib>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "system-error/system-error.hh"
 #include "request-handler.hh"
 #include "timestamp-to-string.hh"
 #include "config.hh"
 #include "log.hh"
 
 using namespace std;
+
+static inline bool is_path_in_hierarchy(const char* hierarchy, const char* path)
+    {
+    char resolved_hierarchy[PATH_MAX];
+    char resolved_path[PATH_MAX];
+
+    if (realpath(hierarchy, resolved_hierarchy) == 0 || realpath(path, resolved_path) == 0)
+        return false;
+    if (strlen(resolved_hierarchy) > strlen(resolved_path))
+        return false;
+    if (strncmp(resolved_hierarchy, resolved_path, strlen(resolved_hierarchy)) != 0)
+        return false;
+    return true;
+    }
 
 bool RequestHandler::setup_reply()
     {
@@ -30,16 +47,16 @@ bool RequestHandler::setup_reply()
     // error. If the URL points to a directory, send a redirect reply
     // pointing to the "index.html" file in that directory.
 
-    string filename = config->document_root;
-    filename += "/" + host + path;
+    string htdocs_root = string(config->document_root) + "/" + host;
+    string filename = htdocs_root + path;
     struct stat sbuf;
-    if (stat(filename.c_str(), &sbuf) == -1)
+    if (is_path_in_hierarchy(htdocs_root.c_str(), filename.c_str()) == false||
+        stat(filename.c_str(), &sbuf) == -1)
         {
         info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
         file_not_found(path.c_str());
         return false;
         }
-
     if (S_ISDIR(sbuf.st_mode))
         {
         if (*path.rbegin() == '/')

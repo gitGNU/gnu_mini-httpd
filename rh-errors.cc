@@ -15,9 +15,9 @@ void RequestHandler::protocol_error(const char* message)
 
     ostringstream buf;
     buf << "HTTP/1.1 400 Bad Request\r\n"
-        << "Content-Type: text/html\r\n";
-    connect_header(buf);
-    buf << "\r\n"
+        << "Content-Type: text/html\r\n"
+        << "Connection: close\r\n"
+        << "\r\n"
         << "<html>\r\n"
         << "<head>\r\n"
         << "  <title>Bad HTTP Request!</title>\r\n"
@@ -29,6 +29,7 @@ void RequestHandler::protocol_error(const char* message)
         << "</blockquote>\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
+    connection = "close";
     write_buffer = buf.str();
     returned_status_code = 400;
     state = WRITE_REMAINING_DATA;
@@ -45,17 +46,18 @@ void RequestHandler::file_not_found(const char* url)
 
     ostringstream buf;
     buf << "HTTP/1.1 404 Not Found\r\n"
-        << "Content-Type: text/html\r\n";
-    connect_header(buf);
-    buf << "\r\n"
+        << "Content-Type: text/html\r\n"
+        << "Connection: close\r\n"
+        << "\r\n"
         << "<html>\r\n"
         << "<head>\r\n"
         << "  <title>Page does not exist!</title>\r\n"
         << "</head>\r\n"
         << "<body>\r\n"
-        << "The requested page <tt>" << url << "</tt> does not exist on this server ...\r\n"
+        << "<p>The requested page <tt>" << url << "</tt> does not exist on this server ...</p>\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
+    connection = "close";
     write_buffer = buf.str();
     returned_status_code = 404;
     state = WRITE_REMAINING_DATA;
