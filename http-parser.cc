@@ -25,15 +25,11 @@ class HTTPRequest
     typedef parse_info<iterator_t>  parse_info_t;
 
     HTTPRequest(iterator_t begin, iterator_t end)
-            : SP         (32),
-              CR         (13),
-              LF         (10),
-              HT         (9),
-              CHAR       (0, 127),
-              CTL        ("\x00-\x1F\x7F"),
-              separators ("()<>@,;:\\\"/[]?={}\x20\x09"),
-              reserved   (";/?:@&=+$,"),
-              mark       ("-_.!~*'()")
+            : SP   (32),
+              CR   (13),
+              LF   (10),
+              HT   (9),
+              CHAR (0, 127)
         {
         Request         = Request_Line
                           >> *(( general_header | request_header | entity_header ) >> CRLF )
@@ -108,9 +104,7 @@ class HTTPRequest
 
         quoted_string   = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
 
-        qdtext          = TEXT - '"';
-
-        TEXT            = anychar_p - CTL;
+        qdtext          = anychar_p - '"';
 
         quoted_pair     = '\\' >> CHAR;
 
@@ -178,8 +172,19 @@ class HTTPRequest
 
         product_version = token;
 
+        TEXT            = anychar_p - CTL;
+
         CRLF            = CR >> LF;
+
         LWS             = !CRLF >> +( SP | HT );
+
+        CTL             = range<>(0, 31) | chlit<>(127);
+
+        separators      = chset<>("()<>@,;:\\\"/[]?={}\x20\x09");
+
+        reserved        = chset<>(";/?:@&=+$,");
+
+        mark            = chset<>("-_.!~*'()");
 
         request_header  = Host; /* | Accept
                                    | Accept_Charset
@@ -219,30 +224,59 @@ class HTTPRequest
         message_header  = field_name >> *LWS >> ":" >> *LWS >> !field_value;
         field_name      = token;
         field_value     = *( field_content | LWS );
-        field_content   = *TEXT | *( token | separators | quoted_string );
+        field_content   = +TEXT | ( token | separators | quoted_string );
 
         message_body    = entity_body;
         entity_body     = *anychar_p;
 
+        SPIRIT_DEBUG_RULE(CTL);
+        SPIRIT_DEBUG_RULE(separators);
+        SPIRIT_DEBUG_RULE(reserved);
+        SPIRIT_DEBUG_RULE(mark);
         SPIRIT_DEBUG_RULE(Request);
         SPIRIT_DEBUG_RULE(Request_Line);
         SPIRIT_DEBUG_RULE(Method);
         SPIRIT_DEBUG_RULE(CRLF);
         SPIRIT_DEBUG_RULE(Request_URI);
         SPIRIT_DEBUG_RULE(HTTP_Version);
+        SPIRIT_DEBUG_RULE(absoluteURI);
+        SPIRIT_DEBUG_RULE(hier_part);
+        SPIRIT_DEBUG_RULE(net_path);
+        SPIRIT_DEBUG_RULE(abs_path);
+        SPIRIT_DEBUG_RULE(scheme);
+        SPIRIT_DEBUG_RULE(authority);
+        SPIRIT_DEBUG_RULE(opaque_part);
         SPIRIT_DEBUG_RULE(query);
+        SPIRIT_DEBUG_RULE(path_segments);
+        SPIRIT_DEBUG_RULE(segment);
+        SPIRIT_DEBUG_RULE(param);
+        SPIRIT_DEBUG_RULE(pchar);
+        SPIRIT_DEBUG_RULE(escaped);
+        SPIRIT_DEBUG_RULE(server);
+        SPIRIT_DEBUG_RULE(userinfo);
+        SPIRIT_DEBUG_RULE(hostport);
+        SPIRIT_DEBUG_RULE(reg_name);
+        SPIRIT_DEBUG_RULE(unreserved);
+        SPIRIT_DEBUG_RULE(host);
+        SPIRIT_DEBUG_RULE(hostname);
+        SPIRIT_DEBUG_RULE(domainlabel);
+        SPIRIT_DEBUG_RULE(toplabel);
+        SPIRIT_DEBUG_RULE(IPv4address);
+        SPIRIT_DEBUG_RULE(port);
+        SPIRIT_DEBUG_RULE(uric_no_slash);
+        SPIRIT_DEBUG_RULE(uric);
         SPIRIT_DEBUG_RULE(general_header);
         SPIRIT_DEBUG_RULE(quoted_pair);
         SPIRIT_DEBUG_RULE(token);
-        SPIRIT_DEBUG_RULE(separators);
         SPIRIT_DEBUG_RULE(quoted_string);
         SPIRIT_DEBUG_RULE(qdtext);
-        SPIRIT_DEBUG_RULE(TEXT);
         SPIRIT_DEBUG_RULE(request_header);
+        SPIRIT_DEBUG_RULE(TEXT);
         SPIRIT_DEBUG_RULE(entity_header);
         SPIRIT_DEBUG_RULE(message_body);
         SPIRIT_DEBUG_RULE(entity_body);
         SPIRIT_DEBUG_RULE(Connection);
+        SPIRIT_DEBUG_RULE(LWS);
         SPIRIT_DEBUG_RULE(connection_token);
         SPIRIT_DEBUG_RULE(Date);
         SPIRIT_DEBUG_RULE(HTTP_date);
@@ -275,6 +309,7 @@ class HTTPRequest
         SPIRIT_DEBUG_RULE(message_header);
         SPIRIT_DEBUG_RULE(field_value);
         SPIRIT_DEBUG_RULE(field_content);
+        SPIRIT_DEBUG_RULE(extension_method);
 
         parse_info_t result = parse(begin, end, Request);
         if (!result.full)
@@ -286,14 +321,14 @@ class HTTPRequest
   private:
     chlit<> SP, CR, LF, HT;
     range<> CHAR;
-    chset<> CTL, separators, reserved, mark;
-    rule_t Request, Request_Line, Method, CRLF, Request_URI, HTTP_Version,
+    rule_t CTL, separators, reserved, mark,Request, Request_Line,
+        Method, CRLF, Request_URI, HTTP_Version,
         absoluteURI, hier_part, net_path, abs_path, scheme, authority,
         opaque_part, query, path_segments, segment, param, pchar,
         escaped, server, userinfo, hostport, reg_name, unreserved,
         host, hostname, domainlabel, toplabel, IPv4address, port,
         uric_no_slash, uric, general_header, quoted_pair,
-        token, quoted_string, qdtext, TEXT, request_header,
+        token, quoted_string, qdtext, request_header, TEXT,
         entity_header, message_body, entity_body, Connection, LWS,
         connection_token, Date, HTTP_date, Pragma, pragma_directive,
         extension_pragma, Trailer, Transfer_Encoding, Upgrade,
