@@ -3,7 +3,7 @@
 httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi' \
                       +lib=(libscheduler/libscheduler.a) \
                       +define='DISABLE_TRACER NDEBUG' \
-                      +optimize=0 \
+                      +optimize=3 \
                       :exe
 
 %httpd.cc.sm == <<
@@ -17,6 +17,7 @@ httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi' \
     rh-timeouts.cc
     rh-writable.cc
     rh-errors.cc
+    file-cache.cc
 
 %clean ! == !<<
     rm -f httpd libscheduler/libscheduler.a gmon.out
