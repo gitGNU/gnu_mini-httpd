@@ -24,7 +24,7 @@ class HTTPParser
     HTTPParser();
 
     std::string res_method, res_host, res_path, res_query;
-    unsigned int res_port;
+    unsigned int res_port, res_minor_version, res_major_version;
     std::string res_name, res_data;
 
     range_t CHAR;

@@ -49,10 +49,10 @@ void RequestHandler::log_access() const throw()
         if (fh == 0)
             throw system_error("Can't open logfile");
 
-        fprintf(fh, "%s - - [%s] \"%s %s HTTP/1.1\" %u %u \"%s\" \"%s\"\n",
+        fprintf(fh, "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %u \"%s\" \"%s\"\n",
                 peer_addr_str, timestamp.c_str(), method.c_str(), path.c_str(),
-                returned_status_code, returned_object_size, referer.c_str(),
-                user_agent.c_str());
+                major_version, minor_version, returned_status_code,
+                returned_object_size, referer.c_str(), user_agent.c_str());
 
         fclose(fh);
         }

@@ -40,7 +40,8 @@ HTTPParser::HTTPParser()
     http_URL      = nocase_d["http://"] >> Host[ref(res_host)] >> !( ':' >> uint_p[ref(res_port)] )
                     >> !( abs_path[ref(res_path)] >> !( '?' >> Query[ref(res_query)] ) );
     Request_URI   = http_URL | abs_path[ref(res_path)] >> !( '?' >> Query[ref(res_query)] );
-    HTTP_Version  = nocase_d["http/"] >> +digit_p >> '.' >> +digit_p;
+    HTTP_Version  = nocase_d["http/"] >> uint_p[ref(res_major_version)]
+                    >> '.' >> uint_p[ref(res_minor_version)];
     Request_Line  = Method[ref(res_method)] >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
 
     CTL           = range_t(0, 31) | chlit_t(127);
