@@ -59,11 +59,34 @@ HTTPParser::HTTPParser()
     Header        = ( field_name[ref(res_name)] >> *LWS >> ":" >> *LWS >> !( field_value[ref(res_data)] ) ) >> CRLF;
 
     Host_Header   = Host[ref(res_host)] >> !( ":" >> uint_p[ref(res_port)] );
+#if 0
+symbols<> monthlist;
+monthlist.add
+    ("Jan",  0)
+    ("Feb",  1)
+    ("Mar",  2)
+    ("Apr",  3)
+    ("May",  4)
+    ("Jun",  5)
+    ("Jul",  6)
+    ("Aug",  7)
+    ("Sep",  8)
+    ("Oct",  9)
+    ("Nov", 10)
+    ("Dec", 11);
+
+month = monthlist[ref(date.tm_mon)];
 
     weekday         = str_p("Monday") | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
-    wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
     month           = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun"
                     | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
+#endif
+
+    weekday         = "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday";
+    wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+
+    month           = "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec";
+
     time            = digit_p.repeat(2) >> ":" >> digit_p.repeat(2) >> ":" >> digit_p.repeat(2);
     date1           = digit_p.repeat(2) >> SP >> month >> SP >> digit_p.repeat(4);
     date2           = digit_p.repeat(2) >> "-" >> month >> "-" >> digit_p.repeat(2);

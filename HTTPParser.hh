@@ -9,7 +9,7 @@
 #include <string>
 #include <ctime>
 #include <boost/spirit/spirit_rule.hpp>
-#include <boost/spirit/utility/chset.hpp>
+#include <boost/spirit/spirit_utility.hpp>
 
 class HTTPParser
     {
@@ -20,6 +20,7 @@ class HTTPParser
     typedef spirit::range<value_t, value_t>  range_t;
     typedef spirit::chset<value_t>           chset_t;
     typedef spirit::rule<iterator_t>         rule_t;
+    typedef spirit::symbols<int, value_t>    symbol_t;
     typedef spirit::parse_info<iterator_t>   parse_info_t;
 
     HTTPParser();
@@ -40,9 +41,10 @@ class HTTPParser
         Request_Line, CTL, TEXT, separators, token, LWS,
         quoted_pair, qdtext, quoted_string, field_content,
         field_value, field_name, Header, Host_Header,
-        weekday, month, wkday, date1, date2, date3,
+        wkday, date1, date2, date3,
         rfc1123_date, rfc850_date, asctime_date, time,
         HTTP_date,If_Modified_Since_Header;
+    symbol_t weekday, month;
 
     static bool have_complete_header_line(std::string::const_iterator begin, std::string::const_iterator end)
         {
