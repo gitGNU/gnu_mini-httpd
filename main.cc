@@ -10,6 +10,7 @@
 #include "RequestHandler.hh"
 #include "log.hh"
 #include "config.hh"
+#include "version.h"
 using namespace std;
 
 const configuration* config;
@@ -44,8 +45,8 @@ try
     TCPListener<RequestHandler> listener(sched, config->http_port);
     setgid(config->setgid_group);
     setuid(config->setuid_user);
-    info("httpd starting up: listen port = %u, user id = %u, group id = %u",
-         config->http_port, getuid(), getgid());
+    info("httpd %s starting up: listen port = %u, user id = %u, group id = %u",
+         VERSION, config->http_port, getuid(), getgid());
     while(!got_terminate_sig && !sched.empty())
         {
 	sched.schedule();
