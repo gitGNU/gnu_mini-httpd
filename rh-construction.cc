@@ -90,7 +90,7 @@ RequestHandler::~RequestHandler()
     {
     TRACE();
 
-    debug(("%d: Closing connection with peer '%s'.", sockfd, peer_address));
+    debug(("%d: Closing connection to peer '%s'.", sockfd, peer_address));
 
     --instances;
 
