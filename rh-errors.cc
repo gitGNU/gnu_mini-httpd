@@ -78,9 +78,9 @@ void RequestHandler::moved_permanently(const char* url)
     if (port != 80)
         buf << ":" << port;
     buf << url << "\r\n"
-        << "Content-Type: text/html\r\n";
-    connect_header(buf);
-    buf << "\r\n"
+        << "Content-Type: text/html\r\n"
+        << "Connection: close\r\n"
+        << "\r\n"
         << "<html>\r\n"
         << "<head>\r\n"
         << "  <title>Page has moved permanently!</title>\r\n"
@@ -92,6 +92,7 @@ void RequestHandler::moved_permanently(const char* url)
     buf << url << "\">here</a>.\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
+    connection = "close";
     write_buffer = buf.str();
     returned_status_code = 301;
     state = WRITE_REMAINING_DATA;
@@ -104,7 +105,7 @@ void RequestHandler::moved_permanently(const char* url)
 void RequestHandler::not_modified()
     {
     TRACE();
-    debug(("%d: Requested page has not modified; going into WRITE_REMAINING_DATA state.", sockfd));
+    debug(("%d: Requested page was not modified; going into WRITE_REMAINING_DATA state.", sockfd));
 
     ostringstream buf;
     buf << "HTTP/1.1 304 Not Modified\r\n";

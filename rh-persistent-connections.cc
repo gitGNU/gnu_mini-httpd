@@ -15,11 +15,12 @@ bool RequestHandler::is_persistent_connection() const
 
     if (strcasecmp(connection.c_str(), "close") == 0)
         return false;
-
+    if (strcasecmp(connection.c_str(), "keep-alive") == 0)
+        return true;
     if (major_version >= 1 && minor_version >= 1)
         return true;
-
-    return false;
+    else
+        return false;
     }
 
 ostream& RequestHandler::connect_header(ostream& os)
