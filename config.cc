@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
+ * Copyright (c) 2001 by Peter Simons <simons@cryp.to>.
  * All rights reserved.
  */
 
@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <getopt.h>
 #include "log.hh"
-#include "version.h"
 #include "config.hh"
 using namespace std;
 
@@ -33,7 +32,7 @@ string configuration::document_root                      = "/htdocs";
 string configuration::default_page                       = "index.html";
 
 // Run-time stuff.
-string configuration::server_string                      = "peti-httpd";
+string configuration::server_string                      = PACKAGE_NAME;
 string configuration::default_hostname;
 char* configuration::default_content_type                = "application/octet-stream";
 unsigned int configuration::http_port                    = 80;
@@ -83,7 +82,7 @@ configuration::configuration(int argc, char** argv)
                 fprintf(stderr, USAGE_MSG);
                 throw no_error();
             case 'v':
-                printf("httpd version %s\n", VERSION);
+                printf("%s version %s\n", PACKAGE_NAME, PACKAGE_VERSION);
                 throw no_error();
             case 'd':
                 debugging = true;

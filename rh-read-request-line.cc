@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
+ * Copyright (c) 2001 by Peter Simons <simons@cryp.to>.
  * All rights reserved.
  */
 

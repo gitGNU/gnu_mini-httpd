@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
+ * Copyright (c) 2001 by Peter Simons <simons@cryp.to>.
  * All rights reserved.
  */
 
@@ -19,10 +19,10 @@ using namespace spirit;
 
   So far so good.
 
-  To make matters a bit complicated, though, I cannot use pointers,
+  To make matters a bit more complicated, though, I cannot use pointers,
   because the pointers are set when the user calls the parser, but the
-  pointers will be dereferenced at _construction_ time -- they
-  aren't set yet at construction time.
+  pointers will be dereferenced at _construction_ time -- when they are
+  _not_ initialized yet.
 
   So what I do is to use these assigner classes, which will store the
   location of the pointers and dereference it when the assignment
@@ -34,7 +34,7 @@ using namespace spirit;
   through the overloaded assign() function that returns the
   appropriate class, depending on the parameter list.
 
-  Of course that would have been too easy.
+  Of course, that would have been too easy.
 
   The variables I assign to are mostly of type resetable_variable<>,
   and because the compiler won't get the data types right (what is not
@@ -42,11 +42,10 @@ using namespace spirit;
   templates for the various types of resetable_variable<> I use.
 
   It's probably best not to read this altogether. I only pray that I
-  won't have to understand what I did here in a few weeks, because
-  there's a bug somewhere. In fact, I'd be surprised if this stuff
-  worked at all. At the time I write this comment, I can compile this
-  source module, but I never actually used that parser yet. Keep your
-  fingers crossed!
+  won't have to understand what I did here in a few weeks. In fact,
+  I'd be surprised if this stuff worked at all. At the time I write
+  this comment, I can compile this source module, but I never actually
+  used that parser yet. Keep your fingers crossed!
 */
 /*
   UPDATE: Now that I've migrated to the latest version of Spirit, most
@@ -58,8 +57,8 @@ using namespace spirit;
 
   Eventually I'll do that.
 
-  Let me just finish figuring out how women think ... then I'll tackle
-  the next task.
+  But befor, let me just finish my understanding-women project ... then
+  I'll tackle the next task. How long can it possibly take?
 */
 
 // Proxy class that will assign a parser result via a pointer to classT.

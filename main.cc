@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
+ * Copyright (c) 2001 by Peter Simons <simons@cryp.to>.
  * All rights reserved.
  */
 
@@ -14,7 +14,6 @@
 #include "RequestHandler.hh"
 #include "log.hh"
 #include "config.hh"
-#include "version.h"
 using namespace std;
 
 const configuration* config;
@@ -92,9 +91,9 @@ try
 
     // Log some helpful information.
 
-    info("httpd %s starting up: listen port = %u, user id = %u, group id = %u, chroot = '%s', " \
-         "default hostname = '%s'",
-         VERSION, config->http_port, getuid(), getgid(), config->chroot_directory.c_str(),
+    info("%s %s starting up: listen port = %u, user id = %u, group id = %u, chroot = '%s', " \
+         "default hostname = '%s'", PACKAGE_NAME, PACKAGE_VERSION,
+         config->http_port, getuid(), getgid(), config->chroot_directory.c_str(),
          config->default_hostname.c_str());
 
     // Run ...
