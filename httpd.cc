@@ -97,12 +97,20 @@ void RequestHandler::fd_is_writable(int)
     debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
     buffer.erase(0, rc);
 
-    if (state == WRITE_ANSWER && buffer.size() < 4*1024)
+    if (state == WRITE_ANSWER)
 	{
-	debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
-	prop.poll_events   = POLLIN;
-	prop.read_timeout  = 0;
-	mysched.register_handler(filefd, *this, prop);
+	if (buffer.empty())
+	    {
+	    debug("%d: Write buffer is empty. Don't engage write handler until we have data again.", sockfd);
+	    mysched.remove_handler(sockfd);
+	    }
+	if (buffer.size() < 4*1024)
+	    {
+	    debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
+	    prop.poll_events   = POLLIN;
+	    prop.read_timeout  = 0;
+	    mysched.register_handler(filefd, *this, prop);
+	    }
 	}
     if (state == TERMINATE && buffer.empty())
 	{
