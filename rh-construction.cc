@@ -8,8 +8,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "system-error/system-error.hh"
 #include "request-handler.hh"
-#include "system-error.hh"
 #include "config.hh"
 
 unsigned int RequestHandler::instances = 0;
