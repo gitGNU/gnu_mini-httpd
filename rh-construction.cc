@@ -50,6 +50,7 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     // Initialize internal variables.
 
     reset();
+    debug(("%d: Accepted new connection from peer '%s'.", sockfd, peer_address));
     ++instances;
     }
 
@@ -80,6 +81,8 @@ void RequestHandler::reset()
 RequestHandler::~RequestHandler()
     {
     TRACE();
+
+    debug(("%d: Closing connection with peer '%s'.", sockfd, peer_address));
 
     --instances;
 
