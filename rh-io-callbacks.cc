@@ -36,7 +36,12 @@ void RequestHandler::fd_is_readable(int)
 
         ssize_t rc = read(sockfd, line_buffer, config->max_line_length);
         if (rc < 0)
-            throw system_error("read() failed");
+            {
+            if (errno != EINTR)
+                throw system_error("read() failed");
+            else
+                return;
+            }
         else if (rc == 0)
             {
             info("Connection to %s was terminated by peer.", peer_address);
@@ -78,7 +83,12 @@ void RequestHandler::fd_is_writable(int)
             {
             ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
             if (rc < 0)
-                throw system_error("write() failed");
+                {
+                if (errno != EINTR)
+                    throw system_error("write() failed");
+                else
+                    return;
+                }
             else if (rc == 0)
                 {
                 info("Connection to %s was terminated by peer.", peer_address);

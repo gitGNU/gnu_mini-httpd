@@ -25,7 +25,12 @@ bool RequestHandler::copy_file()
         char buf[4096];
         ssize_t rc = read(filefd, buf, sizeof(buf));
         if (rc < 0)
-            throw system_error(string("read() from file '") + filename + "' failed");
+            {
+            if (errno != EINTR)
+                throw system_error(string("read() from file '") + filename + "' failed");
+            else
+                return true;
+            }
         else if (rc == 0)
             {
             debug(("%d: The complete file is copied: going into FLUSH_BUFFER state.", sockfd));
