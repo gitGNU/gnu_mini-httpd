@@ -50,6 +50,23 @@ AC_ARG_WITH(debug, [  --with-debug            Support debugging? (default: yes)]
     AC_MSG_RESULT(yes)
     ])
 
+dnl Enable/disable tracing.
+dnl
+AC_MSG_CHECKING(whether to enable funcion tracing)
+AC_ARG_WITH(trace, [  --with-trace            Enable function tracing? (default: no)],
+    [
+    if test "$withval" = "no"; then
+       AC_MSG_RESULT(no)
+    elif test "$withval" = "yes"; then
+       CPPFLAGS="$CPPFLAGS -DENABLE_TRACE"
+       AC_MSG_RESULT(yes)
+    fi
+    ],
+    [
+    CPPFLAGS="$CPPFLAGS -DENABLE_TRACE"
+    AC_MSG_RESULT(yes)
+    ])
+
 dnl Write results.
 dnl
 AC_CONFIG_AUX_DIR(spirit)
