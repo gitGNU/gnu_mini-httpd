@@ -1,0 +1,9 @@
+# Build the http daemon.
+
+httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) +debug :exe
+
+%httpd.cc.sm == <<
+    httpd.cc
+
+%clean ! == !<<
+    rm -f httpd libscheduler.a
