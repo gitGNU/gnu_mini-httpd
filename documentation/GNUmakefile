@@ -1,7 +1,7 @@
 #
 # Build the httpd documentation
 #
-DOCBOOKBASE	= /usr/share/sgml/docbook/dsssl-stylesheets-1.78
+DOCBOOKBASE	= /usr/share/sgml/docbook/dsssl-stylesheets-1.77
 
 .SUFFIXES:
 
@@ -37,7 +37,7 @@ httpd.8:  man-page.sgml synopsis.inc description.inc cmdloptions.inc license.inc
 
 clean distclean:
 	@rm -f *.aux *.dvi *.log *.toc
-	@rm -f *.css *.fot *.ps *.xml
+	@rm -f *.fot *.ps *.xml
 	@rm -f *.tex defconfig.inc defreqmail.inc
 
 realclean:	clean

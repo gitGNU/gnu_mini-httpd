@@ -1,4 +1,4 @@
-<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook V4.1//EN" [
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook V4.2//EN" [
 <!ENTITY httpd "<application>httpd</application>">
 <!ENTITY description SYSTEM "description.inc">
 <!ENTITY building SYSTEM "building.inc">

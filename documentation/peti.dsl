@@ -108,20 +108,28 @@
   ;; Declare result as HTML 4.01 Transitional.
   "-//W3C//DTD HTML 4.01 Transitional//EN")
 
+(define %stylesheet%
+  ;; Name of the stylesheet to use
+  "peti.css")
+
+(define %css-decoration%
+  ;; Enable CSS decoration of elements
+  #f)
+
 (define nochunks
   ;; Suppress chunking of output pages
   #t)
 
 (define %generate-legalnotice-link%
   ;; put the legal notice in a separate file
-  #f)
+  #t)
 
 (define %admon-graphics%
   #f)
 
 (define %funcsynopsis-decoration%
   ;; make funcsynopsis look pretty
-  #t)
+  #f)
 
 (define %html-ext%
   ;; when producing HTML files, use this extension
@@ -257,6 +265,7 @@
     (if (node-list-empty? titles)
         ""
         (node-list-first titles))))
+
 
 </style-specification-body>
 </style-specification>
