@@ -131,7 +131,7 @@ void RequestHandler::fd_is_readable(int)
 		    int len = snprintf(buffer, buffer_end - buffer,
 				       "HTTP/1.0 200 OK\r\n"     \
 				       "Content-Type: %s\r\n"    \
-				       "Content-Length: %Ld\r\n" \
+				       "Content-Length: %ld\r\n" \
 				       "\r\n",
 				       config->get_content_type(filename.c_str()), sbuf.st_size);
 		    if (len > 0 && len <= buffer_end - buffer)
