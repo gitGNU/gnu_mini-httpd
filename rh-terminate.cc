@@ -11,6 +11,7 @@ using namespace std;
 bool RequestHandler::terminate()
     {
     TRACE();
+    log_access();
     delete this;
     return false;
     }

@@ -30,7 +30,14 @@ void RequestHandler::error_condition(int)
 void RequestHandler::pollhup(int)
     {
     TRACE();
-    if (state != TERMINATE)
+    if (state == TERMINATE)
+        {
+        while((this->*state_handlers[state])())
+            ;
+        }
+    else
+        {
         debug(("%d: poll() says the other end aborted; terminating connection.", sockfd));
-    delete this;
+        delete this;
+        }
     }

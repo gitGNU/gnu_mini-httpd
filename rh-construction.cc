@@ -78,6 +78,4 @@ RequestHandler::~RequestHandler()
     close(sockfd);
     if (filefd >= 0)
 	close(filefd);
-
-    log_access();
     }
