@@ -43,8 +43,7 @@ void RequestHandler::fd_is_writable(int)
 	    state = TERMINATE;
 	    if (shutdown(sockfd, SHUT_RDWR) == -1)
 		delete this;
-	    else
-		return;
+	    return;
 	    }
 
 	if (state == TERMINATE)
@@ -54,12 +53,10 @@ void RequestHandler::fd_is_writable(int)
  	{
  	debug("%d: Caught exception: %s", sockfd, e.what());
  	delete this;
- 	return;
  	}
     catch(...)
  	{
  	debug("%d: Caught unknown exception. Terminating.", sockfd);
  	delete this;
- 	return;
  	}
     }

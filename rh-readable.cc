@@ -146,12 +146,10 @@ void RequestHandler::fd_is_readable(int)
 	{
 	debug("%d: Caught exception: %s", sockfd, e.what());
 	delete this;
-	return;
 	}
     catch(...)
 	{
 	debug("%d: Caught unknown exception. Terminating.", sockfd);
 	delete this;
-	return;
 	}
     }
