@@ -44,7 +44,6 @@ class RequestHandler : public scheduler::event_handler
     char peer_addr_str[32];
     scheduler::handler_properties prop;
     string buffer;
-    char* tmp;
     string host, uri;
 
     static const RegExp full_get_port_regex;
@@ -52,6 +51,9 @@ class RequestHandler : public scheduler::event_handler
     static const RegExp get_regex;
     static const RegExp host_regex;
     static const RegExp host_port_regex;
+
+    static char* tmp;
+    static unsigned instances;
     };
 
 #endif

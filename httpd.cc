@@ -21,11 +21,25 @@ const RegExp RequestHandler::get_regex("^GET +(/[^ ]+) +HTTP/([0-9]+)\\.([0-9]+)
 const RegExp RequestHandler::host_port_regex("^Host: +([^ ]+):[0-9]+", REG_EXTENDED);
 const RegExp RequestHandler::host_regex("^Host: +([^ ]+)", REG_EXTENDED);
 
+char* RequestHandler::tmp = 0;
+unsigned RequestHandler::instances = 0;
+
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1),
-          tmp(new char[config->read_block_size])
+	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
     {
     TRACE();
+
+    // If the buffer is not initialized yet, do it now.
+
+    if (tmp == 0)
+	{
+	tmp = new char[config->read_block_size];
+	debug("This is the first RequestHandler instance; initialized static 'tmp' buffer.");
+	}
+
+    // Count active instances of this class.
+
+    ++instances;
 
     // Store the peer's address as ASCII string; we'll need that
     // again later.
@@ -55,7 +69,12 @@ RequestHandler::~RequestHandler()
 	mysched.remove_handler(filefd);
 	close(filefd);
 	}
-    delete[] tmp;
+    if (--instances == 0 && tmp != 0)
+	{
+	debug("No RequestHandler instances left; freeing static 'tmp' buffer.");
+	delete[] tmp;
+	tmp = 0;
+	}
     }
 
 void RequestHandler::fd_is_readable(int)
