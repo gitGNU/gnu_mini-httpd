@@ -60,7 +60,7 @@ class RequestHandler : public scheduler::event_handler
     char peer_addr_str[32];
 
     std::string buffer;
-    std::string host, uri;
+    std::string host, url;
 
     static const RegExp full_get_port_regex;
     static const RegExp full_get_regex;

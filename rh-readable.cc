@@ -54,7 +54,6 @@ void RequestHandler::fd_is_readable(int fd)
 			{
 			debug("%d: Read request is complete.", sockfd);
 			remove_network_read_handler();
-			uri.clear();
 			if (host.empty())
 			    {
 			    protocol_error("The HTTP request did not contain a hostname.\r\n" \
@@ -63,18 +62,18 @@ void RequestHandler::fd_is_readable(int fd)
 					   "header.\r\n");
 			    return;
 			    }
-			else if (uri.empty())
+			else if (url.empty())
 			    {
 			    protocol_error("The HTTP request did not contain an URL!\r\n");
 			    return;
 			    }
 
-			string filename = config->document_root + "/" + host + uri;
+			string filename = config->document_root + "/" + host + url;
 			struct stat sbuf;
 			if (stat(filename.c_str(), &sbuf) == -1)
 			    {
 			    error("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			    file_not_found(uri);
+			    file_not_found(url);
 			    return;
 			    }
 
@@ -88,7 +87,7 @@ void RequestHandler::fd_is_readable(int fd)
 			    file_not_found(filename);
 			    return;
 			    }
-			info("%d: %s GET %s --> %s", sockfd, peer_addr_str, uri.c_str(), filename.c_str());
+			info("%d: %s GET %s --> %s", sockfd, peer_addr_str, url.c_str(), filename.c_str());
 			state = WRITE_ANSWER;
 			buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
 			buffer += config->get_content_type(filename);

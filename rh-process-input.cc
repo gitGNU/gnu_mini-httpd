@@ -19,22 +19,22 @@ bool RequestHandler::process_input(const char* begin, const char* end)
     if (!line.empty())
 	{
 	vector<string> vec;
-	if (host.empty() && uri.empty() && full_get_port_regex.submatch(line, vec))
+	if (host.empty() && url.empty() && full_get_port_regex.submatch(line, vec))
 	    {
 	    host = vec[1];
-	    uri  = vec[2];
-	    debug("%d: Got full GET request including port: host = '%s' and uri = '%s'.", sockfd, host.c_str(), uri.c_str());
+	    url  = vec[2];
+	    debug("%d: Got full GET request including port: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str());
 	    }
-	else if (host.empty() && uri.empty() && full_get_regex.submatch(line, vec))
+	else if (host.empty() && url.empty() && full_get_regex.submatch(line, vec))
 	    {
 	    host = vec[1];
-	    uri  = vec[2];
-	    debug("%d: Got full GET request: host = '%s' and uri = '%s'.", sockfd, host.c_str(), uri.c_str());
+	    url  = vec[2];
+	    debug("%d: Got full GET request: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str());
 	    }
-	else if (uri.empty() && get_regex.submatch(line, vec))
+	else if (url.empty() && get_regex.submatch(line, vec))
 	    {
-	    uri = vec[1];
-	    debug("%d: Got GET request: uri = '%s'.", sockfd, uri.c_str());
+	    url = vec[1];
+	    debug("%d: Got GET request: url = '%s'.", sockfd, url.c_str());
 	    }
 	else if (host.empty() && host_port_regex.submatch(line, vec))
 	    {
