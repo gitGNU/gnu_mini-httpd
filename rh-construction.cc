@@ -79,8 +79,9 @@ RequestHandler::~RequestHandler()
     gettimeofday(&now, 0);
     timersub(&now, &connection_start, &runtime);
 
-    log_access((state == TERMINATE), host.c_str(), url.c_str(), peer_addr_str, sockfd,
-	       runtime, bytes_received, bytes_sent, read_calls, write_calls);
+    log_access((state == TERMINATE), host.c_str(), url.c_str(), peer_addr_str,
+               referer.c_str(), user_agent.c_str(), sockfd, runtime, bytes_received,
+	       bytes_sent, read_calls, write_calls);
 
     if (--instances == config->hard_poll_interval_threshold)
 	{

@@ -2,7 +2,7 @@
 
 httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi' \
                       +lib=(libscheduler/libscheduler.a) \
-                      +define='DISABLE_TRACER NDEBUG' \
+                      +define='DISABLE_TRACER NODEBUG' \
                       +optimize=3 \
                       :exe
 

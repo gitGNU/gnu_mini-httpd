@@ -53,7 +53,8 @@ class RequestHandler : public scheduler::event_handler
     int sockfd;
     int filefd;
     char peer_addr_str[32];
-    std::string host, url;
+    std::string host, url, user_agent, referer;
+
     char* buffer;
     char* buffer_end;
     char* data;
@@ -71,6 +72,8 @@ class RequestHandler : public scheduler::event_handler
     static const RegExp get_regex;
     static const RegExp host_regex;
     static const RegExp host_port_regex;
+    static const RegExp referer_regex;
+    static const RegExp user_agent_regex;
     };
 
 #endif
