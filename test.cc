@@ -39,7 +39,7 @@ try
     url.host = "foobar.example.org";
     assert(!url.host.empty());
     assert(static_cast<std::string>(url.host) == string("foobar.example.org"));
-    assert(strcmp(url.host.data().c_str(), "foobar.example.org") == 0);
+    assert(strcmp(url.host.c_str(), "foobar.example.org") == 0);
 
     url = URL();
     assert(url.host.empty());
