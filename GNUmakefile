@@ -7,7 +7,7 @@ DESTDIR		=
 
 OPTIMFLAGS     +=
 WARNFLAGS      +=
-DEFS	       += -DSPIRIT_DEBUG
+DEFS	       +=
 CPPFLAGS       +=
 CXXFLAGS       +=
 LDFLAGS	       +=
