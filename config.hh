@@ -14,6 +14,7 @@
 #  error Do not know how to include a hash map
 #endif
 #include <string>
+#include <sys/types.h>
 
 class configuration
     {
@@ -40,6 +41,8 @@ class configuration
     // Miscellaneous.
     static char* default_content_type;
     static unsigned int http_port;
+    static uid_t setuid_user;
+    static gid_t setgid_group;
 
     // Content-type mapping.
     const char* get_content_type(const char* filename) const;

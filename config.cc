@@ -30,6 +30,8 @@ char* configuration::logfile                             = LOGFILE;
 // Miscellaneous.
 char* configuration::default_content_type                = "application/octet-stream";
 unsigned int configuration::http_port                    = 8080;
+uid_t configuration::setuid_user                         = 2;
+gid_t configuration::setgid_group                        = 2;
 
 configuration::configuration()
     {
