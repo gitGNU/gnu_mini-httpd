@@ -3,20 +3,22 @@ have to do is the usual routine:</para>
 
   <screen>
 ./configure
-gmake
-gmake install</screen>
+make
+make install</screen>
 
-  <para>Be adviced, though, that the <command>configure</command> script
-included in this distribution does not behave exactly like you will know from
-other packages: The default <varname>$prefix</varname>, where &httpd; will be
-installed, is not <filename>/usr/local</filename> but
-<filename>/usr/local/httpd</filename>! This is for a very good reason. For
-maximum security, &httpd; will run in a restricted sandbox, meaning, that it
-will change the processes <filename>/</filename> directory to the default
-<varname>$prefix</varname> directory provided here. Since no files required by
-&httpd; may reside outside this directory then (logfiles and the actual web
-documents, mostly), it is a very good idea to have all files related to the web
-service installed in <filename>/usr/local/httpd</filename>.</para>
+  <para>Two things should be noted, though: You will require <application>GNU
+Make</application> to build the package. Furthermore, the
+<command>configure</command> script included in this distribution does not
+behave exactly like you will know from other packages: The default
+<varname>$prefix</varname>, where &httpd; will be installed, is not
+<filename>/usr/local</filename> but <filename>/usr/local/httpd</filename>! This
+is for a very good reason. For maximum security, &httpd; will run in a
+restricted sandbox, meaning, that it will change the processes
+<filename>/</filename> directory to the default <varname>$prefix</varname>
+directory provided here. Since no files required by &httpd; may reside outside
+this directory then (logfiles and the actual web documents, mostly), it is a
+very good idea to have all files related to the web service installed in
+<filename>/usr/local/httpd</filename>.</para>
 
   <para>If you don't understand any of this, just trust me and and go ahead with
 the defaults. You can change any of those paths later at run-time, the
