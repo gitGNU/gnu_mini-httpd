@@ -6,8 +6,7 @@
 #ifndef __CONFIG_HH__
 #define __CONFIG_HH__
 
-#include <string>
-#include <map>
+#include <ext/hash_map>
 
 class configuration
     {
@@ -25,24 +24,25 @@ class configuration
     static unsigned int io_buffer_size;
 
     // Paths.
-    static std::string document_root;
+    static char* document_root;
 
     // Miscellaneous.
     static char* default_content_type;
 
     // Content-type mapping.
-    const char* get_content_type(const std::string& filename) const;
+    const char* get_content_type(const char* filename) const;
 
   private:
     configuration(const configuration&);
     configuration& operator= (const configuration&);
 
-    struct ltstr
+    struct eqstr
 	{
-	bool operator()(const std::string& lhs, const std::string& rhs) const
-	    { return strcasecmp(lhs.c_str(), rhs.c_str()) < 0; }
+	bool operator()(const char* lhs, const char* rhs) const
+	    { return strcasecmp(lhs, rhs) == 0; }
 	};
-    std::map<std::string,std::string,ltstr> content_types;
+    typedef std::hash_map<const char*,const char*,std::hash<const char*>,eqstr> map_t;
+    map_t content_types;
     };
 extern const configuration* config;
 

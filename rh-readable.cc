@@ -83,7 +83,8 @@ void RequestHandler::fd_is_readable(int)
 		    // reply pointing to the "index.html" file in that
 		    // directory.
 
-		    string filename = config->document_root + "/" + host + url;
+		    string filename = config->document_root;
+		    filename += "/" + host + url;
 		    struct stat sbuf;
 		    if (stat(filename.c_str(), &sbuf) == -1)
 			{
@@ -117,7 +118,7 @@ void RequestHandler::fd_is_readable(int)
 				       "Content-Type: %s\r\n"    \
 				       "Content-Length: %ld\r\n" \
 				       "\r\n",
-				       config->get_content_type(filename), sbuf.st_size);
+				       config->get_content_type(filename.c_str()), sbuf.st_size);
 		    debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
 		    if (len > 0 && len <= buffer_end - buffer)
 			{

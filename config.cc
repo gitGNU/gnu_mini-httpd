@@ -19,7 +19,7 @@ unsigned int configuration::file_read_timeout           =  0 sec;
 unsigned int configuration::io_buffer_size              =  4 kb;
 
 // Paths.
-std::string configuration::document_root                = DOCUMENT_ROOT;
+char* configuration::document_root                      = DOCUMENT_ROOT;
 
 // Miscellaneous.
 char* configuration::default_content_type		= "application/octet-stream";
@@ -148,26 +148,37 @@ configuration::~configuration()
     TRACE();
     }
 
-const char* configuration::get_content_type(const string& filename) const
+const char* configuration::get_content_type(const char* filename) const
     {
-    TRACE();
-    string::size_type pos = filename.rfind('.');
-    if (pos == string::npos || pos+1 == filename.size())
+
+    const char* last_dot;
+    const char* current;
+    for (current = filename, last_dot = 0; *current != '\0'; ++current)
 	{
-	debug("get_content_type(): Can't find suffix in filename '%s'; using default.", filename.c_str());
-	return default_content_type;
+	if (*current == '.')
+	    last_dot = current;
 	}
-    string suffix = filename.substr(pos+1, string::npos);
-    debug("get_content_type(): Filename '%s' has suffix '%s'.", filename.c_str(), suffix.c_str());
-    map<string,string>::const_iterator i = content_types.find(suffix);
-    if (i != content_types.end())
+
+    if (last_dot == 0)
 	{
-	debug("get_content_type(): suffix '%s' maps to content type '%s'.", suffix.c_str(), i->second.c_str());
- 	return i->second.c_str();
+	debug("get_content_type(): Can't find suffix in filename '%s'; using default.", filename);
+	return default_content_type;
 	}
     else
 	{
-	debug("get_content_type(): No content type found for suffix '%s'; using default.", suffix.c_str());
+	++last_dot;
+	debug("get_content_type(): Filename '%s' has suffix '%s'.", filename, last_dot);
+	}
+
+    map_t::const_iterator i = content_types.find(last_dot);
+    if (i != content_types.end())
+	{
+	debug("get_content_type(): suffix '%s' maps to content type '%s'.", last_dot, i->second);
+ 	return i->second;
+	}
+    else
+	{
+	debug("get_content_type(): No content type found for suffix '%s'; using default.", last_dot);
 	return default_content_type;
 	}
     }
