@@ -120,16 +120,18 @@ void RequestHandler::fd_is_writable(int)
 void RequestHandler::read_timeout(int)
     {
     TRACE();
-    info("No activity on connection to %s for %u seconds; shutting down.",
-         peer_address, config->network_read_timeout);
+    if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+        info("No activity on connection to %s for %u seconds; shutting down.",
+             peer_address, config->network_read_timeout);
     delete this;
     }
 
 void RequestHandler::write_timeout(int)
     {
     TRACE();
-    info("Couldn't send any data to %s for %u seconds; shutting down.",
-         peer_address, config->network_write_timeout);
+    if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+        info("Couldn't send any data to %s for %u seconds; shutting down.",
+             peer_address, config->network_write_timeout);
     delete this;
     }
 
@@ -147,7 +149,8 @@ void RequestHandler::pollhup(int)
         call_state_handler();
     else
         {
-        info("Connection to %s was terminated by peer.", peer_address);
+        if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+            info("Connection to %s was terminated by peer.", peer_address);
         delete this;
         }
     }
