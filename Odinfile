@@ -1,6 +1,7 @@
 # Build the http daemon.
 
-httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) \
+httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
+		      +lib=(libscheduler/libscheduler.a) \
                       +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
                       +define='ENABLE_TRACER' \
 		      +optimize=0 \
