@@ -59,10 +59,10 @@ bool RequestHandler::setup_reply()
         }
     if (S_ISDIR(sbuf.st_mode))
         {
-        if (*request.url.path.data().rbegin() == '/')
-            moved_permanently(request.url.path.data() + config->default_page);
+        if (*request.url.path.rbegin() == '/')
+            moved_permanently(request.url.path + config->default_page);
         else
-            moved_permanently(request.url.path.data() + "/" + config->default_page);
+            moved_permanently(request.url.path + "/" + config->default_page);
         return false;
         }
 
