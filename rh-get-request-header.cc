@@ -85,6 +85,7 @@ bool RequestHandler::parse_host_header()
                 }
             }
         host = http_parser.res_host;
+        port = http_parser.res_port;
         return true;
         }
     else

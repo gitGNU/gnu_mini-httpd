@@ -68,6 +68,7 @@ void RequestHandler::init()
     referer              = "-";
     returned_status_code = 0;
     returned_object_size = 0;
+    port                 = 0;
     minor_version        = 0;
     major_version        = 0;
     if_modified_since    = 0;

@@ -38,6 +38,7 @@ bool RequestHandler::get_request_line()
             path          = http_parser.res_path; urldecode(path);
             major_version = http_parser.res_major_version;
             minor_version = http_parser.res_minor_version;
+            port          = http_parser.res_port;
             read_buffer.erase(0, info.length);
             debug(("Request line is complete; going into READ_REQUEST_HEADER state."));
             state = READ_REQUEST_HEADER;

@@ -72,7 +72,10 @@ void RequestHandler::moved_permanently(const char* url)
 
     ostringstream buf;
     buf << "HTTP/1.1 301 Moved Permanently\r\n"
-        << "Location: " << url << "\r\n"
+        << "Location: http://" << host;
+    if (port != 80)
+        buf << ":" << port;
+    buf << url << "\r\n"
         << "Content-Type: text/html\r\n";
     connect_header(buf);
     buf << "\r\n"
@@ -81,7 +84,10 @@ void RequestHandler::moved_permanently(const char* url)
         << "  <title>Page has moved permanently!</title>\r\n"
         << "</head>\r\n"
         << "<body>\r\n"
-        << "The document has moved <a href=\"%s\">here</a>.\r\n"
+        << "The document has moved <a href=\"http://" << host;
+    if (port != 80)
+        buf << ":" << port;
+    buf << url << "\">here</a>.\r\n"
         << "</body>\r\n"
         << "</html>\r\n";
     write_buffer = buf.str();

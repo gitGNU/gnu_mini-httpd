@@ -93,6 +93,7 @@ class RequestHandler : public scheduler::event_handler
     char peer_addr_str[32];
     std::string method, host, path, user_agent, referer;
     std::string connection, keep_alive;
+    unsigned int port;
     unsigned int returned_status_code;
     size_t returned_object_size;
     unsigned int minor_version, major_version;
