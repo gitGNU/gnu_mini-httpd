@@ -55,7 +55,6 @@ class TCPListener : public scheduler::event_handler
 	scheduler::handler_properties prop;
 	prop.poll_events   = POLLIN;
 	prop.read_timeout  = 0;
-	prop.write_timeout = 0;
 	mysched.register_handler(sockfd, *this, prop);
 
 	info("Listening on TCP port %d for incoming requests ...", port_no);
