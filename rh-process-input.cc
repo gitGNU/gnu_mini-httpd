@@ -29,41 +29,41 @@ bool RequestHandler::process_input(char* begin, char* end)
 	{
 	host.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
 	url.assign(begin + pmatch[2].rm_so, pmatch[2].rm_eo - pmatch[2].rm_so);
-	debug("%d: Got full GET request including port: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str());
+	debug(("%d: Got full GET request including port: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str()));
 	}
     else if (host.empty() && url.empty() && regexec(full_get_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	host.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
 	url.assign(begin + pmatch[2].rm_so, pmatch[2].rm_eo - pmatch[2].rm_so);
-	debug("%d: Got full GET request: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str());
+	debug(("%d: Got full GET request: host = '%s' and url = '%s'.", sockfd, host.c_str(), url.c_str()));
 	}
     else if (url.empty() && regexec(get_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	url.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
-	debug("%d: Got GET request: url = '%s'.", sockfd, url.c_str());
+	debug(("%d: Got GET request: url = '%s'.", sockfd, url.c_str()));
 	}
     else if (host.empty() && regexec(host_port_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	host.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
-	debug("%d: Got host header including port: host = '%s'.", sockfd, host.c_str());
+	debug(("%d: Got host header including port: host = '%s'.", sockfd, host.c_str()));
 	}
     else if (host.empty() && regexec(host_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	host.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
-	debug("%d: Got host header: host = '%s'.", sockfd, host.c_str());
+	debug(("%d: Got host header: host = '%s'.", sockfd, host.c_str()));
 	}
     else if (referer.empty() && regexec(referer_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	referer.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
-	debug("%d: Got referer header: referer = '%s'.", sockfd, referer.c_str());
+	debug(("%d: Got referer header: referer = '%s'.", sockfd, referer.c_str()));
 	}
     else if (user_agent.empty() && regexec(user_agent_regex, begin, sizeof(pmatch) / sizeof(regmatch_t), pmatch, 0) == 0)
 	{
 	user_agent.assign(begin + pmatch[1].rm_so, pmatch[1].rm_eo - pmatch[1].rm_so);
-	debug("%d: Got user_agent header: user-agent = '%s'.", sockfd, user_agent.c_str());
+	debug(("%d: Got user_agent header: user-agent = '%s'.", sockfd, user_agent.c_str()));
 	}
     else
-	debug("%d: Got unknown header '%s'.", sockfd, begin);
+	debug(("%d: Got unknown header '%s'.", sockfd, begin));
 
     *end = backup;
     return false;

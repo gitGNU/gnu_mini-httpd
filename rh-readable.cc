@@ -26,24 +26,24 @@ void RequestHandler::fd_is_readable(int)
 	    size_t offset = data - buffer;
 	    if (offset == 0)
 		throw runtime_error("The I/O buffer is too small to hold a single line! Aborting.");
-	    debug("%d: The first %d bytes of the buffer are unused. Moving data down to make space.",
-		  sockfd, offset);
+	    debug(("%d: The first %d bytes of the buffer are unused. Moving data down to make space.",
+		  sockfd, offset));
 	    memmove(buffer, data, data_end - data);
 	    data     -= offset;
 	    data_end -= offset;
 	    }
 
-	debug("%d: Internal buffer is %d bytes large, has %d bytes content, the first %d bytes are unused, " \
-	      "and %d bytes are free at the end." ,
-	      sockfd, buffer_end - buffer, data_end - data, data - buffer, buffer_end - data_end);
+	debug(("%d: Internal buffer is %d bytes large, has %d bytes content, the first %d bytes are unused, " \
+	      "and %d bytes are free at the end.",
+	      sockfd, buffer_end - buffer, data_end - data, data - buffer, buffer_end - data_end));
 
 	size_t rc = myread(sockfd, data_end, buffer_end - data_end);
 	bytes_received += rc;
 	++read_calls;
-	debug("%d: Read %d bytes from network peer.", sockfd, rc);
+	debug(("%d: Read %d bytes from network peer.", sockfd, rc));
 	if (rc == 0)
 	    {
-	    debug("%d: Peer has shut down his channel of the connection.", sockfd);
+	    debug(("%d: Peer has shut down his channel of the connection.", sockfd));
 	    delete this;
 	    return;
 	    }
@@ -61,7 +61,7 @@ void RequestHandler::fd_is_readable(int)
 		{
 		if (process_input(data, eol) == true)
 		    {
-		    debug("%d: Read request is complete.", sockfd);
+		    debug(("%d: Read request is complete.", sockfd));
 
 		    // Do we have all information we need? If not,
 		    // report a protocol error.
@@ -83,9 +83,9 @@ void RequestHandler::fd_is_readable(int)
                     // Decode any special characters that the url
                     // might contain.
 
-                    debug("Original url is '%s'.", url.c_str());
+                    debug(("Original url is '%s'.", url.c_str()));
                     urldecode(url);
-                    debug("Decoded url is '%s'.", url.c_str());
+                    debug(("Decoded url is '%s'.", url.c_str()));
 
 		    // Construct the actual file name associated with
 		    // the hostname and URL, then check whether the
@@ -121,7 +121,7 @@ void RequestHandler::fd_is_readable(int)
                         return;
                         }
                     state = COPY_FILE;
-                    debug("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd);
+                    debug(("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd));
 
 		    int len = snprintf(buffer, buffer_end - buffer,
 				       "HTTP/1.0 200 OK\r\n"     \
@@ -146,21 +146,21 @@ void RequestHandler::fd_is_readable(int)
 		data = eol + 2;
 		}
 	    else
-		debug("%d: Our input buffer does not contain any more complete lines.", sockfd);
+		debug(("%d: Our input buffer does not contain any more complete lines.", sockfd));
 	    }
 	while (eol);
-	debug("%d: %d bytes could not be processed.", sockfd, data_end - data);
+	debug(("%d: %d bytes could not be processed.", sockfd, data_end - data));
 	if (data == data_end)
 	    data = data_end = buffer;
 	}
     catch(const exception& e)
 	{
-	debug("%d: Caught exception: %s", sockfd, e.what());
+	debug(("%d: Caught exception: %s", sockfd, e.what()));
 	delete this;
 	}
     catch(...)
 	{
-	debug("%d: Caught unknown exception. Terminating.", sockfd);
+	debug(("%d: Caught unknown exception. Terminating.", sockfd));
 	delete this;
 	}
     }

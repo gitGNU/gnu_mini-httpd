@@ -18,12 +18,12 @@ void RequestHandler::fd_is_writable(int)
 	    // continuing.
 
 	    size_t rc = myread(filefd, buffer, buffer_end - buffer);
-	    debug("%d: Read %d bytes from file.", sockfd, rc);
+	    debug(("%d: Read %d bytes from file.", sockfd, rc));
 	    data     = buffer;
 	    data_end = data + rc;
 	    if (rc == 0)
 		{
-		debug("%d: The complete file is copied: going into WRITE_REMAINING_DATA state.", sockfd);
+		debug(("%d: The complete file is copied: going into WRITE_REMAINING_DATA state.", sockfd));
 		state = WRITE_REMAINING_DATA;
 		close(filefd);
 		filefd = -1;
@@ -36,12 +36,12 @@ void RequestHandler::fd_is_writable(int)
 	    bytes_sent += rc;
 	    data       += rc;
 	    ++write_calls;
-	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
+	    debug(("%d: Wrote %d bytes from buffer to peer.", sockfd, rc));
 	    }
 
 	if (state == WRITE_REMAINING_DATA && data == data_end)
 	    {
-	    debug("%d: Done. Going into TERMINATE state.", sockfd);
+	    debug(("%d: Done. Going into TERMINATE state.", sockfd));
 	    state = TERMINATE;
 	    if (shutdown(sockfd, SHUT_RDWR) == -1)
 		delete this;
@@ -53,12 +53,12 @@ void RequestHandler::fd_is_writable(int)
  	}
     catch(const exception& e)
  	{
- 	debug("%d: Caught exception: %s", sockfd, e.what());
+ 	debug(("%d: Caught exception: %s", sockfd, e.what()));
  	delete this;
  	}
     catch(...)
  	{
- 	debug("%d: Caught unknown exception. Terminating.", sockfd);
+ 	debug(("%d: Caught unknown exception. Terminating.", sockfd));
  	delete this;
  	}
     }

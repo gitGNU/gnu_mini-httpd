@@ -68,8 +68,8 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     mysched.register_handler(sockfd, *this, prop);
     if (instances++ == config->hard_poll_interval_threshold)
         {
-        debug("We have more than %d connections: Switching to a hard poll interval of %d seconds.",
-              config->hard_poll_interval_threshold, config->hard_poll_interval);
+        debug(("We have more than %d connections: Switching to a hard poll interval of %d seconds.",
+              config->hard_poll_interval_threshold, config->hard_poll_interval));
         mysched.set_poll_interval(config->hard_poll_interval * 1000);
         }
 
@@ -90,8 +90,8 @@ RequestHandler::~RequestHandler()
 
     if (--instances == config->hard_poll_interval_threshold)
 	{
-	debug("We have %d active connections: Switching back to an accurate poll interval.",
-	      config->hard_poll_interval_threshold);
+	debug(("We have %d active connections: Switching back to an accurate poll interval.",
+	      config->hard_poll_interval_threshold));
 	mysched.use_accurate_poll_interval();
 	}
     mysched.remove_handler(sockfd);
