@@ -1,7 +1,7 @@
 #
 # Build the httpd documentation
 #
-DOCBOOKBASE	= /usr/share/sgml/docbook/dsssl-stylesheets-1.77
+DOCBOOKBASE	= /usr/share/sgml/docbook/dsssl-stylesheets-1.78
 
 .SUFFIXES:
 
