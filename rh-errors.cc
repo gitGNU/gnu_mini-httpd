@@ -56,7 +56,7 @@ void RequestHandler::protocol_error(const string& message)
 void RequestHandler::moved_permanently(const string& url)
     {
     TRACE();
-    debug("%d: Create page-has-moved page in buffer and write it back to the user.", sockfd);
+    debug("%d: Create page-has-moved page to URL %s in buffer and write it back to the user.", sockfd, url.c_str());
     buffer = \
 	"HTTP/1.0 301 Moved Permanently\r\n" \
 	"Location: ";
