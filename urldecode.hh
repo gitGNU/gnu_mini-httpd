@@ -28,7 +28,7 @@ inline void urldecode(std::string& url)
                 c = *i - 'A' + 10;
             else
                 throw std::runtime_error("Invalid encoded character in url!");
-            c = c << 8;
+            c = c << 4;
 
             if (++i == url.end())
                 throw std::runtime_error("Invalid encoded character in url!");
