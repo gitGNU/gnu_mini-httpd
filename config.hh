@@ -6,7 +6,13 @@
 #ifndef CONFIG_HH
 #define CONFIG_HH
 
-#include <ext/hash_map>
+#if defined(HAVE_EXT_HASH_MAP)
+#  include <ext/hash_map>
+#elif defined(HAVE_HASH_MAP)
+#  include <hash_map>
+#else
+#  error Do not know how to include a hash map
+#endif
 #include <string>
 
 class configuration
