@@ -182,8 +182,10 @@ bool RequestHandler::parse_if_modified_since_header()
 
     if (pinfo.full && is_consistent_date(http_parser.res_date))
         {
-        http_parser.res_date.tm_year -= 1900; // prepare for mktime()
-        if_modified_since = mktime(&http_parser.res_date);
+        // Prepare for mktime().
+        http_parser.res_date.tm_year -= 1900;
+        if_modified_since  = mktime(&http_parser.res_date);
+        if_modified_since -= timezone;
         return true;
         }
 
