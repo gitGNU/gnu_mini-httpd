@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include "request-handler.hh"
 #include "config.hh"
+#include "urldecode.hh"
 using namespace std;
 
 void RequestHandler::fd_is_readable(int)
@@ -78,6 +79,13 @@ void RequestHandler::fd_is_readable(int)
 			protocol_error("The HTTP request did not contain an URL!\r\n");
 			return;
 			}
+
+                    // Decode any special characters that the url
+                    // might contain.
+
+                    debug("Original url is '%s'.", url.c_str());
+                    urldecode(url);
+                    debug("Decoded url is '%s'.", url.c_str());
 
 		    // Construct the actual file name associated with
 		    // the hostname and URL, then check whether the
