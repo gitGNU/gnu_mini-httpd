@@ -23,8 +23,6 @@ class configuration
 
     // Buffer sizes.
     static unsigned int read_block_size;
-    static unsigned int min_buffer_fill_size;
-    static unsigned int max_buffer_fill_size;
 
     // Paths.
     static std::string document_root;
