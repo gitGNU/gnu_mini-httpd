@@ -17,7 +17,8 @@ HTTPParser::HTTPParser()
           HT   (9),
           LF   (10),
           CR   (13),
-          SP   (32)
+          SP   (32),
+          commit_month(*this)
     {
     CRLF          = CR >> LF;
     mark          = chset_t("-_.!~*'()");
@@ -58,6 +59,20 @@ HTTPParser::HTTPParser()
     Header        = ( field_name[ref(res_name)] >> *LWS >> ":" >> *LWS >> !( field_value[ref(res_data)] ) ) >> CRLF;
 
     Host_Header   = Host[ref(res_host)] >> !( ":" >> uint_p[ref(res_port)] );
+
+    weekday         = str_p("Monday") | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+    wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+    month           = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun"
+                    | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
+    time            = digit_p.repeat(2) >> ":" >> digit_p.repeat(2) >> ":" >> digit_p.repeat(2);
+    date1           = digit_p.repeat(2) >> SP >> month >> SP >> digit_p.repeat(4);
+    date2           = digit_p.repeat(2) >> "-" >> month >> "-" >> digit_p.repeat(2);
+    date3           = month >> SP >> ( digit_p.repeat(2) | ( SP >> digit_p ) );
+    rfc1123_date    = wkday >> "," >> SP >> date1 >> SP >> time >> SP >> "GMT";
+    rfc850_date     = weekday >> "," >> SP >> date2 >> SP >> time >> SP >> "GMT";
+    asctime_date    = wkday >> SP >> date3 >> SP >> time >> SP >> digit_p.repeat(4);
+    HTTP_date       = rfc1123_date | rfc850_date | asctime_date;
+    If_Modified_Since_Header = HTTP_date;
 
 #if 0
     CRLF            = CR >> LF;
@@ -120,44 +135,8 @@ HTTPParser::HTTPParser()
     Connection      = str_p("Connection") >> *LWS >> ":" >>
                       ( *LWS >> connection_token >> *( *LWS >> "," >> *LWS >> connection_token ) );
 
-    weekday         = str_p("Monday")
-                      | "Tuesday"
-                      | "Wednesday"
-                      | "Thursday"
-                      | "Friday"
-                      | "Saturday"
-                      | "Sunday";
 
-    month           = str_p("Jan")
-                      | "Feb"
-                      | "Mar"
-                      | "Apr"
-                      | "May"
-                      | "Jun"
-                      | "Jul"
-                      | "Aug"
-                      | "Sep"
-                      | "Oct"
-                      | "Nov"
-                      | "Dec";
 
-    wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
-
-    time            = digit_p.repeat(2) >> ":" >> digit_p.repeat(2) >> ":" >> digit_p.repeat(2);
-
-    date1           = digit_p.repeat(2) >> SP >> month >> SP >> digit_p.repeat(4);
-
-    date2           = digit_p.repeat(2) >> "-" >> month >> "-" >> digit_p.repeat(2);
-
-    date3           = month >> SP >> ( digit_p.repeat(2) | ( SP >> digit_p ));
-
-    rfc1123_date    = wkday >> "," >> SP >> date1 >> SP >> time >> SP >> "GMT";
-
-    rfc850_date     = weekday >> "," >> SP >> date2 >> SP >> time >> SP >> "GMT";
-
-    asctime_date    = wkday >> SP >> date3 >> SP >> time >> SP >> digit_p.repeat(4);
-
-    HTTP_date       = rfc1123_date | rfc850_date | asctime_date;
 
     Date            = str_p("Date") >> *LWS >> ":" >> *LWS >> HTTP_date;
 
@@ -211,3 +190,7 @@ HTTPParser::HTTPParser()
 #endif
     }
 
+
+void HTTPParser::commit_month_t::operator() (iterator_t begin, iterator_t end) const
+    {
+    }

@@ -7,6 +7,7 @@
 #define HTTPPARSER_HH
 
 #include <string>
+#include <ctime>
 #include <boost/spirit/spirit_rule.hpp>
 #include <boost/spirit/utility/chset.hpp>
 
@@ -26,6 +27,7 @@ class HTTPParser
     std::string res_method, res_host, res_path, res_query;
     unsigned int res_port, res_minor_version, res_major_version;
     std::string res_name, res_data;
+    struct tm res_date;
 
     range_t CHAR;
     chlit_t HT, LF, CR, SP;
@@ -37,7 +39,10 @@ class HTTPParser
         uric, Query, http_URL, Request_URI, HTTP_Version,
         Request_Line, CTL, TEXT, separators, token, LWS,
         quoted_pair, qdtext, quoted_string, field_content,
-        field_value, field_name, Header, Host_Header;
+        field_value, field_name, Header, Host_Header,
+        weekday, month, wkday, date1, date2, date3,
+        rfc1123_date, rfc850_date, asctime_date, time,
+        HTTP_date,If_Modified_Since_Header;
 
     static bool have_complete_header_line(std::string::const_iterator begin, std::string::const_iterator end)
         {
@@ -52,6 +57,15 @@ class HTTPParser
         else
             return false;
         }
+
+  private:
+    struct commit_month_t
+        {
+        commit_month_t(HTTPParser& parser_) : parser(parser_) { }
+        void operator() (iterator_t begin, iterator_t end) const;
+        HTTPParser& parser;
+        };
+    commit_month_t commit_month;
     };
 
 extern HTTPParser http_parser;

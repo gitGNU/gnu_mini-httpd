@@ -134,5 +134,22 @@ bool RequestHandler::parse_if_modified_since_header()
     TRACE();
     debug(("%d: If-Modified-Since header: data = '%s'", sockfd, http_parser.res_data.c_str()));
 
-    return true;
+    HTTPParser::parse_info_t info = parse(http_parser.res_data.data(),
+                                          http_parser.res_data.data() + http_parser.res_data.size(),
+                                          http_parser.If_Modified_Since_Header);
+    if (info.full)
+        {
+#if 0
+        time_t tmp = mktime(&http_parser.res_date);
+        if (tmp >= 0)
+            {
+            if_modified_since = tmp;
+            return true;
+            }
+#else
+        return true;
+#endif
+        }
+    protocol_error("Malformed <tt>If-Modified-Since</tt> header.\r\n");
+    return false;
     }
