@@ -8,7 +8,7 @@
 
 #include <string>
 #include <ctime>
-#include <boost/spirit/spirit_core.hpp>
+#include <boost/spirit.hpp>
 #include <boost/spirit/utility/chset.hpp>
 #include <boost/spirit/symbols/symbols.hpp>
 
