@@ -7,6 +7,8 @@
 #define __LOG_HH__
 
 #include <string>
+#include <sys/time.h>
+#include <unistd.h>
 
 #ifdef ENABLE_TRACER
 #  define TRACE() Tracer T(__PRETTY_FUNCTION__)
@@ -28,13 +30,13 @@ void debug(const char* fmt, ...) throw();
 void info(const char* fmt, ...)  throw();
 void error(const char* fmt, ...) throw();
 
-inline void log_access(const char* command, const std::string& host,
-		       const std::string& url, const char* peer_address,
-		       const std::string& filename, size_t filesize)
+inline void log_access(bool success, const char* host, const char* url, const char* peer,
+		       int sock, const timeval& runtime, size_t sent, size_t received)
     {
-
+    info("%s: host = '%s'; url = '%s'; peer = '%s'; socket = %u; runtime = %d.%d; " \
+	 "sent = %u, received = %d", ((success) ? "success" : "failure"),
+	 host, url, peer, sock, runtime.tv_sec, runtime.tv_usec, sent, received);
     }
-void flush_accesses();
 
 class Tracer
     {

@@ -7,6 +7,8 @@
 #define __HTTPD_HH__
 
 #include <string>
+#include <sys/time.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -31,7 +33,6 @@ class RequestHandler : public scheduler::event_handler
 
     static size_t myread(int, void*, size_t);
     static size_t mywrite(int, const void*, size_t);
-    bool write_buffer_or_queue();
 
     void file_not_found(const char* url);
     void moved_permanently(const char* url);
@@ -58,6 +59,9 @@ class RequestHandler : public scheduler::event_handler
     char* data;
     char* data_end;
     FileCache::file_object cached_file;
+
+    size_t bytes_sent, bytes_received;
+    timeval connection_start;
 
     static unsigned int instances;
 

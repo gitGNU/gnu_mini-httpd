@@ -37,6 +37,7 @@ void RequestHandler::fd_is_readable(int)
 	      sockfd, buffer_end - buffer, data_end - data, data - buffer, buffer_end - data_end);
 
 	size_t rc = myread(sockfd, data_end, buffer_end - data_end);
+	bytes_received += rc;
 	debug("%d: Read %d bytes from network peer.", sockfd, rc);
 	if (rc == 0)
 	    {
@@ -127,7 +128,6 @@ void RequestHandler::fd_is_readable(int)
 			debug("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd);
 			}
 
-		    log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
 		    int len = snprintf(buffer, buffer_end - buffer,
 				       "HTTP/1.0 200 OK\r\n"     \
 				       "Content-Type: %s\r\n"    \

@@ -15,10 +15,15 @@
 unsigned int RequestHandler::instances = 0;
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
-
+	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1),
+	  bytes_sent(0), bytes_received(0)
     {
     TRACE();
+
+    // Get the current time so that we can calculate our run-time
+    // later.
+
+    gettimeofday(&connection_start, 0);
 
     // Initialize the internal buffer.
 
@@ -69,6 +74,14 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 RequestHandler::~RequestHandler()
     {
     TRACE();
+
+    timeval now, runtime;
+    gettimeofday(&now, 0);
+    timersub(&now, &connection_start, &runtime);
+
+    log_access((state == TERMINATE), host.c_str(), url.c_str(), peer_addr_str, sockfd,
+	       runtime, bytes_sent, bytes_received);
+
     if (--instances == config->hard_poll_interval_threshold)
 	{
 	debug("We have %d active connections: Switching back to an accurate poll interval.",

@@ -33,7 +33,8 @@ void RequestHandler::fd_is_writable(int)
 	if ((state == COPY_FILE || state == WRITE_CACHED_FILE || state == WRITE_REMAINING_DATA) && data < data_end)
 	    {
 	    size_t rc = mywrite(sockfd, data, data_end - data);
-	    data += rc;
+	    bytes_sent += rc;
+	    data       += rc;
 	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
 	    }
 
