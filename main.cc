@@ -35,6 +35,7 @@ try
     signal(SIGINT, &set_sig_term);
     signal(SIGHUP, &set_sig_term);
     signal(SIGQUIT, &set_sig_term);
+    signal(SIGPIPE, SIG_IGN);
 
     // Start-up scheduler and listener.
 
