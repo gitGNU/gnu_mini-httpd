@@ -20,7 +20,7 @@ unsigned int configuration::hard_poll_interval_threshold = 32;
 int configuration::hard_poll_interval                    = 60 sec;
 
 // Buffer sizes.
-unsigned int configuration::io_buffer_size               =  4 kb;
+unsigned int configuration::max_line_length              =  4 kb;
 
 // Paths.
 char* configuration::document_root                       = DOCUMENT_ROOT;

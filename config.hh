@@ -30,7 +30,7 @@ class configuration
     static int hard_poll_interval;
 
     // Buffer sizes.
-    static unsigned int io_buffer_size;
+    static unsigned int max_line_length;
 
     // Paths.
     static char* document_root;

@@ -5,6 +5,7 @@
 
 #include "system-error/system-error.hh"
 #include "request-handler.hh"
+#include "config.hh"
 #include "log.hh"
 using namespace std;
 
@@ -13,6 +14,15 @@ void RequestHandler::fd_is_readable(int)
     TRACE();
     try
 	{
+        // Protect against flooding.
+
+        if (read_buffer.size() > config->max_line_length)
+            {
+            protocol_error("This server won't process excessively long\r\n" \
+                           "request header lines.\r\n");
+            return;
+            }
+
         // Read sockfd stuff into the buffer.
 
         char buf[4096];
