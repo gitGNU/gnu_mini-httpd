@@ -26,7 +26,7 @@ namespace
     }
 
 #ifdef DEBUG
-void trace(const char* fmt, ...) throw()
+void _trace(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);
@@ -34,7 +34,7 @@ void trace(const char* fmt, ...) throw()
     va_end(ap);
     }
 
-void debug(const char* fmt, ...) throw()
+void _debug(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);

@@ -20,11 +20,13 @@
 #endif
 
 #ifdef DEBUG
-void trace(const char* fmt, ...) throw();
-void debug(const char* fmt, ...) throw();
+void _trace(const char* fmt, ...) throw();
+void _debug(const char* fmt, ...) throw();
+#  define trace(x) _trace x
+#  define debug(x) _debug x
 #else
-#  define trace(fmt,...) if (false)
-#  define debug(fmt,...) if (false)
+#  define trace(x) if (false)
+#  define debug(x) if (false)
 #endif
 
 void info(const char* fmt, ...)  throw();
@@ -48,13 +50,13 @@ class Tracer
   public:
     Tracer(const char* funcname) : name(funcname)
 	{
-	trace("%sEntering %s ...", indent.c_str(), name);
+	trace(("%sEntering %s ...", indent.c_str(), name));
 	indent.append("    ");
 	}
     ~Tracer()
 	{
 	indent.erase(indent.size()-4, std::string::npos);
-	trace("%sLeaving %s ...", indent.c_str(), name);
+	trace(("%sLeaving %s ...", indent.c_str(), name));
 	}
 
   private:
