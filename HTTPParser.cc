@@ -5,7 +5,6 @@
 
 #include <stdexcept>
 #include "HTTPParser.hh"
-#include <boost/spirit/attr/semantics.hpp>
 
 using namespace std;
 using namespace spirit;
@@ -49,6 +48,19 @@ using namespace spirit;
   source module, but I never actually used that parser yet. Keep your
   fingers crossed!
 */
+/*
+  UPDATE: Now that I've migrated to the latest version of Spirit, most
+  of what is stated above is probably no longer true. In fact,
+  combined with the Phoenix meta-programming library that comes with
+  Spirit, I could probably get rid of all the helper class I needed
+  before. Actually, if I'd re-write the whole thing, I could probably
+  get a much cleaner parser with a better run-time performance.
+
+  Eventually I'll do that.
+
+  Let me just finish figuring out how women think ... then I'll tackle
+  the next task.
+*/
 
 // Proxy class that will assign a parser result via a pointer to classT.
 
@@ -74,7 +86,7 @@ class var_assign<string>
     {
   public:
     var_assign(string** i) : instance(i) { }
-    void operator() (const char*& first, const char*& last) const
+    void operator() (const char* first, const char* last) const
         {
         **instance = string(first, last - first);
         }
@@ -132,7 +144,7 @@ class member_assign<classT, string>
             : instance(i), member(m)
         {
         }
-    void operator() (const char*& first, const char*& last) const
+    void operator() (const char* first, const char* last) const
         {
         (*instance)->*member = string(first, last - first);
         }
@@ -159,6 +171,7 @@ member_assign<classT,memberT> assign(classT** dst, memberT classT::* var)
     return member_assign<classT,memberT>(dst, var);
     }
 
+#if 0
 // Even though this class looks like another proxy class, it isn't.
 // This is basically another version of the ref() functor, but this one
 // uses another interface in operator(). I need this one because the
@@ -184,6 +197,7 @@ ref_assigner<classT> assign(classT& r)
     {
     return ref_assigner<classT>(r);
     }
+#endif
 
 // That was easy, wasn't it? Finally ... the almighty parser. I wonder
 // whether the code had been much more complicated, had I written it
@@ -213,8 +227,22 @@ HTTPParser::HTTPParser()
     domainlabel   = alnum_p >> *( !ch_p('-') >> alnum_p );
     toplabel      = alpha_p >> *( !ch_p('-') >> alnum_p );
     hostname      = *( domainlabel >> '.' ) >> toplabel >> !ch_p('.');
-    IPv4address   = (+digit_p >> '.' ).repeat(3) >> +digit_p;
+    IPv4address   = +digit_p >> '.'
+                    >> +digit_p >> '.'
+                    >> +digit_p >> '.'
+                    >> +digit_p;
     Host          = hostname | IPv4address;
+    CTL           = range_t(0, 31) | chlit_t(127);
+    TEXT          = anychar_p - CTL;
+    separators    = chset_t("()<>@,;:\\\"/[]?={}\x20\x09");
+    token         = +( CHAR - ( CTL | separators ) );
+    LWS           = !CRLF >> +( SP | HT );
+    quoted_pair   = '\\' >> CHAR;
+    qdtext        = anychar_p - '"';
+    quoted_string = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
+    field_content = +TEXT | ( token | separators | quoted_string );
+    field_value   = *( field_content | LWS );
+    field_name    = token;
     Method        = token;
     uric          = reserved | unreserved | escaped;
     Query         = *uric;
@@ -228,17 +256,7 @@ HTTPParser::HTTPParser()
     HTTP_Version  = nocase_d["http/"] >> uint_p[assign(&req_ptr, &HTTPRequest::major_version)]
                     >> '.' >> uint_p[assign(&req_ptr, &HTTPRequest::minor_version)];
     Request_Line  = Method[assign(&req_ptr, &HTTPRequest::method)] >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
-    CTL           = range_t(0, 31) | chlit_t(127);
-    TEXT          = anychar_p - CTL;
-    separators    = chset_t("()<>@,;:\\\"/[]?={}\x20\x09");
-    token         = +( CHAR - ( CTL | separators ) );
-    LWS           = !CRLF >> +( SP | HT );
-    quoted_pair   = '\\' >> CHAR;
-    qdtext        = anychar_p - '"';
-    quoted_string = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
-    field_content = +TEXT | ( token | separators | quoted_string );
-    field_value   = *( field_content | LWS );
-    field_name    = token;
+
     Header        = ( field_name[assign(&name_ptr)] >> *LWS >> ":" >> *LWS
                     >> !( field_value[assign(&data_ptr)] ) ) >> CRLF;
     Host_Header   = Host[assign(&req_ptr, &HTTPRequest::host)]
@@ -247,17 +265,17 @@ HTTPParser::HTTPParser()
     wkday         = "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun";
     month.add       ("Jan", 0)("Feb", 1)("Mar", 2)("Apr", 3)("May", 4)("Jun", 5)
                     ("Jul", 6)("Aug", 7)("Sep", 8)("Oct", 9)("Nov", 10)("Dec", 11);
-    time          = uint_p[ref(tm_date.tm_hour)] >> ":" >> uint_p[ref(tm_date.tm_min)] >>
-                    ":" >> uint_p[ref(tm_date.tm_sec)];
-    date1         = uint_p[ref(tm_date.tm_mday)] >> SP >> month[assign(tm_date.tm_mon)] >>
-                    SP >> uint_p[ref(tm_date.tm_year)];
-    date2         = uint_p[ref(tm_date.tm_mday)] >> "-" >> month[assign(tm_date.tm_mon)] >>
-                    "-" >> uint_p[ref(tm_date.tm_year)];
+    time          = uint_p[assign(tm_date.tm_hour)] >> ":" >> uint_p[assign(tm_date.tm_min)] >>
+                    ":" >> uint_p[assign(tm_date.tm_sec)];
+    date1         = uint_p[assign(tm_date.tm_mday)] >> SP >> month[assign(tm_date.tm_mon)] >>
+                    SP >> uint_p[assign(tm_date.tm_year)];
+    date2         = uint_p[assign(tm_date.tm_mday)] >> "-" >> month[assign(tm_date.tm_mon)] >>
+                    "-" >> uint_p[assign(tm_date.tm_year)];
     date3         = month[assign(tm_date.tm_mon)] >> SP >>
-                    ( uint_p[ref(tm_date.tm_mday)] | ( SP >> uint_p[ref(tm_date.tm_mday)] ) );
+                    ( uint_p[assign(tm_date.tm_mday)] | ( SP >> uint_p[assign(tm_date.tm_mday)] ) );
     rfc1123_date  = wkday >> "," >> SP >> date1 >> SP >> time >> SP >> "GMT";
     rfc850_date   = weekday >> "," >> SP >> date2 >> SP >> time >> SP >> "GMT";
-    asctime_date  = wkday >> SP >> date3 >> SP >> time >> SP >> uint_p[ref(tm_date.tm_year)];
+    asctime_date  = wkday >> SP >> date3 >> SP >> time >> SP >> uint_p[assign(tm_date.tm_year)];
     HTTP_date     = rfc1123_date | rfc850_date | asctime_date;
     If_Modified_Since_Header = HTTP_date;
 
@@ -300,7 +318,7 @@ size_t HTTPParser::parse_header(string& name, string& data, const string& input)
     data_ptr = &data;
 
     parse_info_t info = parse(input.data(), input.data() + input.size(), Header);
-    if (info.match)
+    if (info.hit)
         return info.length;
     else
         return 0;
@@ -312,7 +330,7 @@ size_t HTTPParser::parse_request_line(HTTPRequest& request, const string& input)
     url_ptr = &request.url;
 
     parse_info_t info = parse(input.data(), input.data() + input.size(), Request_Line);
-    if (info.match)
+    if (info.hit)
         return info.length;
     else
         return 0;
@@ -323,7 +341,7 @@ size_t HTTPParser::parse_host_header(HTTPRequest& request, const std::string& in
     req_ptr = &request;
 
     parse_info_t info = parse(input.data(), input.data() + input.size(), Host_Header);
-    if (info.match)
+    if (info.hit)
         return info.length;
     else
         return 0;
@@ -334,7 +352,7 @@ size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const st
     memset(&tm_date, 0, sizeof(tm_date));
 
     parse_info_t info = parse(input.data(), input.data() + input.size(), If_Modified_Since_Header);
-    if (!info.match)
+    if (!info.hit)
         return 0;
 
     // Make sure the tm structure contains no nonsense.

@@ -8,8 +8,9 @@
 
 #include <string>
 #include <ctime>
-#include <boost/spirit/spirit_rule.hpp>
-#include <boost/spirit/spirit_utility.hpp>
+#include <boost/spirit/spirit_core.hpp>
+#include <boost/spirit/utility/chset.hpp>
+#include <boost/spirit/symbols/symbols.hpp>
 
 #include "HTTPRequest.hh"
 
@@ -49,9 +50,9 @@ class HTTPParser
     typedef char                             value_t;
     typedef const value_t*                   iterator_t;
     typedef spirit::chlit<value_t>           chlit_t;
-    typedef spirit::range<value_t, value_t>  range_t;
+    typedef spirit::range<value_t>           range_t;
     typedef spirit::chset<value_t>           chset_t;
-    typedef spirit::rule<iterator_t>         rule_t;
+    typedef spirit::rule<>                   rule_t;
     typedef spirit::symbols<int, value_t>    symbol_t;
     typedef spirit::parse_info<iterator_t>   parse_info_t;
 
