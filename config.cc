@@ -277,4 +277,3 @@ const char* configuration::get_content_type(const char* filename) const
     else
 	return default_content_type;
     }
-
