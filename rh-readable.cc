@@ -78,7 +78,13 @@ void RequestHandler::fd_is_readable(int fd)
 			    }
 
 			if (S_ISDIR(sbuf.st_mode))
-			    filename.append("/index.html");
+			    {
+			    if (url[url.size()-1] == '/')
+				moved_permanently(url + "index.html");
+			    else
+				moved_permanently(url + "/index.html");
+			    return;
+			    }
 
 			filefd = open(filename.c_str(), O_RDONLY | O_NONBLOCK, 0);
 			if (filefd == -1)
@@ -87,10 +93,15 @@ void RequestHandler::fd_is_readable(int fd)
 			    file_not_found(filename);
 			    return;
 			    }
-			info("%d: %s GET %s --> %s", sockfd, peer_addr_str, url.c_str(), filename.c_str());
+			log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
 			state = WRITE_ANSWER;
 			buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
 			buffer += config->get_content_type(filename);
+			if (snprintf(tmp, config->read_block_size, "%ld", sbuf.st_size) != -1)
+			    {
+			    buffer += "\r\nContent-Length: ";
+			    buffer += tmp;
+			    }
 			buffer += "\r\n\r\n";
 			if (write_buffer_or_queue())
 			    {

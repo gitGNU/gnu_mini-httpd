@@ -28,6 +28,14 @@ inline void debug(const char* fmt, ...) throw() { }
 void info(const char* fmt, ...)  throw();
 void error(const char* fmt, ...) throw();
 
+inline void log_access(const char* command, const std::string& host,
+		       const std::string& url, const char* peer_address,
+		       const std::string& filename, size_t filesize)
+    {
+
+    }
+void flush_accesses();
+
 class Tracer
     {
   public:
