@@ -8,7 +8,6 @@
 #include "system-error/system-error.hh"
 #include "RequestHandler.hh"
 #include "timestamp-to-string.hh"
-#include "escape-char.hh"
 #include "config.hh"
 #include "log.hh"
 
