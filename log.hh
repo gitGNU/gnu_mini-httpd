@@ -8,8 +8,21 @@
 
 #include <string>
 
+#ifdef ENABLE_TRACER
+#  define TRACE() Tracer T(__PRETTY_FUNCTION__)
+#  define DEBUG
+#else
+#  define TRACE() if (false)
+#endif
+
+#ifdef DEBUG
 void trace(const char* fmt, ...) throw();
 void debug(const char* fmt, ...) throw();
+#else
+inline void trace(const char* fmt, ...) throw() { }
+inline void debug(const char* fmt, ...) throw() { }
+#endif
+
 void info(const char* fmt, ...)  throw();
 void error(const char* fmt, ...) throw();
 
@@ -31,11 +44,5 @@ class Tracer
     const char*        name;
     static std::string indent;
     };
-
-#ifdef ENABLE_TRACER
-#  define TRACE() Tracer T(__PRETTY_FUNCTION__)
-#else
-#  define TRACE() if (false)
-#endif
 
 #endif

@@ -25,6 +25,7 @@ namespace
     static init_logging sentry;
     }
 
+#ifdef DEBUG
 void trace(const char* fmt, ...) throw()
     {
     va_list ap;
@@ -40,6 +41,7 @@ void debug(const char* fmt, ...) throw()
     vsyslog(LOG_DEBUG, fmt, ap);
     va_end(ap);
     }
+#endif
 
 void info(const char* fmt, ...) throw()
     {
