@@ -7,6 +7,7 @@
 #define __CONFIG_HH__
 
 #include <ext/hash_map>
+#include <string>
 
 class configuration
     {
