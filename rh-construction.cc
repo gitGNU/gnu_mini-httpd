@@ -57,7 +57,7 @@ void RequestHandler::reset()
     {
     TRACE();
 
-    // Initialize the internal variables.
+    // Freshen up the internal variables.
 
     state = READ_REQUEST_LINE;
 
@@ -67,11 +67,9 @@ void RequestHandler::reset()
         filefd = -1;
         }
 
-    request          = HTTPRequest();
-    request.url.port = 80;
-    request.port     = 80;
+    request = HTTPRequest();
 
-    // Register ourselves with the scheduler.
+    // Register ourself with the scheduler.
 
     scheduler::handler_properties prop;
     prop.poll_events   = POLLIN;
