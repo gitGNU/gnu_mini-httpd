@@ -14,7 +14,7 @@ using namespace std;
 const configuration* config;
 volatile sig_atomic_t got_terminate_sig = false;
 
-void set_sig_term(int)
+static void set_sig_term(int)
     {
     got_terminate_sig = true;
     }
