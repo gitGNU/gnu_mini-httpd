@@ -3,48 +3,59 @@
  * All rights reserved.
  */
 
+#include <unistd.h>
 #include "request-handler.hh"
 using namespace std;
 
 void RequestHandler::fd_is_writable(int)
     {
+    TRACE();
     try
-	{
-	TRACE();
-	size_t rc = mywrite(sockfd, buffer.data(), buffer.size());
-	debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
-	buffer.erase(0, rc);
-
+ 	{
+	size_t rc;
 	if (state == WRITE_ANSWER)
 	    {
-	    if (buffer.empty())
+	    if (data_end == data)
 		{
-		debug("%d: Write buffer is empty. Start the read handler, stop the write handler.", sockfd);
-		register_file_read_handler();
-		remove_network_write_handler();
+		// Buffer is empty. Read new data from file before
+		// continuing.
+
+		rc = myread(filefd, buffer, buffer_end - buffer);
+		debug("%d: Read %d bytes from file.", sockfd, rc);
+		data     = buffer;
+		data_end = data + rc;
+		if (rc == 0)
+		    {
+		    debug("%d: The complete file is copied, we're done.", sockfd);
+		    state = TERMINATE;
+		    close(filefd);
+		    filefd = -1;
+		    }
 		}
 	    }
-	else if (state == TERMINATE)
+
+	if (data < data_end)
 	    {
-	    if (buffer.empty())
-		{
-		debug("%d: Buffer is empty and we're in TERMINATE state ... terminating.", sockfd);
-		delete this;
-		}
+	    rc = mywrite(sockfd, data, data_end - data);
+	    data += rc;
+	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
 	    }
 	else
-	    throw logic_error("The internal state of the RequestHandler is messed up.");
-	}
+	    {
+	    debug("%d: Done. Terminate the connection.", sockfd);
+	    delete this;
+	    }
+ 	}
     catch(const exception& e)
-	{
-	info("%d: Caught exception: %s", sockfd, e.what());
-	delete this;
-	return;
-	}
+ 	{
+ 	info("%d: Caught exception: %s", sockfd, e.what());
+ 	delete this;
+ 	return;
+ 	}
     catch(...)
-	{
-	info("%d: Caught unknown exception. Terminating.", sockfd);
-	delete this;
-	return;
-	}
+ 	{
+ 	info("%d: Caught unknown exception. Terminating.", sockfd);
+ 	delete this;
+ 	return;
+ 	}
     }

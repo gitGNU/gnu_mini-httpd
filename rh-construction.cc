@@ -12,22 +12,18 @@
 #include "system-error.hh"
 #include "config.hh"
 
-char* RequestHandler::tmp = 0;
-unsigned RequestHandler::instances = 0;
-
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
+
     {
     TRACE();
 
-    // If the buffer is not initialized yet, do it now.
+    // Initialize the internal buffer.
 
-    if (tmp == 0)
-	{
-	tmp = new char[config->read_block_size];
-	debug("This is the first RequestHandler instance; initialized static 'tmp' buffer.");
-	}
-    ++instances;
+    buffer     = new char[config->io_buffer_size + 1];
+    buffer_end = buffer + config->io_buffer_size;
+    data       = buffer;
+    data_end   = buffer;
 
     // Store the peer's address as ASCII string; we'll need that
     // again later.
@@ -48,13 +44,10 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 
     // Register ourselves with the scheduler.
 
-    network_properties.poll_events   = 0;
-    network_properties.read_timeout  = config->network_read_timeout;
-    network_properties.write_timeout = config->network_write_timeout;
-    file_properties.poll_events      = 0;
-    file_properties.read_timeout     = config->file_read_timeout;
-    file_properties.write_timeout    = 0;
-    register_network_read_handler();
+    scheduler::handler_properties prop;
+    prop.poll_events   = POLLIN;
+    prop.read_timeout  = config->network_read_timeout;
+    mysched.register_handler(sockfd, *this, prop);
     }
 
 RequestHandler::~RequestHandler()
@@ -63,14 +56,6 @@ RequestHandler::~RequestHandler()
     mysched.remove_handler(sockfd);
     close(sockfd);
     if (filefd >= 0)
-	{
-	mysched.remove_handler(filefd);
 	close(filefd);
-	}
-    if (--instances == 0 && tmp != 0)
-	{
-	debug("No RequestHandler instances left; freeing static 'tmp' buffer.");
-	delete[] tmp;
-	tmp = 0;
-	}
+    delete[] buffer;
     }

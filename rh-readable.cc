@@ -11,162 +11,137 @@
 #include "config.hh"
 using namespace std;
 
-void RequestHandler::fd_is_readable(int fd)
+void RequestHandler::fd_is_readable(int)
     {
+    TRACE();
     try
 	{
-	TRACE();
-	size_t rc = myread(fd, tmp, config->read_block_size);
+	if (state != READ_REQUEST)
+	    throw logic_error("Internal Error: RequestHandler::fd_is_readable() called in wrong state!");
 
-	if (state == READ_REQUEST)
+	if (buffer_end == data_end)
 	    {
-	    if (rc == 0)
+	    size_t offset = data - buffer;
+	    if (offset == 0)
+		throw runtime_error("The I/O buffer is too small to hold a single line! Aborting.");
+	    debug("%d: The first %d bytes of the buffer are unused. Moving data down to make space.",
+		  sockfd, offset);
+	    memmove(buffer, data, data_end - data);
+	    data     -= offset;
+	    data_end -= offset;
+	    }
+
+	debug("%d: Internal buffer is %d bytes large, has %d bytes content, the first %d bytes are unused, " \
+	      "and %d bytes are free at the end." ,
+	      sockfd, buffer_end - buffer, data_end - data, data - buffer, buffer_end - data_end);
+
+	size_t rc = myread(sockfd, data_end, buffer_end - data_end);
+	debug("%d: Read %d bytes from network peer.", sockfd, rc);
+	if (rc == 0)
+	    {
+	    info("%d: Connection was dropped by the peer. Aborting.", sockfd);
+	    delete this;
+	    return;
+	    }
+	else
+	    {
+	    data_end += rc;
+	    *data_end = '\0';
+	    }
+
+	char* eol;
+	do
+	    {
+	    eol = strstr(data, "\r\n");
+	    if (eol)
 		{
-		info("%d: Connection was dropped by the peer. Aborting.", sockfd);
-		delete this;
-		return;
-		}
-	    debug("%d: Read %d bytes from network peer.", sockfd, rc);
-	    const char* begin;
-	    const char* current;
-	    const char* end;
-	    const char* eol;
-	    if (buffer.empty())
-		{
-		debug("%d: Our input buffer is empty, we can handle the input without copying.", sockfd);
-		begin = tmp;
-		end   = tmp + rc;
-		}
-	    else
-		{
-		debug("%d: Our input buffer contains %d bytes, we have to copy.", sockfd, buffer.size());
-		buffer.append(tmp, rc);
-		begin = buffer.c_str();
-		end   = buffer.c_str() + buffer.size();
-		}
-	    current = begin;
-	    do
-		{
-		eol = strstr(current, "\r\n");
-		if (eol)
+		if (process_input(data, eol) == true)
 		    {
-		    if (process_input(current, eol) == true)
+		    debug("%d: Read request is complete.", sockfd);
+
+		    // Do we have all information we need? If not,
+		    // report a protocol error.
+
+		    if (host.empty())
 			{
-			debug("%d: Read request is complete.", sockfd);
-			remove_network_read_handler();
-			if (host.empty())
-			    {
-			    protocol_error("The HTTP request did not contain a hostname.\r\n" \
-					   "In order to fulfill the request, we need the\r\n" \
-					   "hostname either in the URL or via the <tt>Host:</tt>\r\n" \
-					   "header.\r\n");
-			    return;
-			    }
-			else if (url.empty())
-			    {
-			    protocol_error("The HTTP request did not contain an URL!\r\n");
-			    return;
-			    }
-
-			string filename = config->document_root + "/" + host + url;
-			struct stat sbuf;
-			if (stat(filename.c_str(), &sbuf) == -1)
-			    {
-			    info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			    file_not_found(url);
-			    return;
-			    }
-
-			if (S_ISDIR(sbuf.st_mode))
-			    {
-			    if (url[url.size()-1] == '/')
-				moved_permanently(url + "index.html");
-			    else
-				moved_permanently(url + "/index.html");
-			    return;
-			    }
-
-			filefd = open(filename.c_str(), O_RDONLY | O_NONBLOCK, 0);
-			if (filefd == -1)
-			    {
-			    info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			    file_not_found(filename);
-			    return;
-			    }
-			log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
-			state = WRITE_ANSWER;
-			buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
-			buffer += config->get_content_type(filename);
-			if (snprintf(tmp, config->read_block_size, "%ld", sbuf.st_size) != -1)
-			    {
-			    buffer += "\r\nContent-Length: ";
-			    buffer += tmp;
-			    }
-			buffer += "\r\n\r\n";
-			if (write_buffer_or_queue())
-			    {
-			    buffer.clear();
-			    register_file_read_handler();
-			    }
+			protocol_error("The HTTP request did not contain a hostname.\r\n" \
+				       "In order to fulfill the request, we need the\r\n" \
+				       "hostname either in the URL or via the <tt>Host:</tt>\r\n" \
+				       "header.\r\n");
 			return;
 			}
-		    current = eol + 2;
+		    else if (url.empty())
+			{
+			protocol_error("The HTTP request did not contain an URL!\r\n");
+			return;
+			}
+
+		    // Construct the actual file name associated with
+		    // the hostname and URL, then check whether the
+		    // file exists. If not, report an error. If the
+		    // URL points to a directory, send a redirect
+		    // reply pointing to the "index.html" file in that
+		    // directory.
+
+		    string filename = config->document_root + "/" + host + url;
+		    struct stat sbuf;
+		    if (stat(filename.c_str(), &sbuf) == -1)
+			{
+			info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+			file_not_found(url);
+			return;
+			}
+
+		    if (S_ISDIR(sbuf.st_mode))
+			{
+			if (url[url.size()-1] == '/')
+			    moved_permanently(url + "index.html");
+			else
+			    moved_permanently(url + "/index.html");
+			return;
+			}
+
+		    filefd = open(filename.c_str(), O_RDONLY, 0);
+		    if (filefd == -1)
+			{
+			info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+			file_not_found(filename);
+			return;
+			}
+		    log_access("GET", host, url, peer_addr_str, filename, sbuf.st_size);
+		    debug("%d: Going into WRITE_ANSWER state.", sockfd);
+		    state = WRITE_ANSWER;
+		    debug("%d: The snprintf() call may use %d bytes in the buffer.", sockfd, buffer_end - buffer);
+		    int len = snprintf(buffer, buffer_end - buffer,
+				       "HTTP/1.0 200 OK\r\n"     \
+				       "Content-Type: %s\r\n"    \
+				       "Content-Length: %ld\r\n" \
+				       "\r\n",
+				       config->get_content_type(filename), sbuf.st_size);
+		    debug("%d: The snprintf() used %d bytes in the buffer.", sockfd, len);
+		    if (len > 0 && len <= buffer_end - buffer)
+			{
+			data     = buffer;
+			data_end = data + len;
+			}
+		    else
+			throw runtime_error("Internal error: Our internal buffer is too small!");
+
+		    scheduler::handler_properties prop;
+		    prop.poll_events   = POLLOUT;
+		    prop.write_timeout = config->network_write_timeout;
+		    mysched.register_handler(sockfd, *this, prop);
+		    return;
 		    }
-		else
-		    debug("%d: Our input buffer does not contain any more complete lines.", sockfd);
-		}
-	    while (eol);
-	    if (current < end)
-		{
-		if (buffer.empty())
-		    {
-		    debug("%d: Append remaining %d input bytes to the (empty) buffer.", sockfd, end-current);
-		    buffer.append(current, end-current);
-		    }
-		else
-		    {
-		    debug("%d: Remove the processed %d input bytes from the buffer.", sockfd, current-begin);
-		    buffer.erase(0, current-begin);
-		    debug("%d: Buffer contains %d bytes after removal.", sockfd, buffer.size());
-		    }
+		data = eol + 2;
 		}
 	    else
-		{
-		if (!buffer.empty())
-		    {
-		    debug("%d: We have processed the whole buffer contents, so we'll flush the buffer.", sockfd);
-		    buffer.clear();
-		    }
-		else
-		    debug("%d: We have processed all input without the need to copy.", sockfd);
-		}
+		debug("%d: Our input buffer does not contain any more complete lines.", sockfd);
 	    }
-
-	else if (state == WRITE_ANSWER)
-	    {
-	    if (rc == 0)
-		{
-		debug("%d: We have copied the complete file. Terminating.", sockfd);
-		delete this;
-		}
-	    else
-		{
-		debug("%d: Read %d bytes from file fd %d.", sockfd, rc, filefd);
-		size_t rc2 = mywrite(sockfd, tmp, rc);
-		debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc2);
-		if (rc2 < rc)
-		    {
-		    debug("%d: Could not write all %d bytes at once, using buffer for remaining %d bytes.",
-			  sockfd, rc, rc-rc2);
-		    buffer.append(tmp+rc2, rc-rc2);
-		    register_network_write_handler();
-		    remove_file_read_handler();
-		    }
-		}
-	    }
-
-	else
-	    throw logic_error("The internal state of the RequestHandler is messed up.");
+	while (eol);
+	debug("%d: %d bytes could not be processed.", sockfd, data_end - data);
+	if (data == data_end)
+	    data = data_end = buffer;
 	}
     catch(const exception& e)
 	{

@@ -35,18 +35,7 @@ class RequestHandler : public scheduler::event_handler
     void file_not_found(const std::string& url);
     void moved_permanently(const std::string& url);
     void protocol_error(const std::string& message);
-
     bool process_input(const char* begin, const char* end);
-
-    void register_network_read_handler();
-    void remove_network_read_handler();
-    void register_network_write_handler();
-    void remove_network_write_handler();
-    void register_file_read_handler();
-    void remove_file_read_handler();
-
-    scheduler::handler_properties network_properties;
-    scheduler::handler_properties file_properties;
 
     enum state_t
 	{
@@ -60,18 +49,17 @@ class RequestHandler : public scheduler::event_handler
     int sockfd;
     int filefd;
     char peer_addr_str[32];
-
-    std::string buffer;
     std::string host, url;
+    char* buffer;
+    char* buffer_end;
+    char* data;
+    char* data_end;
 
     static const RegExp full_get_port_regex;
     static const RegExp full_get_regex;
     static const RegExp get_regex;
     static const RegExp host_regex;
     static const RegExp host_port_regex;
-
-    static char* tmp;
-    static unsigned instances;
     };
 
 #endif
