@@ -8,10 +8,10 @@
 
 #include <string>
 
-void trace(const char* fmt, ...);
-void debug(const char* fmt, ...);
-void info(const char* fmt, ...);
-void error(const char* fmt, ...);
+void trace(const char* fmt, ...) throw();
+void debug(const char* fmt, ...) throw();
+void info(const char* fmt, ...)  throw();
+void error(const char* fmt, ...) throw();
 
 class Tracer
     {

@@ -25,7 +25,7 @@ namespace
     static init_logging sentry;
     }
 
-void trace(const char* fmt, ...)
+void trace(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);
@@ -33,7 +33,7 @@ void trace(const char* fmt, ...)
     va_end(ap);
     }
 
-void debug(const char* fmt, ...)
+void debug(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);
@@ -41,7 +41,7 @@ void debug(const char* fmt, ...)
     va_end(ap);
     }
 
-void info(const char* fmt, ...)
+void info(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);
@@ -49,7 +49,7 @@ void info(const char* fmt, ...)
     va_end(ap);
     }
 
-void error(const char* fmt, ...)
+void error(const char* fmt, ...) throw()
     {
     va_list ap;
     va_start(ap, fmt);
