@@ -19,7 +19,9 @@ void RequestHandler::file_not_found(const string& file)
 	"  <title>Page does not exist!</title>\r\n" \
 	"</head>\r\n" \
 	"<body>\r\n" \
-	"The page you requested does not exist on this server ...\r\n" \
+	"The requested page <tt>";
+    buffer += file;
+    buffer += "</tt> does not exist on this server ...\r\n" \
 	"</body>\r\n" \
 	"</html>\r\n";
     state = TERMINATE;
@@ -44,15 +46,18 @@ void RequestHandler::protocol_error(const string& message)
     TRACE();
     debug("%d: Create protocol-error page for in buffer and write it back to the user.", sockfd);
     buffer = \
-	"HTTP/1.0 404 Not Found\r\n" \
+	"HTTP/1.0 400 Bad Request\r\n" \
 	"Content-Type: text/html\r\n" \
 	"\r\n" \
 	"<html>\r\n" \
 	"<head>\r\n" \
-	"  <title>Page does not exist!</title>\r\n" \
+	"  <title>Bad HTTP Request!</title>\r\n" \
 	"</head>\r\n" \
 	"<body>\r\n" \
-	"The page you requested does not exist on this server ...\r\n" \
+	"The HTTP request received by this server was incorrect:<p>\r\n" \
+	"<blockquote>\r\n";
+    buffer += message;
+    buffer += "</blockquote>\r\n" \
 	"</body>\r\n" \
 	"</html>\r\n";
     state = TERMINATE;

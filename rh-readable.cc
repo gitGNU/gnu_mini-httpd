@@ -54,14 +54,18 @@ void RequestHandler::fd_is_readable(int fd)
 			{
 			debug("%d: Read request is complete.", sockfd);
 			remove_network_read_handler();
+			uri.clear();
 			if (host.empty())
 			    {
-			    protocol_error("no host");
+			    protocol_error("The HTTP request did not contain a hostname.\r\n" \
+					   "In order to fulfill the request, we need the\r\n" \
+					   "hostname either in the URL or via the <tt>Host:</tt>\r\n" \
+					   "header.\r\n");
 			    return;
 			    }
 			else if (uri.empty())
 			    {
-			    protocol_error("no uri");
+			    protocol_error("The HTTP request did not contain an URL!\r\n");
 			    return;
 			    }
 
@@ -70,7 +74,7 @@ void RequestHandler::fd_is_readable(int fd)
 			if (stat(filename.c_str(), &sbuf) == -1)
 			    {
 			    error("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-			    file_not_found(filename);
+			    file_not_found(uri);
 			    return;
 			    }
 
