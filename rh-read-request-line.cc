@@ -19,18 +19,21 @@ bool RequestHandler::get_request_line()
         size_t len = http_parser.parse_request_line(request, read_buffer);
         if (len > 0)
             {
-            debug(("%d: Read request line:", sockfd));
-            debug(("%d:     host  = '%s'", sockfd, request.url.host.data().c_str()));
-            debug(("%d:     port  = '%d'", sockfd, request.url.port.data()));
-            debug(("%d:     path  = '%s'", sockfd, request.url.path.data().c_str()));
-            debug(("%d:     query = '%s'", sockfd, request.url.query.data().c_str()));
+            debug(("%d: Read request line: method = '%s', http version = '%u.%u', host = '%s', " \
+                   "port = '%d', path = '%s', query = '%s'",
+                   sockfd, request.method.c_str(), request.major_version,
+                   request.minor_version,
+                   ((request.url.host.empty()) ? "none" : request.url.host.data().c_str()),
+                   ((request.url.port.empty()) ? -1 : static_cast<int>(request.url.port.data())),
+                   request.url.path.c_str(),
+                   ((request.url.query.empty()) ? "none" : request.url.query.data().c_str())));
             read_buffer.erase(0, len);
             state = READ_REQUEST_HEADER;
             return true;
             }
         else
             {
-            protocol_error("The HTTP request you sent was syntactically incorrect.\r\n");
+            protocol_error("The HTTP request line you sent was syntactically incorrect.\r\n");
             return false;
             }
         }
