@@ -16,7 +16,7 @@ unsigned int RequestHandler::instances = 0;
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1),
-	  bytes_sent(0), bytes_received(0)
+	  bytes_sent(0), bytes_received(0), read_calls(0), write_calls(0)
     {
     TRACE();
 
@@ -80,7 +80,7 @@ RequestHandler::~RequestHandler()
     timersub(&now, &connection_start, &runtime);
 
     log_access((state == TERMINATE), host.c_str(), url.c_str(), peer_addr_str, sockfd,
-	       runtime, bytes_sent, bytes_received);
+	       runtime, bytes_received, bytes_sent, read_calls, write_calls);
 
     if (--instances == config->hard_poll_interval_threshold)
 	{

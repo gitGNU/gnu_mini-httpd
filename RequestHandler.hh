@@ -61,6 +61,7 @@ class RequestHandler : public scheduler::event_handler
     FileCache::file_object cached_file;
 
     size_t bytes_sent, bytes_received;
+    size_t read_calls, write_calls;
     timeval connection_start;
 
     static unsigned int instances;

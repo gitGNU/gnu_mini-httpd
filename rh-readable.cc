@@ -38,6 +38,7 @@ void RequestHandler::fd_is_readable(int)
 
 	size_t rc = myread(sockfd, data_end, buffer_end - data_end);
 	bytes_received += rc;
+	++read_calls;
 	debug("%d: Read %d bytes from network peer.", sockfd, rc);
 	if (rc == 0)
 	    {

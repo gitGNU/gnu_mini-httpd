@@ -35,6 +35,7 @@ void RequestHandler::fd_is_writable(int)
 	    size_t rc = mywrite(sockfd, data, data_end - data);
 	    bytes_sent += rc;
 	    data       += rc;
+	    ++write_calls;
 	    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
 	    }
 
