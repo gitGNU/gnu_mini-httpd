@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef __CONFIG_HH__
-#define __CONFIG_HH__
+#ifndef CONFIG_HH
+#define CONFIG_HH
 
 #include <ext/hash_map>
 #include <string>

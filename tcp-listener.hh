@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef __TCP_LISTENER_HH__
-#define __TCP_LISTENER_HH__
+#ifndef TCP_LISTENER_HH
+#define TCP_LISTENER_HH
 
 #include <stdexcept>
 #include <cstdio>
@@ -117,4 +117,4 @@ class TCPListener : public scheduler::event_handler
     socklen_t    sin_size;
     };
 
-#endif //!defined(__TCP_LISTENER_HH__)
+#endif //!defined(TCP_LISTENER_HH)

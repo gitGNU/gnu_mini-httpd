@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef __HTTPD_HH__
-#define __HTTPD_HH__
+#ifndef HTTPD_HH
+#define HTTPD_HH
 
 #include <string>
 #include <sys/time.h>

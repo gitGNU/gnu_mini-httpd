@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef __LOG_HH__
-#define __LOG_HH__
+#ifndef LOG_HH
+#define LOG_HH
 
 #include <string>
 #include <sys/time.h>

@@ -3,8 +3,8 @@
  * All rights reserved.
  */
 
-#ifndef __FILE_CACHE_HH__
-#define __FILE_CACHE_HH__
+#ifndef FILE_CACHE_HH
+#define FILE_CACHE_HH
 
 #include <string>
 #include <map>
@@ -44,4 +44,4 @@ class FileCache
 
 extern FileCache* cache;
 
-#endif //!defined(__FILE_CACHE_HH__)
+#endif //!defined(FILE_CACHE_HH)
