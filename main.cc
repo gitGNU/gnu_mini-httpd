@@ -17,7 +17,6 @@ bool got_terminate_sig = false;
 
 void set_sig_term(int)
     {
-    info("Received signal; shutting down.");
     got_terminate_sig = true;
     }
 
