@@ -57,23 +57,26 @@ following:</para>
 # chown daemon.daemon htdocs/example.org htdocs/www.example.org</screen>
   </informalexample>
 
+  <para>If you're unsure what hostname to use here for testing purposes,
+<literal>localhost</literal> is usually a safe bet. :-)</para>
+
   <para>Copy the HTML documents to the <filename>htdocs/example.org</filename>
 directory and again make sure that &httpd; has permission to access them!
 Finally, start &httpd; as <literal>root</literal> with the following command
 line:</para>
 
   <informalexample>
-    <screen># /usr/local/httpd/bin/httpd -u 2</screen>
+    <screen># /usr/local/httpd/bin/httpd --uid 2</screen>
   </informalexample>
 
   <para>Now you can access the URL <literal>http://example.org/</literal> with
 you favorite broweser. That's it.</para>
 
   <para>In case you want to try &httpd; with some port other than 80, add the
-<option>-p</option> to the command line: <option>-p 8080</option>. Furthermore,
-you might want to add the <option>-d</option> switch to turn on the debugging
-messages in &httpd;. That is particularly helpful in case &httpd; is not
-behaving as you'd expect.</para>
+<option>--port</option> option to the command line: <option>--port
+8080</option>. Furthermore, you might want to add the <option>--debug</option>
+switch to turn on the debugging messages in &httpd;. That is particularly
+helpful in case &httpd; is not behaving as you'd expect.</para>
 
   <para>Once you have accessed the web site, you'll find the apropriate access
 logfile in the <filename>logs</filename> directory, one per virtual host.</para>
