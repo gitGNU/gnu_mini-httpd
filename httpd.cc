@@ -15,12 +15,15 @@ using namespace std;
 #include "log.hh"
 #include "config.hh"
 
+const RegExp RequestHandler::full_get_port_regex("^GET http://([^:]+):[0-9]+(/[^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
 const RegExp RequestHandler::full_get_regex("^GET http://([^/]+)([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
-const RegExp RequestHandler::get_regex("^GET +([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
+const RegExp RequestHandler::get_regex("^GET +(/[^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
+const RegExp RequestHandler::host_port_regex("^Host: +([^ ]+):[0-9]+", REG_EXTENDED);
 const RegExp RequestHandler::host_regex("^Host: +([^ ]+)", REG_EXTENDED);
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
+	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1),
+          tmp(new char[config->read_block_size])
     {
     TRACE();
 
@@ -31,16 +34,6 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 	strcpy(peer_addr_str, "unknown");
 
     // Set socket parameters.
-
-    int true_flag = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &true_flag, sizeof(int)) == -1)
-	throw system_error("Can't set KEEPALIVE mode");
-
-    linger ling;
-    ling.l_onoff  = 0;
-    ling.l_linger = 0;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
-	throw system_error("Can't switch LINGER mode off");
 
     if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
 	throw system_error("Can set non-blocking mode");
@@ -62,6 +55,7 @@ RequestHandler::~RequestHandler()
 	mysched.remove_handler(filefd);
 	close(filefd);
 	}
+    delete[] tmp;
     }
 
 void RequestHandler::fd_is_readable(int)
@@ -87,7 +81,7 @@ void RequestHandler::fd_is_readable(int)
 void RequestHandler::fd_is_writable(int)
     {
     TRACE();
-    ssize_t rc = write(sockfd, buffer.c_str(), buffer.size());
+    ssize_t rc = write(sockfd, buffer.data(), buffer.size());
     if (rc <= 0)
 	{
 	info("%d: Writing to connection returned an error; closing connection.", sockfd);
@@ -104,7 +98,7 @@ void RequestHandler::fd_is_writable(int)
 	    debug("%d: Write buffer is empty. Don't engage write handler until we have data again.", sockfd);
 	    mysched.remove_handler(sockfd);
 	    }
-	if (buffer.size() < 4*1024)
+	if (buffer.size() < config->min_buffer_fill_size)
 	    {
 	    debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
 	    prop.poll_events   = POLLIN;
@@ -136,15 +130,14 @@ void RequestHandler::write_timeout(int)
 void RequestHandler::read_request()
     {
     TRACE();
-    char buf[1024];
-    ssize_t rc = read(sockfd, buf, sizeof(buf));
+    ssize_t rc = read(sockfd, tmp, config->read_block_size);
     if (rc <= 0)
 	{
 	info("%d: Reading from connection returned an error; closing connection.", sockfd);
 	delete this;
 	return;
 	}
-    buffer.append(buf, rc);
+    buffer.append(tmp, rc);
     while(!buffer.empty())
 	{
 	string::size_type pos = buffer.find("\r\n");
@@ -156,18 +149,36 @@ void RequestHandler::read_request()
 	if (!line.empty())
 	    {
 	    vector<string> vec;
-	    if (host.empty() && uri.empty() && full_get_regex.submatch(line, vec))
+	    if (host.empty() && uri.empty() && full_get_port_regex.submatch(line, vec))
 		{
 		host = vec[1];
 		uri  = vec[2];
+		debug("%d: Got full GET request including port: host = '%s' and uri = '%s'.", sockfd, host.c_str(), uri.c_str());
+		}
+	    else if (host.empty() && uri.empty() && full_get_regex.submatch(line, vec))
+		{
+		host = vec[1];
+		uri  = vec[2];
+		debug("%d: Got full GET request: host = '%s' and uri = '%s'.", sockfd, host.c_str(), uri.c_str());
 		}
 	    else if (uri.empty() && get_regex.submatch(line, vec))
 		{
 		uri = vec[1];
+		debug("%d: Got GET request: uri = '%s'.", sockfd, uri.c_str());
+		}
+	    else if (host.empty() && host_port_regex.submatch(line, vec))
+		{
+		host = vec[1];
+		debug("%d: Got Host header including port: host = '%s'.", sockfd, host.c_str());
 		}
 	    else if (host.empty() && host_regex.submatch(line, vec))
 		{
 		host = vec[1];
+		debug("%d: Got Host header: host = '%s'.", sockfd, host.c_str());
+		}
+	    else
+		{
+		debug("%d: Got unknown header '%s'.", sockfd, line.c_str());
 		}
 	    }
 	else
@@ -187,7 +198,7 @@ void RequestHandler::read_request()
 	    if (S_ISDIR(sbuf.st_mode))
 		filename.append("/index.html");
 
-	    filefd = open(filename.c_str(), O_RDONLY, 0);
+	    filefd = open(filename.c_str(), O_RDONLY | O_NONBLOCK, 0);
 	    if (filefd == -1)
 		{
 		error("Can't open requested file %s: %s", filename.c_str(), strerror(errno));
@@ -210,8 +221,7 @@ void RequestHandler::read_request()
 void RequestHandler::read_file()
     {
     TRACE();
-    char buf[16 * 1024];
-    ssize_t rc = read(filefd, buf, sizeof(buf));
+    ssize_t rc = read(filefd, tmp, config->read_block_size);
     if (rc < 0)
 	{
 	error("%d: Reading from file returned an error; closing connection.", sockfd);
@@ -239,11 +249,11 @@ void RequestHandler::read_file()
     else
 	{
 	debug("%d: Read %d bytes from file into the buffer.", sockfd, rc);
-	buffer.append(buf, rc);
+	buffer.append(tmp, rc);
 	prop.poll_events = POLLOUT;
 	prop.write_timeout = config->network_write_timeout;
 	mysched.register_handler(sockfd, *this, prop);
-	if (buffer.size() <= 8 * 1024)
+	if (buffer.size() <= config->max_buffer_fill_size)
 	    {
 	    debug("%d: Buffer contains %d bytes, so we'll continue to read into it.", sockfd, buffer.size());
 	    prop.poll_events = POLLIN;
