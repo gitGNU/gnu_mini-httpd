@@ -72,7 +72,7 @@ class RequestHandler : public scheduler::event_handler
     std::string read_buffer, write_buffer;
 
     char peer_addr_str[32];
-    std::string host, path;
+    std::string method, host, path;
 
     size_t bytes_sent, bytes_received;
     timeval connection_start;

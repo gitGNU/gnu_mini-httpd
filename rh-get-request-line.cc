@@ -31,8 +31,9 @@ bool RequestHandler::get_request_line()
                    sockfd, http_parser.res_method.c_str(), http_parser.res_host.c_str(),
                    http_parser.res_port, http_parser.res_path.c_str(),
                    http_parser.res_query.c_str()));
-            host = http_parser.res_host;
-            path = http_parser.res_path; urldecode(path);
+            method = http_parser.res_method;
+            host   = http_parser.res_host;
+            path   = http_parser.res_path; urldecode(path);
             read_buffer.erase(0, info.length);
             state = READ_REQUEST_HEADER;
             return true;

@@ -57,29 +57,47 @@ bool RequestHandler::setup_reply()
         return false;
         }
 
-    filefd = open(filename.c_str(), O_RDONLY, 0);
-    if (filefd == -1)
+    if (method == "HEAD")
         {
-        info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-        file_not_found(filename.c_str());
-        return false;
-        }
-    state = COPY_FILE;
-    debug(("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd));
+        state = WRITE_REMAINING_DATA;
+        debug(("%d: Answering HEAD: Going into WRITE_REMAINING_DATA state.", sockfd));
 
-    char buf[4096];
-    snprintf(buf, sizeof(buf),
-             "HTTP/1.0 200 OK\r\n"     \
-             "Content-Type: %s\r\n"    \
-             "Content-Length: %ld\r\n" \
-             "Date: %s\r\n"            \
-             "Last-Modified: %s\r\n"   \
-             "\r\n",
-             config->get_content_type(filename.c_str()),
-             sbuf.st_size,
-             time_to_ascii(time(0)).c_str(),
-             time_to_ascii(sbuf.st_mtime).c_str());
-    write_buffer = buf;
+        char buf[4096];
+        snprintf(buf, sizeof(buf),
+                 "HTTP/1.0 200 OK\r\n"     \
+                 "Content-Type: %s\r\n"    \
+                 "Date: %s\r\n"            \
+                 "\r\n",
+                 config->get_content_type(filename.c_str()),
+                 time_to_ascii(time(0)).c_str());
+        write_buffer = buf;
+        }
+    else if (method == "GET")
+        {
+        filefd = open(filename.c_str(), O_RDONLY, 0);
+        if (filefd == -1)
+            {
+            info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+            file_not_found(filename.c_str());
+            return false;
+            }
+        state = COPY_FILE;
+        debug(("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd));
+
+        char buf[4096];
+        snprintf(buf, sizeof(buf),
+                 "HTTP/1.0 200 OK\r\n"     \
+                 "Content-Type: %s\r\n"    \
+                 "Content-Length: %ld\r\n" \
+                 "Date: %s\r\n"            \
+                 "Last-Modified: %s\r\n"   \
+                 "\r\n",
+                 config->get_content_type(filename.c_str()),
+                 sbuf.st_size,
+                 time_to_ascii(time(0)).c_str(),
+                 time_to_ascii(sbuf.st_mtime).c_str());
+        write_buffer = buf;
+        }
 
     scheduler::handler_properties prop;
     prop.poll_events   = POLLOUT;
