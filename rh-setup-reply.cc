@@ -12,16 +12,13 @@
 
 using namespace std;
 
-namespace
+static const char* time_to_ascii(time_t t)
     {
-    inline string time_to_ascii(time_t t)
-        {
-        char buffer[1024];
-        size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
-        if (len == 0 || len >= sizeof(buffer))
-            throw std::logic_error("strftime() failed because an internal buffer is too small!");
-        return buffer;
-        }
+    static char buffer[64];
+    size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
+    if (len == 0 || len >= sizeof(buffer))
+        throw std::logic_error("strftime() failed because an internal buffer is too small!");
+    return buffer;
     }
 
 bool RequestHandler::setup_reply()
