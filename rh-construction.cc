@@ -16,8 +16,7 @@ char* RequestHandler::tmp = 0;
 unsigned RequestHandler::instances = 0;
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	:
-    state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
+	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
     {
     TRACE();
 
