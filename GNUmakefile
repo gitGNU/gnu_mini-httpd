@@ -7,14 +7,14 @@ DESTDIR		=
 
 OPTIMFLAGS     +=
 WARNFLAGS      +=
-DEFS	       +=
+DEFS	       += -DDEBUG
 CPPFLAGS       +=
 CXXFLAGS       +=
 LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o rh-construction.o rh-misc.o \
 		  rh-process-input.o rh-readable.o rh-timeouts.o \
-		  rh-writable.o rh-errors.o HTTPParser.o
+		  rh-writable.o rh-errors.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -24,7 +24,7 @@ LIBS	       +=
 .cc.o:
 	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
-all:		httpd http-parser
+all:		httpd
 
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
