@@ -63,9 +63,8 @@ inline std::ostream& operator<< (std::ostream& os, const resetable_variable<varT
 struct URL
     {
     resetable_variable<std::string>  host;
-    bool                             host_is_ip_address;
     resetable_variable<unsigned int> port;
-    resetable_variable<std::string>  path;
+    std::string                      path;
     resetable_variable<std::string>  query;
     };
 
@@ -79,7 +78,6 @@ struct HTTPRequest
     unsigned int                     major_version;
     unsigned int                     minor_version;
     resetable_variable<std::string>  host;
-    bool                             host_is_ip_address;
     resetable_variable<unsigned int> port;
     resetable_variable<std::string>  connection;
     resetable_variable<std::string>  keep_alive;
