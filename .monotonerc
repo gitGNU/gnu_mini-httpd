@@ -1,0 +1,28 @@
+function ignore_file(name)
+  if (name == "configure") then return true end
+  if (name == "aclocal.m4") then return true end
+  if (name == "depcomp") then return true end
+  if (name == "Makefile.in") then return true end
+  if (name == "Makefile") then return true end
+  if (name == "missing") then return true end
+  if (name == "install-sh") then return true end
+  if (name == "mkinstalldirs") then return true end
+  if (name == "httpd") then return true end
+  if (name == "config.log") then return true end
+  if (name == "config.status") then return true end
+  if (name == "httpd.8") then return true end
+  if (name == "manpage.links") then return true end
+  if (name == "manpage.refs") then return true end
+
+  if (string.find(name, "^mini%-httpd%-.+tar%.gz$")) then return true end
+  if (string.find(name, "%.o$")) then return true end
+  if (string.find(name, "%.deps/")) then return true end
+  if (string.find(name, "^libgetopt/")) then return true end
+  if (string.find(name, "^libscheduler/")) then return true end
+  if (string.find(name, "^libgetopt/")) then return true end
+  if (string.find(name, "^ScopeGuard/")) then return true end
+  if (string.find(name, "^system%-error/")) then return true end
+  if (string.find(name, "^autom4te%.cache/")) then return true end
+
+  return false
+end

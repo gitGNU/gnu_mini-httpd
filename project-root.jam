@@ -1,0 +1,16 @@
+# mini-httpd build configuration
+
+import modules ;
+import os ;
+
+constant OS       : [ modules.peek : OS     ] ;
+constant PLATFORM : [ modules.peek : OSPLAT ] ;
+
+path-constant BUILD_ROOT : bin.$(PLATFORM:L).$(OS:L) ;
+
+project /
+  : build-dir $(BUILD_ROOT)
+  : requirements
+      <threading>single:<define>BOOST_DISABLE_THREADS
+      <define>_FILE_OFFSET_BITS=64
+  ;
