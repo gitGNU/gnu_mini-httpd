@@ -95,8 +95,8 @@ bool RequestHandler::setup_reply()
         if (errno != ENOENT)
             {
             info("Peer %s requested URL 'http://%s:%u%s' ('%s'), which fails the hirarchy check.",
-                 peer_address, request.host.c_str(), request.port.data(), request.url.path.c_str(),
-                 filename.c_str());
+                 peer_address, request.host.c_str(), ((request.port.empty()) ? 80 : request.port.data()),
+                 request.url.path.c_str(), filename.c_str());
             }
         file_not_found();
         return false;
