@@ -51,10 +51,15 @@ bool RequestHandler::setup_reply()
     if (S_ISDIR(sbuf.st_mode))
         {
         if (*path.rbegin() == '/')
-            moved_permanently((path + "index.html").c_str());
+            {
+            moved_permanently((path + config->default_page).c_str());
+            return false;
+            }
         else
-            moved_permanently((path + "/index.html").c_str());
-        return false;
+            {
+            moved_permanently((path + "/" + config->default_page).c_str());
+            return false;
+            }
         }
 
     if (method == "HEAD")

@@ -34,6 +34,7 @@ class configuration
 
     // Paths.
     static char* document_root;
+    static char* default_page;
 
     // Miscellaneous.
     static char* default_content_type;

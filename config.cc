@@ -24,6 +24,7 @@ unsigned int configuration::io_buffer_size               =  4 kb;
 
 // Paths.
 char* configuration::document_root                       = DOCUMENT_ROOT;
+char* configuration::default_page                        = "index.html";
 
 // Miscellaneous.
 char* configuration::default_content_type                = "application/octet-stream";
