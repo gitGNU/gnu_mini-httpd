@@ -22,9 +22,10 @@ static void set_sig_term(int)
 int main(int, char** argv)
 try
     {
-    // Create our configuration.
+    // Create our configuration and place it in the global pointer.
 
-    config = new configuration;
+    configuration real_config;
+    config = &real_config;
 
     // Install signal handler.
 
@@ -43,7 +44,6 @@ try
 
     // Exit gracefully.
 
-    delete config;
     return 0;
     }
 catch(const exception& e)
