@@ -2,6 +2,7 @@
 # Build the httpd documentation
 #
 DOCBOOKBASE	= /usr/local/sgml/dsssl/docbook
+
 .SUFFIXES:
 
 %.tex : %.sgml
@@ -31,27 +32,14 @@ all:	httpd.html httpd.pdf man-page.txt readme.txt
 man-page.html:	synopsis.inc description.inc cmdloptions.inc license.inc
 
 httpd.html httpd.tex: license.inc building.inc synopsis.inc cmdloptions.inc ../VERSION
+httpd.html httpd.tex: setup.inc peti.dsl
 
-readme.txt:	readme.sgml building.inc ../VERSION
+readme.txt:	readme.sgml building.inc setup.inc ../VERSION peti.dsl
 
-man-page.txt:	man-page.html
+man-page.html:	man-page.sgml synopsis.inc description.inc cmdloptions.inc license.inc
+
+man-page.txt:  man-page.html
 	lynx -width=80 -nolist -dump $< >$@
-
-defconfig.inc:	../config-sample Makefile
-	sed <$< >$@ -e 's/&/\&amp;/g' \
-		    -e 's/</\&lt;/g' \
-		    -e 's/>/\&gt;/g' \
-		    -e 's#-#<markup>-</markup>#g' \
-		    -e '/^#/d'	     \
-		    -e '/^$$/d'
-
-defreqmail.inc:../reqmail.template-sample Makefile
-	sed <$< >$@ -e 's/</\&lt;/g' \
-		    -e 's/>/\&gt;/g' \
-		    -e 's/&/\&amp;/g' \
-		    -e 's#-#<markup>-</markup>#g' \
-		    -e 's#username@example.com#<replaceable>&</replaceable>#g' \
-		    -e 's#Real Name#<replaceable>&</replaceable>#g'
 
 clean distclean:
 	@rm -f *.aux *.dvi *.log *.toc

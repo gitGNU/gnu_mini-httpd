@@ -2,6 +2,7 @@
 <!ENTITY httpd "<application>httpd</application>">
 <!ENTITY description SYSTEM "description.inc">
 <!ENTITY building SYSTEM "building.inc">
+<!ENTITY setup SYSTEM "setup.inc">
 <!ENTITY synopsis SYSTEM "synopsis.inc">
 <!ENTITY cmdloptions SYSTEM "cmdloptions.inc">
 <!ENTITY configfile SYSTEM "configfile.inc">
@@ -33,6 +34,11 @@ in various setups.</para>
   <sect1>
     <title>Building &httpd;</title>
     &building;
+  </sect1>
+
+  <sect1>
+    <title>Setting &httpd; up</title>
+    &setup;
   </sect1>
 
   <sect1>

@@ -6,32 +6,48 @@ have to do is the usual routine:</para>
 make
 make install</screen>
 
-  <para>The last step may require super-user privileges, so have the <systemitem
-class="username">root</systemitem> password ready if you're going for a
-system-wide installation.</para>
+  <para>Be adviced, though, that the <command>configure</command> script
+included in this distribution does not behave exactly like you will know from
+other packages: The default <varname>$prefix</varname>, where &httpd; will be
+installed, is not <filename>/usr/local</filename> but
+<filename>/usr/local/httpd</filename>! This is for a very good reason. For
+maximum security, &httpd; will run in a restricted sandbox, meaning, that it
+will change the processes <filename>/</filename> directory to the default
+<varname>$prefix</varname> directory provided here. Since no files required by
+&httpd; may reside outside this directory then (logfiles and the actual web
+documents, mostly), it is a very good idea to have all files related to the web
+service installed in <filename>/usr/local/httpd</filename>.</para>
 
-  <para>Be adviced that &httpd; needs a fairly recent C++ compiler because it
-make full use of the new ISO C++ language features. If you're using the <ulink
-url="http://gcc.gnu.org/">GNU C Compiler</ulink> version 2.95 or later, you
-won't have any problems. But other compilers are known not to be ISO C++
-compatible. If you're having trouble, send me an e-mail and I'll see what I can
-do.</para>
+  <para>If you don't understand any of this, just trust me and and go ahead with
+the defaults. You can change any of those paths later at run-time, the
+compiled-in values are merely defaults than can be overridden.</para>
 
-  <para>The <filename>configure</filename> script is a standard <ulink
+  <para>The <command>configure</command> script is a standard <ulink
 url="http://www.gnu.org/software/autoconf/">GNU Autoconf</ulink> script, which
 supports all the usual options. If you are not familiar with these scripts,
 please refer to the "Running <filename>configure</filename> Scripts" section of
 the <application>Autoconf</application> user manual, which is available
-at: </para>
+at:</para>
 
   <informalfigure>
     <ulink url="http://www.gnu.org/manual/autoconf/html_chapter/autoconf_13.html#SEC129">http://www.gnu.org/manual/autoconf/html_chapter/autoconf_13.html#SEC129</ulink>
   </informalfigure>
 
-<!-- Insert lots of text here. -->
+  <para>The only noteworthy addition to the command line is the
+<option>--with-debug</option> option, which will tell the build process to
+include some debug messages into the binary. You can activate debugging via the
+command line, if these messages are compiled in -- what currently is the
+default.</para>
 
-  <para>If your using a fairly recent gcc version to compile this, you might
-want to try</para>
+  <para>Furthermore, you should expect &httpd; to require a fairly recent C++
+compiler to build, because it make full use of the ISO C++ language features. If
+you're using the <ulink url="http://gcc.gnu.org/">GNU C Compiler</ulink> version
+2.95 or later, you won't have any problems. But other compilers are known not to
+be ISO C++ compatible. If you're having trouble, send me an e-mail and I'll see
+what I can do.</para>
+
+  <para>If your using a rather current gcc version to compile this package, you
+might want to try</para>
 
   <informalexample>
     <screen>CXXFLAGS=-frepo ./configure</screen>
