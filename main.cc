@@ -92,8 +92,10 @@ try
 
     // Log some helpful information.
 
-    info("httpd %s starting up: listen port = %u, user id = %u, group id = %u, chroot = '%s'",
-         VERSION, config->http_port, getuid(), getgid(), config->chroot_directory.c_str());
+    info("httpd %s starting up: listen port = %u, user id = %u, group id = %u, chroot = '%s', " \
+         "default hostname = '%s'",
+         VERSION, config->http_port, getuid(), getgid(), config->chroot_directory.c_str(),
+         config->default_hostname.c_str());
 
     // Run ...
 
