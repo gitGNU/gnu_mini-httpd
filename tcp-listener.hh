@@ -16,7 +16,6 @@
 #include "ScopeGuard/ScopeGuard.hh"
 #include "system-error/system-error.hh"
 #include "libscheduler/scheduler.hh"
-#include "log.hh"
 
 template<class connection_handlerT>
 class TCPListener : public scheduler::event_handler
@@ -64,7 +63,6 @@ class TCPListener : public scheduler::event_handler
   private:
     virtual void fd_is_readable(int)
 	{
-	TRACE();
 	int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
 	if (streamfd == -1)
 	    {
