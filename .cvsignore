@@ -1,4 +1,4 @@
-httpd
+httpd http-parser
 autoconf.mk config.log config.status configure
 gmon.out
 *.rpo

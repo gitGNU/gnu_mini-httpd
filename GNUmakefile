@@ -7,7 +7,7 @@ DESTDIR		=
 
 OPTIMFLAGS     +=
 WARNFLAGS      +=
-DEFS	       +=
+DEFS	       += #-DSPIRIT_DEBUG
 CPPFLAGS       +=
 CFLAGS	       +=
 CXXFLAGS       +=
@@ -25,10 +25,13 @@ LIBS	       +=
 .cc.o:
 	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
-all:		httpd
+all:		httpd http-parser
 
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
+
+http-parser:	http-parser.o
+	$(CXX) $(LDFLAGS) $< $(LIBS) -o $@
 
 config.o:	config.cc
 	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
@@ -48,7 +51,7 @@ clean::
 	@find . -name '*.a'   -exec rm -f {} \;
 	@find . -name '*.o'   -exec rm -f {} \;
 	@find . -name '*.so'  -exec rm -f {} \;
-	@rm -f httpd
+	@rm -f httpd http-parser
 	@echo All dependent files have been removed.
 
 distclean:: clean
