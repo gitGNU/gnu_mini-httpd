@@ -1,6 +1,6 @@
 # Build the http daemon.
 
-httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
+httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi' \
                       +lib=(libscheduler/libscheduler.a) \
                       +define='DISABLE_TRACER NDEBUG' \
                       +optimize=0 \
