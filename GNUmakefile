@@ -35,7 +35,7 @@ httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
 run:		httpd
-	su -c "`pwd`/httpd -d -p 8080 -r `pwd` -s peti/1.0 -u 100 -H peti.cryp.to"
+	su -c "`pwd`/httpd -d -p 8080 -r `pwd` -s peti/1.0 -u 100 -H `hostname`"
 
 config.o:	config.cc
 	$(CXX) -DPREFIX=\"$(prefix)\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
