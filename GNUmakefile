@@ -15,7 +15,7 @@ LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o rh-construction.o rh-misc.o \
 		  rh-process-input.o rh-readable.o rh-timeouts.o \
-		  rh-writable.o rh-errors.o
+		  rh-writable.o rh-errors.o uri.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -30,8 +30,8 @@ all:		httpd http-parser
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
-http-parser:	http-parser.o
-	$(CXX) $(LDFLAGS) $< $(LIBS) -o $@
+http-parser:	http-parser.o uri.o
+	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
 config.o:	config.cc
 	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
@@ -69,12 +69,14 @@ depend::
 
 config.o: config.hh log.hh
 log.o: log.hh
-main.o: tcp-listener.hh system-error/system-error.hh
-main.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
-main.o: request-handler.hh RegExp/RegExp.hh config.hh
-rh-construction.o: system-error/system-error.hh request-handler.hh
-rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-construction.o: RegExp/RegExp.hh log.hh config.hh
+main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
+main.o: system-error/system-error.hh libscheduler/scheduler.hh
+main.o: libscheduler/pollvector.hh log.hh request-handler.hh
+main.o: RegExp/RegExp.hh config.hh
+rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
+rh-construction.o: request-handler.hh libscheduler/scheduler.hh
+rh-construction.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
+rh-construction.o: config.hh
 rh-errors.o: request-handler.hh libscheduler/scheduler.hh
 rh-errors.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh config.hh
 rh-misc.o: system-error/system-error.hh request-handler.hh
@@ -93,4 +95,5 @@ libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 RegExp/test.o: RegExp/RegExp.hh
-refcount-auto-ptr/test.o: refcount-auto-ptr/refcount-auto-ptr.hh
+http-parser.o: uri.hh
+uri.o: uri.hh
