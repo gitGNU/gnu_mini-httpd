@@ -10,10 +10,10 @@
 #include <cerrno>
 #include <string>
 
-struct system_error : public runtime_error
+struct system_error : public std::runtime_error
     {
-    explicit system_error(const string& msg)
-	    : runtime_error(msg + ": " + strerror(errno))
+    explicit system_error(const std::string& msg)
+	    : std::runtime_error(msg + ": " + strerror(errno))
 	{
 	}
     };

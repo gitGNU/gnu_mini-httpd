@@ -9,7 +9,7 @@
 
 using namespace std;
 #include "tcp-listener.hh"
-#include "httpd.hh"
+#include "request-handler.hh"
 #include "log.hh"
 #include "config.hh"
 

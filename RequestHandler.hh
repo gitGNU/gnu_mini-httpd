@@ -28,8 +28,11 @@ class RequestHandler : public scheduler::event_handler
     virtual void error_condition(int);
     virtual void pollhup(int);
 
-    void file_not_found(const string& file);
-    void protocol_error(const string& message);
+    static size_t myread(int, void*, size_t);
+    static size_t mywrite(int, const void*, size_t);
+
+    void file_not_found(const std::string& file);
+    void protocol_error(const std::string& message);
 
     bool process_input(const char* begin, const char* end);
 
@@ -56,8 +59,8 @@ class RequestHandler : public scheduler::event_handler
     int filefd;
     char peer_addr_str[32];
 
-    string buffer;
-    string host, uri;
+    std::string buffer;
+    std::string host, uri;
 
     static const RegExp full_get_port_regex;
     static const RegExp full_get_regex;
