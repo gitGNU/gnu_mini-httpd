@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include "system-error.hh"
 #include "libscheduler/scheduler.hh"
+#include "log.hh"
 
 template<class connection_handlerT>
 class TCPListener : public scheduler::event_handler
@@ -57,11 +58,12 @@ class TCPListener : public scheduler::event_handler
 	prop.write_timeout = 0;
 	mysched.register_handler(sockfd, *this, prop);
 
-	cerr << "Listening on TCP port " << port_no << " for incoming requests ..." << endl;
+	log(INFO, "Listening on TCP port %d for incoming requests ...", port_no);
 	}
 
     ~TCPListener()
 	{
+	log(INFO, "Shutting TCP listener down.");
 	mysched.remove_handler(sockfd);
 	close(sockfd);
 	}
@@ -69,20 +71,28 @@ class TCPListener : public scheduler::event_handler
   private:
     virtual void fd_is_readable(int)
 	{
+	TRACE();
 	int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
 	if (streamfd == -1)
 	    {
-	    cerr << "TCPListener: Failed to accept new connection with accept(). Continuing.\n";
+	    log(ERROR, "TCPListener: Failed to accept new connection with accept(). Continuing.");
 	    return;
 	    }
-	try { new connection_handlerT(mysched, streamfd, sin); }
+	try
+	    {
+	    log(INFO, "Will create connection handler for the new connecton on fd %d.", streamfd);
+	    new connection_handlerT(mysched, streamfd, sin);
+	    log(INFO, "Created it.");
+	    }
 	catch(const exception& e)
 	    {
-	    cerr << "TCPListener: Caught exception while creating connection handler: " << e.what() << endl;
+	    log(ERROR, "TCPListener: Caught exception while creating connection handler: %s", e.what());
+	    close(streamfd);
 	    }
 	catch(...)
 	    {
-	    cerr << "TCPListener: Caught unknown exception while creating connection handler." << endl;
+	    log(ERROR, "TCPListener: Caught unknown exception while creating connection handler.");
+	    close(streamfd);
 	    }
 	}
     virtual void fd_is_writable(int)

@@ -11,12 +11,13 @@
 #include <sys/socket.h>
 #include "libscheduler/scheduler.hh"
 #include "RegExp/RegExp.hh"
+#include "log.hh"
 
 class RequestHandler : public scheduler::event_handler
     {
   public:
     explicit RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin);
-    ~RequestHandler();
+    virtual ~RequestHandler();
 
   private:
     virtual void fd_is_readable(int);

@@ -3,30 +3,35 @@
  * All rights reserved.
  */
 
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
 using namespace std;
 #include "tcp-listener.hh"
 #include "httpd.hh"
+#include "log.hh"
 
 int main(int, char** argv)
 try
     {
+    // Start-up scheduler and listener.
+
     scheduler sched;
     TCPListener<RequestHandler> listener(sched, 8080);
     while(!sched.empty())
 	sched.schedule();
+
+    // Exit gracefully.
+
     return 0;
     }
 catch(const exception& e)
     {
-    cerr << "Caught exception: " << e.what() << endl;
+    log(ERROR, "Caught exception: %s", e.what());
     return 1;
     }
 catch(...)
     {
-    cerr << "Caught unknown exception." << endl;
+    log(ERROR, "Caught unknown exception.");
     return 1;
     }

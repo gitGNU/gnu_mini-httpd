@@ -2,12 +2,15 @@
 
 httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) \
                       +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
+                      +define='ENABLE_TRACER' \
 		      +optimize=0 \
+		      +debug \
                       :exe
 
 %httpd.cc.sm == <<
     main.cc
     httpd.cc
+    log.cc
 
 %clean ! == !<<
     rm -f httpd libscheduler/libscheduler.a
