@@ -17,7 +17,7 @@ OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
 		  rh-get-request-header.o rh-get-request-line.o        \
 		  rh-readable.o rh-setup-reply.o rh-terminate.o        \
 		  rh-timeouts.o rh-writable.o rh-log-access.o          \
-		  rh-write-remaining-data.o
+		  rh-write-remaining-data.o rh-make-connection-header.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -104,6 +104,8 @@ rh-write-remaining-data.o: libscheduler/pollvector.hh log.hh
 libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-make-connection-header.o: request-handler.hh libscheduler/scheduler.hh
+rh-make-connection-header.o: libscheduler/pollvector.hh config.hh log.hh
 rh-log-access.o: system-error/system-error.hh request-handler.hh
 rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 rh-log-access.o: config.hh log.hh

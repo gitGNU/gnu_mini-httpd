@@ -77,10 +77,12 @@ bool RequestHandler::setup_reply()
                  "Content-Type: %s\r\n"    \
                  "Date: %s\r\n"            \
                  "Last-Modified: %s\r\n"   \
+                 "%s"                      \
                  "\r\n",
                  config->get_content_type(filename.c_str()),
                  time_to_ascii(time(0)).c_str(),
-                 time_to_ascii(sbuf.st_mtime).c_str());
+                 time_to_ascii(sbuf.st_mtime).c_str(),
+                 make_connection_header());
         write_buffer = buf;
         returned_status_code = 200;
         returned_object_size = 0;
@@ -104,11 +106,13 @@ bool RequestHandler::setup_reply()
                  "Content-Length: %ld\r\n" \
                  "Date: %s\r\n"            \
                  "Last-Modified: %s\r\n"   \
+                 "%s"                      \
                  "\r\n",
                  config->get_content_type(filename.c_str()),
                  sbuf.st_size,
                  time_to_ascii(time(0)).c_str(),
-                 time_to_ascii(sbuf.st_mtime).c_str());
+                 time_to_ascii(sbuf.st_mtime).c_str(),
+                 make_connection_header());
         write_buffer = buf;
         returned_status_code = 200;
         returned_object_size = sbuf.st_size;

@@ -77,6 +77,8 @@ class RequestHandler : public scheduler::event_handler
     void moved_permanently(const char*);
 
     void log_access() const throw();
+    bool is_persistent_connection() const;
+    const char* make_connection_header() const;
 
     scheduler& mysched;
     int sockfd;
