@@ -1,4 +1,5 @@
-/*
+/* -*- mode: c++; eval: (c-set-offset 'statement-cont `c-lineup-math); -*-
+ *
  * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
  * All rights reserved.
  */
@@ -20,9 +21,7 @@ class HTTPRequest
         };
 
     typedef const char*             iterator_t;
-    typedef skipper<iterator_t>     skipper_t;
-    typedef scanner<iterator_t>     scanner_t;
-    typedef rule<scanner_t>         rule_t;
+    typedef rule<iterator_t>        rule_t;
     typedef parse_info<iterator_t>  parse_info_t;
 
     HTTPRequest(iterator_t begin, iterator_t end)
@@ -31,117 +30,187 @@ class HTTPRequest
               LF(10),
               HT(9),
               CHAR(0, 127),
-              CTL("\x00-\x1F\x7F")
+              CTL("\x00-\x1F\x7F"),
+              separators("()<>@,;:\\\"/[]?={}\x20\x09"),
+              reserved(";/?:@&=+$,"),
+              mark("-_.!~*'()")
         {
-        Request = Request_Line
-            >> *(( general_header | request_header | entity_header ) >> CRLF )
-            >> CRLF
-            >> !( message_body );
-        Request_Line  = lexeme_d[ Method >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF ];
-        Method        = str_p("OPTIONS") | "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "TRACE" | "CONNECT";
-        HTTP_Version  = str_p("HTTP") >> '/' >> digit_p(1, more) >> '.' >> digit_p(1, more);
-        Request_URI   = '*' | absoluteURI | abs_path | authority;
-        absoluteURI   = scheme >> ':' >> ( hier_part | opaque_part );
-        hier_part     = ( net_path | abs_path ) >> !( '?' >> query );
-        net_path      = "//" >> authority >> !abs_path;
-        abs_path      = '/' >> path_segments;
-        path_segments = segment >> *( '/' >> segment );
-        segment       = *pchar >> *( ';' >> param );
-        param         = *pchar;
-        pchar         = unreserved | escaped | ':' | '@' | '&' | '=' | '+' | '$' | ',';
-        unreserved    = alnum_p | mark;
-        mark          = ch_p('-') | '_' | '.' | '!' | '~' | '*' | '\'' | '(' | ')';
-        escaped       = '%' >> xdigit_p >> xdigit_p;
-        server        = !( !( userinfo >> '@' ) >> hostport );
-        userinfo      = *( unreserved | escaped | ';' | ':' | '&' | '=' | '+' | '$' | ',' );
-        hostport      = host >> !( ':' >> port );
-        host          = hostname | IPv4address;
-        hostname      = *( domainlabel >> '.' ) >> toplabel >> !ch_p('.');
-        domainlabel   = alnum_p >> *( !ch_p('-') >> alnum_p );
-        toplabel      = alpha_p >> *( !ch_p('-') >> alnum_p );
-        IPv4address   = digit_p(1, more) >> '.' >> digit_p(1, more) >> '.' >> digit_p(1, more) >> '.' >> digit_p(1, more);
-        port          = *digit_p;
-        scheme        = alpha_p >> *( alpha_p | digit_p | '+' | '-' | '.' );
-        authority     = server | reg_name;
-        reg_name      = ( unreserved | escaped | '$' | ',' | ';' | ':' | '@' | '&' | '=' | '+' )(1, more);
-        opaque_part   = uric_no_slash >> *uric;
-        query         = *uric;
-        uric_no_slash = unreserved | escaped | ';' | '?' | ':' | '@' | '&' | '=' | '+' | '$' | ',';
-        uric          = reserved | unreserved | escaped;
-        reserved      = ch_p(';') | '/' | '?' | ':' | '@' | '&' | '=' | '+' | '$' | ',';
-        CRLF          = CR >> LF;
-        token          = (CHAR - (CTL | separators))(1, more);
-        separators     = ch_p('(') | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '\\' | '"'
-            | '/' | '[' | ']' | '?' | '=' | '{' | '}' | SP | HT;
-        quoted_string  = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
-        qdtext         = TEXT - '"';
-        TEXT          = anychar_p - CTL;
-        quoted_pair    = '\\' >> CHAR;
-        general_header = Connection | Date | Pragma | Trailer | Transfer_Encoding | Upgrade ;
-        Connection = str_p("Connection") >> ":" >> ( connection_token >> *( "," >> connection_token ) );
-        connection_token  = token;
-        Pragma            = str_p("Pragma") >> ":" >> ( pragma_directive >> *( "," >> pragma_directive ) );
-        pragma_directive  = "no-cache" | extension_pragma;
-        extension_pragma  = token >> !( "=" >> ( token | quoted_string ) );
-        Trailer  = str_p("Trailer") >> ":" >> ( field_name >> *( "," >> field_name ) );
-        field_name     = token;
-        Transfer_Encoding = str_p("Transfer_Encoding") >> ":" >> ( transfer_coding >> *( "," >> transfer_coding ) );
-        transfer_coding         = "chunked" | transfer_extension;
-        transfer_extension      = token >> *( ";" >> parameter );
-        parameter               = attribute >> "=" >> value;
-        attribute               = token;
-        value                   = token | quoted_string;
-        Date  = str_p("Date") >> ":" >> HTTP_date;
-        HTTP_date    = rfc1123_date | rfc850_date | asctime_date;
-        rfc1123_date = wkday >> "," >> SP >> date1 >> SP >> time >> SP >> "GMT";
-        rfc850_date  = weekday >> "," >> SP >> date2 >> SP >> time >> SP >> "GMT";
-        asctime_date = wkday >> SP >> date3 >> SP >> time >> SP >> digit_p(4);
-        date1        = digit_p(2) >> SP >> month >> SP >> digit_p(4);
-        date2        = digit_p(2) >> "-" >> month >> "-" >> digit_p(2);
-        date3        = month >> SP >> ( digit_p(2) | ( SP >> digit_p ));
-        time         = digit_p(2) >> ":" >> digit_p(2) >> ":" >> digit_p(2);
-        wkday        = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
-        weekday      = str_p("Monday") | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
-        month        = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
-        Upgrade        = "Upgrade" ":" >> ( product >> *( "," >> product ) );
+        Request         = Request_Line
+                          >> *(( general_header | request_header | entity_header ) >> CRLF )
+                          >> CRLF
+                          >> !message_body;
+
+        Request_Line    = Method >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
+
+        Method          = str_p("OPTIONS") | "GET" | "HEAD" | "POST"
+                          | "PUT" | "DELETE" | "TRACE" | "CONNECT"
+                          | extension_method;
+
+        extension_method = token;
+
+        HTTP_Version    = str_p("HTTP") >> '/' >> digit_p.repeat(1, more) >> '.' >> digit_p.repeat(1, more);
+
+        Request_URI     = '*' | absoluteURI | abs_path | authority;
+
+        absoluteURI     = scheme >> ':' >> ( hier_part | opaque_part );
+
+        hier_part       = ( net_path | abs_path ) >> !( '?' >> query );
+
+        net_path        = "//" >> authority >> !abs_path;
+
+        abs_path        = '/' >> path_segments;
+
+        path_segments   = segment >> *( '/' >> segment );
+
+        segment         = *pchar >> *( ';' >> param );
+
+        param           = *pchar;
+
+        pchar           = unreserved | escaped | ':' | '@' | '&' | '=' | '+' | '$' | ',';
+
+        unreserved      = alnum_p | mark;
+
+        escaped         = '%' >> xdigit_p >> xdigit_p;
+
+        server          = !( !( userinfo >> '@' ) >> hostport );
+
+        userinfo        = *( unreserved | escaped | chset<>(";:&=+$,") );
+
+        hostport        = host >> !( ':' >> port );
+
+        host            = hostname | IPv4address;
+
+        hostname        = *( domainlabel >> '.' ) >> toplabel >> !ch_p('.');
+
+        domainlabel     = alnum_p >> *( !ch_p('-') >> alnum_p );
+
+        toplabel        = alpha_p >> *( !ch_p('-') >> alnum_p );
+
+        IPv4address     = (digit_p.repeat(1, more) >> '.').repeat(3) >> digit_p.repeat(1, more);
+
+        port            = *digit_p;
+
+        scheme          = alpha_p >> *( alpha_p | digit_p | '+' | '-' | '.' );
+
+        authority       = server | reg_name;
+
+        reg_name        = ( unreserved | escaped | chset<>("'$,;:@&=+") )(1, more);
+
+        opaque_part     = uric_no_slash >> *uric;
+
+        query           = *uric;
+
+        uric_no_slash   = unreserved | escaped | chset<>(";?:@&=+$");
+
+        uric            = reserved | unreserved | escaped;
+
+        token           = (CHAR - (CTL | separators)).repeat(1, more);
+
+        quoted_string   = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
+
+        qdtext          = TEXT - '"';
+
+        TEXT            = anychar_p - CTL;
+
+        quoted_pair     = '\\' >> CHAR;
+
+        general_header  = Connection | Date | Pragma | Trailer | Transfer_Encoding | Upgrade ;
+
+        Connection      = str_p("Connection") >> ":" >>
+                          ( *LWS >> connection_token >> *( *LWS >> "," >> *LWS >> connection_token ) );
+
+        connection_token = token;
+
+        Pragma           = str_p("Pragma") >> ":" >>
+                           ( *LWS >> pragma_directive >> *( *LWS >> "," >> *LWS >> pragma_directive ) );
+
+        pragma_directive = "no-cache" | extension_pragma;
+
+        extension_pragma = token >> !( "=" >> ( token | quoted_string ) );
+
+        Trailer         = str_p("Trailer") >> ":" >>
+                          ( *LWS >> field_name >> *( *LWS >> "," >> *LWS >> field_name ) );
+
+        field_name      = token;
+
+        Transfer_Encoding  = str_p("Transfer_Encoding") >> ":" >>
+                             ( *LWS >> transfer_coding >> *( *LWS >> "," >> *LWS >> transfer_coding ) );
+
+        transfer_coding    = "chunked" | transfer_extension;
+
+        transfer_extension = token >> *( ";" >> parameter );
+
+        parameter       = attribute >> "=" >> value;
+
+        attribute       = token;
+
+        value           = token | quoted_string;
+
+        Date            = str_p("Date") >> ":" >> HTTP_date;
+
+        HTTP_date       = rfc1123_date | rfc850_date | asctime_date;
+
+        rfc1123_date    = wkday >> "," >> SP >> date1 >> SP >> time >> SP >> "GMT";
+
+        rfc850_date     = weekday >> "," >> SP >> date2 >> SP >> time >> SP >> "GMT";
+
+        asctime_date    = wkday >> SP >> date3 >> SP >> time >> SP >> digit_p.repeat(4);
+
+        date1           = digit_p.repeat(2) >> SP >> month >> SP >> digit_p.repeat(4);
+
+        date2           = digit_p.repeat(2) >> "-" >> month >> "-" >> digit_p.repeat(2);
+
+        date3           = month >> SP >> ( digit_p.repeat(2) | ( SP >> digit_p ));
+
+        time            = digit_p.repeat(2) >> ":" >> digit_p.repeat(2) >> ":" >> digit_p.repeat(2);
+
+        wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+
+        weekday         = str_p("Monday") | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+
+        month           = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
+
+        Upgrade         = "Upgrade" ":" >> ( *LWS >> product >> *( *LWS >> "," >> *LWS >> product ) );
+
         product         = token >> !( "/" >> product_version );
+
         product_version = token;
-        LWS            = !CRLF >> ( SP | HT )(1, more);
 
-        request_header = /* Accept
-            | Accept_Charset
-            | Accept_Encoding
-            | Accept_Language
-            | Authorization
-            | Expect
-            | From
-            | */ Host /*
-            | If_Match
-            | If_Modified_Since
-            | If_None_Match
-            | If_Range
-            | If_Unmodified_Since
-            | Max_Forwards
-            | Proxy_Authorization
-            | Range
-            | Referer
-            | TE
-            | User_Agent */;
+        CRLF            = CR >> LF;
+        LWS             = !CRLF >> ( SP | HT )(1, more);
 
+        request_header = Host; /* | Accept
+                                  | Accept_Charset
+                                  | Accept_Encoding
+                                  | Accept_Language
+                                  | Authorization
+                                  | Expect
+                                  | From
+                                  | If_Match
+                                  | If_Modified_Since
+                                  | If_None_Match
+                                  | If_Range
+                                  | If_Unmodified_Since
+                                  | Max_Forwards
+                                  | Proxy_Authorization
+                                  | Range
+                                  | Referer
+                                  | TE
+                                  | User_Agent
+                               */
         Host = str_p("Host") >> ":" >> host >> !( ":" >> port );
 
-
-        entity_header  = /* Allow
-            | Content_Encoding
-            | Content_Language
-            | Content_Length
-            | Content_Location
-            | Content_MD5
-            | Content_Range
-            | Content_Type
-            | Expires
-            | Last_Modified
-            | */ extension_header;
+        entity_header  = extension_header; /* | Allow
+                                              | Content_Encoding
+                                              | Content_Language
+                                              | Content_Length
+                                              | Content_Location
+                                              | Content_MD5
+                                              | Content_Range
+                                              | Content_Type
+                                              | Expires
+                                              | Last_Modified
+                                           */
         extension_header = message_header;
 
         message_header = field_name >> ":" >> !field_value;
@@ -151,8 +220,6 @@ class HTTPRequest
 
         message_body = entity_body;
         entity_body    = *anychar_p;
-
-        skip_lws = !( CR >> LF ) >> ( SP | HT )(1, more);
 
         SPIRIT_DEBUG_RULE(Request);
         SPIRIT_DEBUG_RULE(Request_Line);
@@ -234,12 +301,8 @@ class HTTPRequest
         SPIRIT_DEBUG_RULE(field_value);
         SPIRIT_DEBUG_RULE(field_content);
 
-        skipper_t skip(skip_lws, end);
-        scanner_t first(begin, &skip);
-        scanner_t last(end, &skip);
-
-        match hit = Request.parse(first, last);
-        if (!hit)
+        parse_info_t result = parse(begin, end, Request);
+        if (!result.full)
             throw parse_error();
         }
 
@@ -248,14 +311,14 @@ class HTTPRequest
   private:
     chlit<> SP, CR, LF, HT;
     range<> CHAR;
-    chset<> CTL;
+    chset<> CTL, separators, reserved, mark;
     rule_t Request, Request_Line, Method, CRLF, Request_URI, HTTP_Version,
         absoluteURI, hier_part, net_path, abs_path, scheme, authority,
         opaque_part, query, path_segments, segment, param, pchar,
-        unreserved, mark, escaped, server, userinfo, hostport, reg_name,
+        escaped, server, userinfo, hostport, reg_name, unreserved,
         host, hostname, domainlabel, toplabel, IPv4address, port,
-        uric_no_slash, uric, reserved, general_header, quoted_pair,
-        token, separators, quoted_string, qdtext, TEXT, request_header,
+        uric_no_slash, uric, general_header, quoted_pair,
+        token, quoted_string, qdtext, TEXT, request_header,
         entity_header, message_body, entity_body, Connection, LWS,
         connection_token, Date, HTTP_date, Pragma, pragma_directive,
         extension_pragma, Trailer, Transfer_Encoding, Upgrade,
@@ -263,8 +326,7 @@ class HTTPRequest
         attribute, value, rfc1123_date, rfc850_date, asctime_date,
         wkday, date1, date2, date3, month, time, weekday, product,
         product_version, Host, extension_header, message_header,
-        field_value, field_content;
-    rule<iterator_t> skip_lws;
+        field_value, field_content, extension_method;
     };
 
 
