@@ -33,7 +33,7 @@ dnl     AC_LIBOBJ(libgetopt/getopt)
 dnl     AC_LIBOBJ(libgetopt/getopt1)
 dnl fi
 
-dnl Enable/disable debugging.
+dnl Include debug code?
 dnl
 AC_MSG_CHECKING(whether to include debugging capabilities)
 AC_ARG_WITH(debug, [  --with-debug            Support debugging? (default: yes)],
