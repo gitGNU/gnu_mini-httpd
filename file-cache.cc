@@ -25,8 +25,8 @@ FileCache::buffer_object_t FileCache::get_file(const string& name)
     objectmap_t::const_iterator i = objects.find(name);
     if (i != objects.end())
 	{
-	debug("CACHE HIT for file %s.", name.c_str());
 	++(i->second.accesses);
+	debug("CACHE HIT: File %s has been hit %d times.", name.c_str(), i->second.accesses);
 	return buffer_object_t(i->second.data, i->second.data_len);
 	}
     debug("CACHE MISS for file %s.", name.c_str());
