@@ -3,6 +3,7 @@
 httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) +debug :exe
 
 %httpd.cc.sm == <<
+    main.cc
     httpd.cc
 
 %clean ! == !<<

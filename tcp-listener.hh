@@ -87,15 +87,15 @@ class TCPListener : public scheduler::event_handler
 	}
     virtual void fd_is_writable(int)
         {
-        throw std::logic_error("This routine should not be called.");
+        throw logic_error("This routine should not be called.");
         }
     virtual void read_timeout(int)
         {
-        throw std::logic_error("This routine should not be called.");
+        throw logic_error("This routine should not be called.");
         }
     virtual void write_timeout(int)
         {
-        throw std::logic_error("This routine should not be called.");
+        throw logic_error("This routine should not be called.");
         }
 
     scheduler&   mysched;
