@@ -1,23 +1,22 @@
 #
 # Build the httpd documentation
 #
-
+DOCBOOKBASE	= /usr/local/sgml/dsssl/docbook
 .SUFFIXES:
 
 %.tex : %.sgml
-	sgmltools -b jadetex $<
+	openjade -t tex -d peti.dsl#print -D $(DOCBOOKBASE)/print $<
 
 %.html : %.sgml
-	sgmltools -b onehtml $<
+	openjade -t sgml -d peti.dsl#html -D $(DOCBOOKBASE)/html $< >$@
 
 %.txt : %.sgml
 	sgmltools -b w3m $<
 
 %.dvi : %.tex
 	jadetex \\nonstopmode\\input $<; \
-	while grep -i 'Rerun' $*.log; do \
-	     jadetex \\nonstopmode\\input $<; \
-	done
+	jadetex \\nonstopmode\\input $<; \
+	jadetex \\nonstopmode\\input $<; \
 
 %.ps : %.dvi
 	dvips $< -o $@
@@ -29,11 +28,9 @@
 
 all:	httpd.html httpd.pdf man-page.txt readme.txt
 
-man-page.html:	synopsis.inc description.inc cmdloptions.inc configfile.inc \
-		license.inc
+man-page.html:	synopsis.inc description.inc cmdloptions.inc license.inc
 
-httpd.html httpd.tex: license.inc building.inc synopsis.inc cmdloptions.inc
-httpd.html httpd.tex: configfile.inc
+httpd.html httpd.tex: license.inc building.inc synopsis.inc cmdloptions.inc ../VERSION
 
 readme.txt:	readme.sgml building.inc ../VERSION
 

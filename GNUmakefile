@@ -34,10 +34,13 @@ test:		test.o HTTPParser.o log.o
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
 
+run:		httpd
+	su -c "`pwd`/httpd -d -p 8080 -r `pwd` -s peti/1.0"
+
 config.o:	config.cc
 	$(CXX) -DPREFIX=\"$(prefix)\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
-main.o:		version.h
+config.o main.o:	version.h
 
 version.h:	VERSION
 	@echo  >$@ '/* Generated automatically; do not edit! */'
@@ -81,48 +84,55 @@ depend::
 
 # Dependencies
 
-HTTPParser.o: HTTPParser.hh HTTPRequest.hh
-config.o: config.hh log.hh
-log.o: log.hh
+HTTPParser.o: HTTPParser.hh HTTPRequest.hh resetable-variable.hh
+config.o: log.hh version.h config.hh resetable-variable.hh
+log.o: log.hh config.hh resetable-variable.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
 main.o: libscheduler/pollvector.hh log.hh RequestHandler.hh HTTPRequest.hh
-main.o: config.hh
+main.o: resetable-variable.hh config.hh version.h
 rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
 rh-construction.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-construction.o: libscheduler/pollvector.hh HTTPRequest.hh config.hh
-rh-construction.o: log.hh
+rh-construction.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-construction.o: resetable-variable.hh config.hh log.hh
 rh-copy-file.o: system-error/system-error.hh RequestHandler.hh
 rh-copy-file.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-copy-file.o: HTTPRequest.hh log.hh
+rh-copy-file.o: HTTPRequest.hh resetable-variable.hh log.hh
 rh-flush-buffer.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-flush-buffer.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
+rh-flush-buffer.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-flush-buffer.o: resetable-variable.hh log.hh
 rh-io-callbacks.o: system-error/system-error.hh RequestHandler.hh
 rh-io-callbacks.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-io-callbacks.o: HTTPRequest.hh config.hh log.hh
+rh-io-callbacks.o: HTTPRequest.hh resetable-variable.hh config.hh log.hh
 rh-log-access.o: system-error/system-error.hh RequestHandler.hh
 rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-log-access.o: HTTPRequest.hh timestamp-to-string.hh
-rh-log-access.o: search-and-replace.hh config.hh log.hh
+rh-log-access.o: HTTPRequest.hh resetable-variable.hh
+rh-log-access.o: timestamp-to-string.hh search-and-replace.hh config.hh
+rh-log-access.o: log.hh
 rh-read-request-body.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-read-request-body.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
+rh-read-request-body.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-read-request-body.o: resetable-variable.hh log.hh
 rh-read-request-header.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-header.o: libscheduler/pollvector.hh HTTPRequest.hh
-rh-read-request-header.o: HTTPParser.hh log.hh
+rh-read-request-header.o: resetable-variable.hh HTTPParser.hh log.hh
 rh-read-request-line.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-read-request-line.o: libscheduler/pollvector.hh HTTPRequest.hh
-rh-read-request-line.o: HTTPParser.hh urldecode.hh log.hh
+rh-read-request-line.o: resetable-variable.hh HTTPParser.hh urldecode.hh
+rh-read-request-line.o: log.hh
 rh-setup-reply.o: system-error/system-error.hh HTTPParser.hh HTTPRequest.hh
-rh-setup-reply.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-setup-reply.o: libscheduler/pollvector.hh timestamp-to-string.hh
-rh-setup-reply.o: escape-html-specials.hh urldecode.hh config.hh log.hh
+rh-setup-reply.o: resetable-variable.hh RequestHandler.hh
+rh-setup-reply.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-setup-reply.o: timestamp-to-string.hh escape-html-specials.hh
+rh-setup-reply.o: urldecode.hh config.hh log.hh
 rh-standard-replies.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-standard-replies.o: libscheduler/pollvector.hh HTTPRequest.hh
-rh-standard-replies.o: HTTPParser.hh escape-html-specials.hh
-rh-standard-replies.o: timestamp-to-string.hh config.hh log.hh
+rh-standard-replies.o: resetable-variable.hh HTTPParser.hh
+rh-standard-replies.o: escape-html-specials.hh timestamp-to-string.hh
+rh-standard-replies.o: config.hh log.hh
 rh-terminate.o: RequestHandler.hh libscheduler/scheduler.hh
-rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
-test.o: HTTPParser.hh HTTPRequest.hh log.hh
+rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-terminate.o: resetable-variable.hh log.hh
+test.o: HTTPParser.hh HTTPRequest.hh resetable-variable.hh log.hh
 libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh

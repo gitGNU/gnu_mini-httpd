@@ -3,8 +3,12 @@
  * All rights reserved.
  */
 
-#include "config.hh"
+#include <cstdlib>
+#include <stdexcept>
+#include <getopt.h>
 #include "log.hh"
+#include "version.h"
+#include "config.hh"
 using namespace std;
 
 #define kb * 1024
@@ -14,7 +18,6 @@ using namespace std;
 // Timeouts.
 unsigned int configuration::network_read_timeout         = 30 sec;
 unsigned int configuration::network_write_timeout        = 30 sec;
-unsigned int configuration::file_read_timeout            =  0 sec;
 
 unsigned int configuration::hard_poll_interval_threshold = 32;
 int configuration::hard_poll_interval                    = 60 sec;
@@ -23,22 +26,101 @@ int configuration::hard_poll_interval                    = 60 sec;
 unsigned int configuration::max_line_length              =  4 kb;
 
 // Paths.
-string configuration::document_root                      = PREFIX "/htdocs";
-string configuration::default_page                       = "index.html";
-string configuration::logfile_directory                  = PREFIX "/logs";
 string configuration::chroot_directory                   = PREFIX;
+string configuration::logfile_directory                  = "/logs";
+string configuration::document_root                      = "/htdocs";
+string configuration::default_page                       = "index.html";
 
-// Miscellaneous.
+// Run-time stuff.
 string configuration::server_string                      = "peti-httpd";
 char* configuration::default_content_type                = "application/octet-stream";
-unsigned int configuration::http_port                    = 8080;
-uid_t configuration::setuid_user                         = 2;
-gid_t configuration::setgid_group                        = 2;
+unsigned int configuration::http_port                    = 80;
+resetable_variable<uid_t> configuration::setuid_user;
+resetable_variable<gid_t> configuration::setgid_group;
+bool configuration::debugging                            = false;
 
-
-configuration::configuration()
+configuration::configuration(int argc, char** argv)
     {
     TRACE();
+
+    // Parse the command line.
+
+    const char* optstring = "hdp:r:l:s:u:g:";
+    const option longopts[] =
+        {
+        { "help",               no_argument,       0, 'h' },
+        { "version",            no_argument,       0, 'v' },
+        { "debug",              no_argument,       0, 'd' },
+        { "port",               required_argument, 0, 'p' },
+        { "change-root",        required_argument, 0, 'r' },
+        { "logfile-directory",  required_argument, 0, 'l' },
+        { "server-string",      required_argument, 0, 's' },
+        { "uid",                required_argument, 0, 'u' },
+        { "gid",                required_argument, 0, 'g' },
+        { "document-root",      required_argument, 0, 'y' },
+        { "default-page",       required_argument, 0, 'z' },
+        { 0, 0, 0, 0 }          // mark end of array
+        };
+    int rc;
+    opterr = 0;
+    while ((rc = getopt_long(argc, argv, optstring, longopts, 0)) != -1)
+        {
+        switch(rc)
+            {
+            case 'h':
+                fprintf(stderr, "Usage: httpd [-h | --help] [--version] [-d | --debug] [-a | --accept]\n" \
+                        "              [--cookie cookie] [-c config | --config-file config] [mail...]\n");
+                throw no_error();
+            case 'v':
+                printf("httpd version %s\n", VERSION);
+                throw no_error();
+            case 'd':
+                debugging = true;
+                break;
+            case 'p':
+                http_port = atoi(optarg);
+                if (http_port > 65535)
+                    throw runtime_error("The specified port number is out of range!");
+                break;
+            case 'g':
+                setgid_group = atoi(optarg);
+                break;
+            case 'u':
+                setuid_user = atoi(optarg);
+                break;
+            case 'r':
+                chroot_directory = optarg;
+                break;
+            case 'y':
+                document_root = optarg;
+                break;
+            case 'z':
+                default_page = optarg;
+                break;
+            case 'l':
+                logfile_directory = optarg;
+                break;
+            case 's':
+                server_string = optarg;
+                break;
+            default:
+                fprintf(stderr, "Usage: httpd [-h | --help] [--version] [-d | --debug] [-a | --accept]\n" \
+                        "              [--cookie cookie] [-c config | --config-file config] [mail...]\n");
+                throw runtime_error("Incorrect command line syntax.");
+            }
+
+        // Consistency checks on the configured parameters.
+
+        if (default_page.empty())
+            throw invalid_argument("Setting an empty --default-page is not allowed.");
+        if (document_root.empty())
+            throw invalid_argument("Setting an empty --document-root is not allowed.");
+        if (logfile_directory.empty())
+            throw invalid_argument("Setting an empty --document-root is not allowed.");
+        }
+
+    // Initialize the content type lookup map.
+
     content_types["ai"]      = "application/postscript";
     content_types["aif"]     = "audio/x-aiff";
     content_types["aifc"]    = "audio/x-aiff";

@@ -3,7 +3,6 @@
 <!ENTITY synopsis SYSTEM "synopsis.inc">
 <!ENTITY description SYSTEM "description.inc">
 <!ENTITY cmdloptions SYSTEM "cmdloptions.inc">
-<!ENTITY configfile SYSTEM "configfile.inc">
 <!ENTITY license SYSTEM "license.inc">
 ]>
 
@@ -36,11 +35,6 @@ options in detail.</para>
     <title>Command Line Syntax</title>
     <para>&httpd; understands the following command line parameters:</para>
     &cmdloptions;
-  </refsect1>
-
-  <refsect1>
-    <title>Configuration File</title>
-    &configfile;
   </refsect1>
 
   <refsect1>

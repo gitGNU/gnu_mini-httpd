@@ -17,9 +17,10 @@ void RequestHandler::protocol_error(const string& message)
     debug(("%d: Protocol error; going into FLUSH_BUFFER state.", sockfd));
 
     ostringstream buf;
-    buf << "HTTP/1.1 400 Bad Request\r\n"
-        << "Server: " << config->server_string << "\r\n"
-        << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+    buf << "HTTP/1.1 400 Bad Request\r\n";
+    if (!config->server_string.empty())
+        buf << "Server: " << config->server_string << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: text/html\r\n";
     if (!request.connection.empty())
         buf << "Connection: close\r\n";
@@ -50,9 +51,10 @@ void RequestHandler::file_not_found()
     debug(("%d: URL '%s' not found; going into FLUSH_BUFFER state.", sockfd, request.url.path.c_str()));
 
     ostringstream buf;
-    buf << "HTTP/1.1 404 Not Found\r\n"
-        << "Server: " << config->server_string << "\r\n"
-        << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+    buf << "HTTP/1.1 404 Not Found\r\n";
+    if (!config->server_string.empty())
+        buf << "Server: " << config->server_string << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: text/html\r\n";
     if (!request.connection.empty())
         buf << "Connection: close\r\n";
@@ -83,9 +85,10 @@ void RequestHandler::moved_permanently(const string& path)
            sockfd, request.url.path.c_str(), path.c_str()));
 
     ostringstream buf;
-    buf << "HTTP/1.1 301 Moved Permanently\r\n"
-        << "Server: " << config->server_string << "\r\n"
-        << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+    buf << "HTTP/1.1 301 Moved Permanently\r\n";
+    if (!config->server_string.empty())
+        buf << "Server: " << config->server_string << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: text/html\r\n"
         << "Location: http://" << request.host;
     if (!request.port.empty() && request.port != 80)
@@ -120,9 +123,10 @@ void RequestHandler::not_modified()
     debug(("%d: Requested page was not modified; going into FLUSH_BUFFER state.", sockfd));
 
     ostringstream buf;
-    buf << "HTTP/1.1 304 Not Modified\r\n"
-        << "Server: " << config->server_string << "\r\n"
-        << "Date: " << time_to_rfcdate(time(0)) << "\r\n";
+    buf << "HTTP/1.1 304 Not Modified\r\n";
+    if (!config->server_string.empty())
+        buf << "Server: " << config->server_string << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n";
     if (!request.connection.empty())
         {
         if (use_persistent_connection)

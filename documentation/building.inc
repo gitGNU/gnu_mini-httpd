@@ -2,9 +2,9 @@
 have to do is the usual routine:</para>
 
   <screen>
-    ./configure
-    make
-    make install</screen>
+./configure
+make
+make install</screen>
 
   <para>The last step may require super-user privileges, so have the <systemitem
 class="username">root</systemitem> password ready if you're going for a

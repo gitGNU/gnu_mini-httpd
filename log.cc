@@ -6,6 +6,7 @@
 #include <syslog.h>
 #include <stdarg.h>
 #include "log.hh"
+#include "config.hh"
 
 std::string Tracer::indent;
 
@@ -28,6 +29,8 @@ namespace
 #ifdef DEBUG
 void _trace(const char* fmt, ...) throw()
     {
+    if (!config->debugging)
+        return;
     va_list ap;
     va_start(ap, fmt);
     vsyslog(LOG_DEBUG, fmt, ap);
@@ -36,6 +39,8 @@ void _trace(const char* fmt, ...) throw()
 
 void _debug(const char* fmt, ...) throw()
     {
+    if (!config->debugging)
+        return;
     va_list ap;
     va_start(ap, fmt);
     vsyslog(LOG_DEBUG, fmt, ap);

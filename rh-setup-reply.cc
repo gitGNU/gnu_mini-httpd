@@ -152,9 +152,10 @@ bool RequestHandler::setup_reply()
     // Now answer the request, which may be either HEAD or GET.
 
     ostringstream buf;
-    buf << "HTTP/1.1 200 OK\r\n"
-        << "Server: " << config->server_string << "\r\n"
-        << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+    buf << "HTTP/1.1 200 OK\r\n";
+    if (!config->server_string.empty())
+        buf << "Server: " << config->server_string << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
         << "Content-Length: " << file_stat.st_size << "\r\n"
         << "Last-Modified: " << time_to_rfcdate(file_stat.st_mtime) << "\r\n";
