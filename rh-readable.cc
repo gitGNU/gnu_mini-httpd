@@ -4,6 +4,7 @@
  */
 
 #include <cstdio>
+#include <ctime>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,6 +13,18 @@
 #include "config.hh"
 #include "urldecode.hh"
 using namespace std;
+
+namespace
+    {
+    string time_to_ascii(time_t t)
+        {
+        char buffer[1024];
+        size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
+        if (len == 0 || len >= sizeof(buffer))
+            throw std::logic_error("strftime() failed because an internal buffer is too small!");
+        return buffer;
+        }
+    }
 
 void RequestHandler::fd_is_readable(int)
     {
@@ -127,8 +140,13 @@ void RequestHandler::fd_is_readable(int)
 				       "HTTP/1.0 200 OK\r\n"     \
 				       "Content-Type: %s\r\n"    \
 				       "Content-Length: %ld\r\n" \
+				       "Date: %s\r\n" \
+				       "Last-Modified: %s\r\n" \
 				       "\r\n",
-				       config->get_content_type(filename.c_str()), sbuf.st_size);
+				       config->get_content_type(filename.c_str()),
+                                       sbuf.st_size,
+                                       time_to_ascii(time(0)).c_str(),
+                                       time_to_ascii(sbuf.st_mtime).c_str());
 		    if (len > 0 && len <= buffer_end - buffer)
 			{
 			data     = buffer;
