@@ -15,9 +15,9 @@ using namespace std;
 #include "log.hh"
 #include "config.hh"
 
-const RegExp RequestHandler::full_get_port_regex("^GET http://([^:]+):[0-9]+(/[^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
+const RegExp RequestHandler::full_get_port_regex("^GET http://([^:]+):[0-9]+(/[^ ]*) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
 const RegExp RequestHandler::full_get_regex("^GET http://([^/]+)([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
-const RegExp RequestHandler::get_regex("^GET +(/[^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
+const RegExp RequestHandler::get_regex("^GET +(/[^ ]*) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
 const RegExp RequestHandler::host_port_regex("^Host: +([^ ]+):[0-9]+", REG_EXTENDED);
 const RegExp RequestHandler::host_regex("^Host: +([^ ]+)", REG_EXTENDED);
 
@@ -49,6 +49,11 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 
     // Set socket parameters.
 
+    linger ling;
+    ling.l_onoff  = 0;
+    ling.l_linger = 0;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
+	throw system_error("Can't switch LINGER mode off");
     if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
 	throw system_error("Can set non-blocking mode");
 
@@ -209,7 +214,7 @@ void RequestHandler::read_request()
 	    struct stat sbuf;
 	    if (stat(filename.c_str(), &sbuf) == -1)
 		{
-		error("Can't stat requested file %s: %s", filename.c_str(), strerror(errno));
+		error("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
 		file_not_found(filename);
 		return;
 		}
@@ -220,7 +225,7 @@ void RequestHandler::read_request()
 	    filefd = open(filename.c_str(), O_RDONLY | O_NONBLOCK, 0);
 	    if (filefd == -1)
 		{
-		error("Can't open requested file %s: %s", filename.c_str(), strerror(errno));
+		error("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
 		file_not_found(filename);
 		return;
 		}
