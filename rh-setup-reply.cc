@@ -54,12 +54,9 @@ bool RequestHandler::setup_reply()
     debug(("%d: file mtime = %d; if-modified-since = %d; timezone = %d", sockfd, sbuf.st_mtime, if_modified_since, timezone));
     if (if_modified_since > 0 && sbuf.st_mtime <= if_modified_since)
         {
-        debug(("%d: not modified!", sockfd));
         not_modified();
         return false;
         }
-    else
-        debug(("%d: modified!", sockfd));
 
     // Now answer the request, which may be either HEAD or GET.
 
