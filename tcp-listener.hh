@@ -45,17 +45,17 @@ class TCPListener : public scheduler::event_handler
 
 	    if (listen(sockfd, queue_backlog) == -1)
 		throw system_error("listen() failed");
+
+	    scheduler::handler_properties prop;
+	    prop.poll_events  = POLLIN;
+	    prop.read_timeout = 0;
+	    mysched.register_handler(sockfd, *this, prop);
 	    }
 	catch(...)
 	    {
 	    close(sockfd);
 	    throw;
 	    }
-
-	scheduler::handler_properties prop;
-	prop.poll_events   = POLLIN;
-	prop.read_timeout  = 0;
-	mysched.register_handler(sockfd, *this, prop);
 
 	info("Listening on TCP port %d for incoming requests ...", port_no);
 	}
