@@ -34,10 +34,11 @@ inline void log_access(bool success, const char* host, const char* url, const ch
 		       int sock, const timeval& runtime, size_t received, size_t sent,
 		       size_t read_calls, size_t write_calls)
     {
-    info("%s: host = '%s'; url = '%s'; peer = '%s'; socket = %u; runtime = %u.%u; " \
+    info("%s: host = '%s'; url = '%s'; peer = '%s'; socket = %d; runtime = %u.%u; " \
 	 "received = %u; sent = %u; read calls = %u; write calls = %u",
 	 ((success) ? "success" : "failure"),
-	 host, url, peer, sock, runtime.tv_sec, runtime.tv_usec, sent, received);
+	 host, url, peer, sock, runtime.tv_sec, runtime.tv_usec, received, sent,
+	 read_calls, write_calls);
     }
 
 class Tracer
