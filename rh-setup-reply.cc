@@ -64,7 +64,7 @@ bool RequestHandler::setup_reply()
     buf << "HTTP/1.1 200 OK\r\n"
         << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
         << "Content-Length: " << sbuf.st_size << "\r\n";
-    buf << "Date: " << time_to_rfcdate(time(0)) << " \r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n";
     buf << "Last-Modified: " << time_to_rfcdate(sbuf.st_mtime) << "\r\n";
     connect_header(buf);
     buf << "\r\n";
