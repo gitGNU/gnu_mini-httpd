@@ -62,9 +62,9 @@ class TCPListener : public scheduler::event_handler
 
     virtual ~TCPListener()
 	{
-	info("Shutting TCP listener down.");
 	mysched.remove_handler(sockfd);
 	close(sockfd);
+	info("Shutting TCP listener down.");
 	}
 
   private:
