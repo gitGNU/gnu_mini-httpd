@@ -98,3 +98,21 @@ void RequestHandler::moved_permanently(const char* url)
     prop.write_timeout = config->network_write_timeout;
     mysched.register_handler(sockfd, *this, prop);
     }
+
+void RequestHandler::not_modified()
+    {
+    TRACE();
+    debug(("%d: Requested page has not modified; going into WRITE_REMAINING_DATA state.", sockfd));
+
+    ostringstream buf;
+    buf << "HTTP/1.1 304 Not Modified\r\n";
+    connect_header(buf);
+    buf << "\r\n";
+    write_buffer = buf.str();
+    returned_status_code = 304;
+    state = WRITE_REMAINING_DATA;
+    scheduler::handler_properties prop;
+    prop.poll_events   = POLLOUT;
+    prop.write_timeout = config->network_write_timeout;
+    mysched.register_handler(sockfd, *this, prop);
+    }

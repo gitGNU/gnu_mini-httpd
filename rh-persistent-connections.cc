@@ -13,13 +13,10 @@ bool RequestHandler::is_persistent_connection() const
     {
     TRACE();
 
-    if (major_version < 1)
-        return false;
-
-    if (strcasecmp(connection.c_str(), "keep-alive") == 0)
+    if (major_version >= 1 && minor_version >= 1)
         return true;
 
-    return false;
+    return (strcasecmp(connection.c_str(), "keep-alive") == 0);
     }
 
 ostream& RequestHandler::connect_header(ostream& os)

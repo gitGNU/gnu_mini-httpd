@@ -14,6 +14,7 @@ bool RequestHandler::write_remaining_data()
 
     if (write_buffer.empty())
         {
+        log_access();
         if (is_persistent_connection())
             {
             debug(("%d: Persistent connection; starting over in GET_REQUEST_LINE state.", sockfd));

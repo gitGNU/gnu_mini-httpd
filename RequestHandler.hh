@@ -78,6 +78,7 @@ class RequestHandler : public scheduler::event_handler
     void protocol_error(const char*);
     void file_not_found(const char*);
     void moved_permanently(const char*);
+    void not_modified();
 
     void log_access() const throw();
 

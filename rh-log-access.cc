@@ -9,21 +9,13 @@
 #include "system-error/system-error.hh"
 #include "request-handler.hh"
 #include "config.hh"
+#include "timestamp-to-string.hh"
 #include "log.hh"
 
 using namespace std;
 
 namespace
     {
-    inline string time_to_ascii(time_t t)
-        {
-        char buffer[1024];
-        size_t len = strftime(buffer, sizeof(buffer), "%d/%b/%Y:%H:%M:%S %z", localtime(&t));
-        if (len == 0 || len >= sizeof(buffer))
-            throw length_error("strftime() failed because the internal buffer is too small");
-        return buffer;
-        }
-
     inline string escape_quotes(const string& str)
         {
         string tmp = str;
@@ -55,7 +47,7 @@ void RequestHandler::log_access() const throw()
 
         // Create the data for the log entry.
 
-        string timestamp = time_to_ascii(time(0));
+        string timestamp = time_to_logdate(time(0));
 
         // Open it and write the entry.
 

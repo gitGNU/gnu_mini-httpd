@@ -7,19 +7,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "request-handler.hh"
+#include "timestamp-to-string.hh"
 #include "config.hh"
 #include "log.hh"
 
 using namespace std;
-
-static const char* time_to_ascii(time_t t)
-    {
-    static char buffer[64];
-    size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
-    if (len == 0 || len >= sizeof(buffer))
-        throw std::logic_error("strftime() failed because an internal buffer is too small!");
-    return buffer;
-    }
 
 bool RequestHandler::setup_reply()
     {
@@ -51,34 +43,43 @@ bool RequestHandler::setup_reply()
     if (S_ISDIR(sbuf.st_mode))
         {
         if (*path.rbegin() == '/')
-            {
             moved_permanently((path + config->default_page).c_str());
-            return false;
-            }
         else
-            {
             moved_permanently((path + "/" + config->default_page).c_str());
-            return false;
-            }
+        return false;
         }
+
+    // Check whether the If-Modified-Since header applies.
+
+    debug(("%d: file mtime = %d; if-modified-since = %d", sockfd, sbuf.st_mtime, if_modified_since));
+    if (if_modified_since > 0 && sbuf.st_mtime <= if_modified_since)
+        {
+        debug(("%d: not modified!"));
+        not_modified();
+        return false;
+        }
+    else
+        debug(("%d: modified!"));
+
+    // Now answer the request, which may be either HEAD or GET.
+
+    ostringstream buf;
+    buf << "HTTP/1.1 200 OK\r\n"
+        << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
+        << "Content-Length: " << sbuf.st_size << "\r\n";
+    buf << "Date: " << time_to_rfcdate(time(0)) << " \r\n";
+    buf << "Last-Modified: " << time_to_rfcdate(sbuf.st_mtime) << "\r\n";
+    connect_header(buf);
+    buf << "\r\n";
+    write_buffer = buf.str();
+    returned_status_code = 200;
 
     if (method == "HEAD")
         {
         state = WRITE_REMAINING_DATA;
         debug(("%d: Answering HEAD; going into WRITE_REMAINING_DATA state.", sockfd));
-
-        ostringstream buf;
-        buf << "HTTP/1.1 200 OK\r\n"
-            << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
-            << "Date: " << time_to_ascii(time(0)) << " \r\n"
-            << "Last-Modified: " << time_to_ascii(sbuf.st_mtime) << "\r\n";
-        connect_header(buf);
-        buf << "\r\n";
-        write_buffer = buf.str();
-        returned_status_code = 200;
-        returned_object_size = 0;
         }
-    else if (method == "GET")
+    else // must be GET
         {
         filefd = open(filename.c_str(), O_RDONLY, 0);
         if (filefd == -1)
@@ -87,20 +88,9 @@ bool RequestHandler::setup_reply()
             file_not_found(filename.c_str());
             return false;
             }
+        returned_object_size = sbuf.st_size;
         state = COPY_FILE;
         debug(("%d: Answering GET; going into COPY_FILE state.", sockfd));
-
-        ostringstream buf;
-        buf << "HTTP/1.1 200 OK\r\n"
-            << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
-            << "Content-Length: " << sbuf.st_size << "\r\n"
-            << "Date: " << time_to_ascii(time(0)) << " \r\n"
-            << "Last-Modified: " << time_to_ascii(sbuf.st_mtime) << "\r\n";
-        connect_header(buf);
-        buf << "\r\n";
-        write_buffer = buf.str();
-        returned_status_code = 200;
-        returned_object_size = sbuf.st_size;
         }
 
     scheduler::handler_properties prop;
