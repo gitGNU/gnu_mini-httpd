@@ -8,32 +8,24 @@
 
 using namespace std;
 
-bool RequestHandler::flush_buffer_and_reset()
-    {
-    TRACE();
-
-    if (write_buffer.empty())
-        {
-        debug(("%d: Request is finished; restarting handler.", sockfd));
-        log_access();
-        reset();
-        return true;
-        }
-    else
-        return false;
-    }
-
-bool RequestHandler::flush_buffer_and_terminate()
+bool RequestHandler::flush_buffer()
     {
     TRACE();
 
     if (write_buffer.empty())
         {
         log_access();
-        debug(("%d: Request is finished; going into TERMINATE state.", sockfd));
-        state = TERMINATE;
-        if (shutdown(sockfd, SHUT_RDWR) == -1)
-            delete this;
+        if (use_persistent_connection)
+            {
+            reset();
+            return true;
+            }
+        else
+            {
+            state = TERMINATE;
+            if (shutdown(sockfd, SHUT_RDWR) == -1)
+                delete this;
+            }
         }
     return false;
     }

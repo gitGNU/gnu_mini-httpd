@@ -26,8 +26,7 @@ const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
     &RequestHandler::get_request_body,
     &RequestHandler::setup_reply,
     &RequestHandler::copy_file,
-    &RequestHandler::flush_buffer_and_reset,
-    &RequestHandler::flush_buffer_and_terminate,
+    &RequestHandler::flush_buffer,
     &RequestHandler::terminate
     };
 

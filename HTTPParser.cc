@@ -282,6 +282,18 @@ bool HTTPParser::have_complete_header_line(const string& input)
         return false;
     }
 
+bool HTTPParser::supports_persistent_connection(const HTTPRequest& request)
+    {
+    if (strcasecmp(request.connection.c_str(), "close") == 0)
+        return false;
+    if (strcasecmp(request.connection.c_str(), "keep-alive") == 0 && !request.keep_alive.empty())
+        return true;
+    if (request.major_version >= 1 && request.minor_version >= 1)
+        return true;
+    else
+        return false;
+    }
+
 size_t HTTPParser::parse_header(string& name, string& data, const string& input) const
     {
     name_ptr = &name;

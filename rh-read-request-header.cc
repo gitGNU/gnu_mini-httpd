@@ -18,7 +18,7 @@ bool RequestHandler::get_request_header()
     if (read_buffer.size() >= 2 && read_buffer[0] == '\r' && read_buffer[1] == '\n')
         {
         read_buffer.erase(0, 2);
-        debug(("Request header is complete; going into READ_REQUEST_BODY state."));
+        debug(("%d: Request header is complete; going into READ_REQUEST_BODY state.", sockfd));
         state = READ_REQUEST_BODY;
         return true;
         }

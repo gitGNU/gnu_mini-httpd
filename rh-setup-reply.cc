@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "system-error/system-error.hh"
+#include "HTTPParser.hh"
 #include "RequestHandler.hh"
 #include "timestamp-to-string.hh"
 #include "escape-html-specials.hh"
@@ -91,9 +92,12 @@ bool RequestHandler::setup_reply()
 
     if (!is_path_in_hierarchy(document_root.c_str(), filename.c_str()))
         {
-        info("Peer %s requested URL 'http://%s:%u%s' ('%s'), which fails the hirarchy check.",
-             peer_address, request.host.c_str(), request.port.data(), request.url.path.c_str(),
-             filename.c_str());
+        if (errno != ENOENT)
+            {
+            info("Peer %s requested URL 'http://%s:%u%s' ('%s'), which fails the hirarchy check.",
+                 peer_address, request.host.c_str(), request.port.data(), request.url.path.c_str(),
+                 filename.c_str());
+            }
         file_not_found();
         return false;
         }
@@ -120,10 +124,14 @@ bool RequestHandler::setup_reply()
             }
         else
             {
-            moved_permanently(request.url.path + "/" + config->default_page);
+            moved_permanently(request.url.path + "/");
             return false;
             }
         }
+
+    // Decide whether to use a persistent connection.
+
+    use_persistent_connection = HTTPParser::supports_persistent_connection(request);
 
     // Check whether the If-Modified-Since header applies.
 
@@ -149,17 +157,28 @@ bool RequestHandler::setup_reply()
         << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
         << "Content-Length: " << file_stat.st_size << "\r\n"
-        << "Last-Modified: " << time_to_rfcdate(file_stat.st_mtime) << "\r\n"
-        << "Connection: close\r\n"
-        << "\r\n";
+        << "Last-Modified: " << time_to_rfcdate(file_stat.st_mtime) << "\r\n";
+    if (!request.connection.empty())
+        {
+        if (use_persistent_connection)
+            {
+            buf << "Connection: keep-alive\r\n"
+                << "Keep-Alive: timeout=" << config->network_read_timeout << ", max=100\r\n";
+            }
+        else
+            {
+            buf << "Connection: close\r\n";
+            }
+        }
+    buf << "\r\n";
     write_buffer        = buf.str();
     request.status_code = 200;
     request.object_size = file_stat.st_size;
 
     if (request.method == "HEAD")
         {
-        state = FLUSH_BUFFER_AND_TERMINATE;
-        debug(("%d: Answering HEAD; going into FLUSH_BUFFER_AND_TERMINATE state.", sockfd));
+        state = FLUSH_BUFFER;
+        debug(("%d: Answering HEAD; going into FLUSH_BUFFER state.", sockfd));
         }
     else // must be GET
         {

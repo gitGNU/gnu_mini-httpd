@@ -28,8 +28,8 @@ bool RequestHandler::copy_file()
             throw system_error(string("read() from file '") + filename + "' failed");
         else if (rc == 0)
             {
-            debug(("%d: The complete file is copied: going into FLUSH_BUFFER_AND_TERMINATE state.", sockfd));
-            state = FLUSH_BUFFER_AND_TERMINATE;
+            debug(("%d: The complete file is copied: going into FLUSH_BUFFER state.", sockfd));
+            state = FLUSH_BUFFER;
             close(filefd);
             filefd = -1;
             }

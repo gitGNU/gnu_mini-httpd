@@ -24,6 +24,10 @@ class HTTPParser
 
     static bool have_complete_header_line(const std::string& input);
 
+    // Does the given request allow a persistent connection?
+
+    static bool supports_persistent_connection(const HTTPRequest& request);
+
     // Parse an HTTP request line.
 
     size_t parse_request_line(HTTPRequest& request, const std::string& input) const;

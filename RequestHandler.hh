@@ -64,8 +64,7 @@ class RequestHandler : public scheduler::event_handler
 	READ_REQUEST_BODY,
         SETUP_REPLY,
 	COPY_FILE,
-	FLUSH_BUFFER_AND_RESET,
-	FLUSH_BUFFER_AND_TERMINATE,
+	FLUSH_BUFFER,
 	TERMINATE
 	};
     state_t state;
@@ -78,8 +77,7 @@ class RequestHandler : public scheduler::event_handler
     bool get_request_body();
     bool setup_reply();
     bool copy_file();
-    bool flush_buffer_and_reset();
-    bool flush_buffer_and_terminate();
+    bool flush_buffer();
     bool terminate();
 
     void call_state_handler()
@@ -96,7 +94,6 @@ class RequestHandler : public scheduler::event_handler
     void moved_permanently(const std::string& path);
     void file_not_found();
     void not_modified();
-    void make_standard_header(std::ostringstream& os);
 
   private:
     // The routine for making the logfile entries.
@@ -117,6 +114,7 @@ class RequestHandler : public scheduler::event_handler
 
     char         peer_address[64];
     HTTPRequest  request;
+    bool         use_persistent_connection;
 
   private:
     // Information about the file associated with the request.
