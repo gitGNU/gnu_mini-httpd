@@ -54,6 +54,7 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     ling.l_linger = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
 	throw system_error("Can't switch LINGER mode off");
+
     if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
 	throw system_error("Can set non-blocking mode");
 
@@ -265,8 +266,8 @@ void RequestHandler::read_file()
 	    prop.write_timeout = config->network_write_timeout;
 	    mysched.register_handler(sockfd, *this, prop);
 	    mysched.remove_handler(filefd);
-	    filefd = -1;
 	    close(filefd);
+	    filefd = -1;
 	    }
 	else
 	    {
