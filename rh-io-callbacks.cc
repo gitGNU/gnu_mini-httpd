@@ -78,7 +78,7 @@ void RequestHandler::fd_is_writable(int)
             {
             ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
             if (rc < 0)
-                throw system_error(string("Writing to connection to ") + peer_address + " failed");
+                throw system_error("write() failed");
             else if (rc == 0)
                 {
                 info("Connection to %s was terminated by peer.", peer_address);
