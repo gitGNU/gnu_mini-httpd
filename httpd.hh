@@ -9,6 +9,7 @@
 #include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include "libscheduler/scheduler.hh"
 #include "RegExp/RegExp.hh"
 #include "log.hh"
