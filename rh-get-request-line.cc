@@ -17,9 +17,9 @@ bool RequestHandler::get_request_line()
 
     if (read_buffer.find("\r\n") != string::npos)
         {
-        http_parser.res_method.clear();
-        http_parser.res_host.clear();
-        http_parser.res_query.clear();
+        http_parser.res_method.erase();
+        http_parser.res_host.erase();
+        http_parser.res_query.erase();
         http_parser.res_path = "/";
         http_parser.res_port = 80;
 

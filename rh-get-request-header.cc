@@ -23,8 +23,8 @@ bool RequestHandler::get_request_header()
 
     if (HTTPParser::have_complete_header_line(read_buffer.begin(), read_buffer.end()))
         {
-        http_parser.res_name.clear();
-        http_parser.res_data.clear();
+        http_parser.res_name.erase();
+        http_parser.res_data.erase();
 
         HTTPParser::parse_info_t info =
             parse(read_buffer.data(), read_buffer.data() + read_buffer.size(), http_parser.Header);
