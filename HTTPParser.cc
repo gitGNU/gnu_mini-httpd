@@ -4,7 +4,6 @@
  */
 
 #include "HTTPParser.hh"
-#include <boost/spirit/utility/numerics.hpp>
 #include <boost/spirit/attr/semantics.hpp>
 
 using namespace std;
