@@ -25,26 +25,34 @@ namespace
     static init_logging sentry;
     }
 
-void log(log_level_t level, const char* fmt, ...)
+void trace(const char* fmt, ...)
     {
     va_list ap;
-    int priority;
     va_start(ap, fmt);
+    vsyslog(LOG_DEBUG, fmt, ap);
+    va_end(ap);
+    }
 
-    switch(level)
-	{
-	case TRACE:
-	case DEBUG:
-	    priority = LOG_DEBUG;
-	    break;
-	case INFO:
-	    priority = LOG_INFO;
-	    break;
-	case ERROR:
-	    priority = LOG_ERR;
-	    break;
-	};
-    vsyslog(priority, fmt, ap);
+void debug(const char* fmt, ...)
+    {
+    va_list ap;
+    va_start(ap, fmt);
+    vsyslog(LOG_DEBUG, fmt, ap);
+    va_end(ap);
+    }
 
+void info(const char* fmt, ...)
+    {
+    va_list ap;
+    va_start(ap, fmt);
+    vsyslog(LOG_INFO, fmt, ap);
+    va_end(ap);
+    }
+
+void error(const char* fmt, ...)
+    {
+    va_list ap;
+    va_start(ap, fmt);
+    vsyslog(LOG_ERR, fmt, ap);
     va_end(ap);
     }

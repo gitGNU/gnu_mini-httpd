@@ -8,27 +8,23 @@
 
 #include <string>
 
-enum log_level_t
-    {
-    TRACE,
-    DEBUG,
-    INFO,
-    ERROR
-    };
-void log(log_level_t level, const char* fmt, ...);
+void trace(const char* fmt, ...);
+void debug(const char* fmt, ...);
+void info(const char* fmt, ...);
+void error(const char* fmt, ...);
 
 class Tracer
     {
   public:
     Tracer(const char* funcname) : name(funcname)
 	{
-	log(TRACE, "%sEntering %s() ...", indent.c_str(), name);
-	indent.append(" ");
+	trace("%sEntering %s() ...", indent.c_str(), name);
+	indent.append("    ");
 	}
     ~Tracer()
 	{
-	indent.erase(indent.size()-1);
-	log(TRACE, "%sLeaving %s() ...", indent.c_str(), name);
+	indent.erase(indent.size()-4, std::string::npos);
+	trace("%sLeaving %s() ...", indent.c_str(), name);
 	}
 
   private:
