@@ -25,15 +25,15 @@ class HTTPRequest
     typedef parse_info<iterator_t>  parse_info_t;
 
     HTTPRequest(iterator_t begin, iterator_t end)
-            : SP(32),
-              CR(13),
-              LF(10),
-              HT(9),
-              CHAR(0, 127),
-              CTL("\x00-\x1F\x7F"),
-              separators("()<>@,;:\\\"/[]?={}\x20\x09"),
-              reserved(";/?:@&=+$,"),
-              mark("-_.!~*'()")
+            : SP         (32),
+              CR         (13),
+              LF         (10),
+              HT         (9),
+              CHAR       (0, 127),
+              CTL        ("\x00-\x1F\x7F"),
+              separators ("()<>@,;:\\\"/[]?={}\x20\x09"),
+              reserved   (";/?:@&=+$,"),
+              mark       ("-_.!~*'()")
         {
         Request         = Request_Line
                           >> *(( general_header | request_header | entity_header ) >> CRLF )
@@ -48,7 +48,7 @@ class HTTPRequest
 
         extension_method = token;
 
-        HTTP_Version    = str_p("HTTP") >> '/' >> digit_p.repeat(1, more) >> '.' >> digit_p.repeat(1, more);
+        HTTP_Version    = str_p("HTTP") >> '/' >> +digit_p >> '.' >> +digit_p;
 
         Request_URI     = '*' | absoluteURI | abs_path | authority;
 
@@ -66,7 +66,7 @@ class HTTPRequest
 
         param           = *pchar;
 
-        pchar           = unreserved | escaped | ':' | '@' | '&' | '=' | '+' | '$' | ',';
+        pchar           = unreserved | escaped | chset<>(":@&=+$,");
 
         unreserved      = alnum_p | mark;
 
@@ -86,15 +86,15 @@ class HTTPRequest
 
         toplabel        = alpha_p >> *( !ch_p('-') >> alnum_p );
 
-        IPv4address     = (digit_p.repeat(1, more) >> '.').repeat(3) >> digit_p.repeat(1, more);
+        IPv4address     = (+digit_p >> '.' ).repeat(3) >> +digit_p;
 
         port            = *digit_p;
 
-        scheme          = alpha_p >> *( alpha_p | digit_p | '+' | '-' | '.' );
+        scheme          = alpha_p >> *( alpha_p | digit_p | chset<>("+-.") );
 
         authority       = server | reg_name;
 
-        reg_name        = ( unreserved | escaped | chset<>("'$,;:@&=+") )(1, more);
+        reg_name        = +( unreserved | escaped | chset<>("'$,;:@&=+") );
 
         opaque_part     = uric_no_slash >> *uric;
 
@@ -104,7 +104,7 @@ class HTTPRequest
 
         uric            = reserved | unreserved | escaped;
 
-        token           = (CHAR - (CTL | separators)).repeat(1, more);
+        token           = +( CHAR - ( CTL | separators ) );
 
         quoted_string   = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
 
@@ -116,37 +116,37 @@ class HTTPRequest
 
         general_header  = Connection | Date | Pragma | Trailer | Transfer_Encoding | Upgrade ;
 
-        Connection      = str_p("Connection") >> ":" >>
+        Connection      = str_p("Connection") >> *LWS >> ":" >>
                           ( *LWS >> connection_token >> *( *LWS >> "," >> *LWS >> connection_token ) );
 
         connection_token = token;
 
-        Pragma           = str_p("Pragma") >> ":" >>
+        Pragma           = str_p("Pragma") >> *LWS >> ":" >>
                            ( *LWS >> pragma_directive >> *( *LWS >> "," >> *LWS >> pragma_directive ) );
 
         pragma_directive = "no-cache" | extension_pragma;
 
-        extension_pragma = token >> !( "=" >> ( token | quoted_string ) );
+        extension_pragma = token >> !( *LWS >> "=" >> *LWS >> ( token | quoted_string ) );
 
-        Trailer         = str_p("Trailer") >> ":" >>
+        Trailer         = str_p("Trailer") >> *LWS >> ":" >>
                           ( *LWS >> field_name >> *( *LWS >> "," >> *LWS >> field_name ) );
 
         field_name      = token;
 
-        Transfer_Encoding  = str_p("Transfer_Encoding") >> ":" >>
+        Transfer_Encoding  = str_p("Transfer_Encoding") >> *LWS >> ":" >>
                              ( *LWS >> transfer_coding >> *( *LWS >> "," >> *LWS >> transfer_coding ) );
 
         transfer_coding    = "chunked" | transfer_extension;
 
-        transfer_extension = token >> *( ";" >> parameter );
+        transfer_extension = token >> *( *LWS >> ";" >> *LWS >> parameter );
 
-        parameter       = attribute >> "=" >> value;
+        parameter       = attribute >> *LWS >> "=" >> *LWS >> value;
 
         attribute       = token;
 
         value           = token | quoted_string;
 
-        Date            = str_p("Date") >> ":" >> HTTP_date;
+        Date            = str_p("Date") >> *LWS >> ":" >> *LWS >> HTTP_date;
 
         HTTP_date       = rfc1123_date | rfc850_date | asctime_date;
 
@@ -166,60 +166,63 @@ class HTTPRequest
 
         wkday           = str_p("Mon") | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
-        weekday         = str_p("Monday") | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+        weekday         = str_p("Monday") | "Tuesday" | "Wednesday"
+                          | "Thursday" | "Friday" | "Saturday" | "Sunday";
 
-        month           = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
+        month           = str_p("Jan") | "Feb" | "Mar" | "Apr" | "May" | "Jun"
+                          | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
 
-        Upgrade         = "Upgrade" ":" >> ( *LWS >> product >> *( *LWS >> "," >> *LWS >> product ) );
+        Upgrade         = "Upgrade" >> *LWS >> ":" >> ( *LWS >> product >> *( *LWS >> "," >> *LWS >> product ) );
 
-        product         = token >> !( "/" >> product_version );
+        product         = token >> *LWS >> !( "/" >> *LWS >> product_version );
 
         product_version = token;
 
         CRLF            = CR >> LF;
-        LWS             = !CRLF >> ( SP | HT )(1, more);
+        LWS             = !CRLF >> +( SP | HT );
 
-        request_header = Host; /* | Accept
-                                  | Accept_Charset
-                                  | Accept_Encoding
-                                  | Accept_Language
-                                  | Authorization
-                                  | Expect
-                                  | From
-                                  | If_Match
-                                  | If_Modified_Since
-                                  | If_None_Match
-                                  | If_Range
-                                  | If_Unmodified_Since
-                                  | Max_Forwards
-                                  | Proxy_Authorization
-                                  | Range
-                                  | Referer
-                                  | TE
-                                  | User_Agent
-                               */
-        Host = str_p("Host") >> ":" >> host >> !( ":" >> port );
+        request_header  = Host; /* | Accept
+                                   | Accept_Charset
+                                   | Accept_Encoding
+                                   | Accept_Language
+                                   | Authorization
+                                   | Expect
+                                   | From
+                                   | If_Match
+                                   | If_Modified_Since
+                                   | If_None_Match
+                                   | If_Range
+                                   | If_Unmodified_Since
+                                   | Max_Forwards
+                                   | Proxy_Authorization
+                                   | Range
+                                   | Referer
+                                   | TE
+                                   | User_Agent
+                                */
 
-        entity_header  = extension_header; /* | Allow
-                                              | Content_Encoding
-                                              | Content_Language
-                                              | Content_Length
-                                              | Content_Location
-                                              | Content_MD5
-                                              | Content_Range
-                                              | Content_Type
-                                              | Expires
-                                              | Last_Modified
-                                           */
+        Host            = str_p("Host") >> *LWS >> ":" >> *LWS >> host >> !( ":" >> port );
+
+        entity_header   = extension_header; /* | Allow
+                                               | Content_Encoding
+                                               | Content_Language
+                                               | Content_Length
+                                               | Content_Location
+                                               | Content_MD5
+                                               | Content_Range
+                                               | Content_Type
+                                               | Expires
+                                               | Last_Modified
+                                            */
         extension_header = message_header;
 
-        message_header = field_name >> ":" >> !field_value;
-        field_name     = token;
-        field_value    = *( field_content | LWS );
-        field_content  = *TEXT | *( token | separators | quoted_string );
+        message_header  = field_name >> *LWS >> ":" >> *LWS >> !field_value;
+        field_name      = token;
+        field_value     = *( field_content | LWS );
+        field_content   = *TEXT | *( token | separators | quoted_string );
 
-        message_body = entity_body;
-        entity_body    = *anychar_p;
+        message_body    = entity_body;
+        entity_body     = *anychar_p;
 
         SPIRIT_DEBUG_RULE(Request);
         SPIRIT_DEBUG_RULE(Request_Line);
@@ -227,34 +230,7 @@ class HTTPRequest
         SPIRIT_DEBUG_RULE(CRLF);
         SPIRIT_DEBUG_RULE(Request_URI);
         SPIRIT_DEBUG_RULE(HTTP_Version);
-        SPIRIT_DEBUG_RULE(absoluteURI);
-        SPIRIT_DEBUG_RULE(hier_part);
-        SPIRIT_DEBUG_RULE(net_path);
-        SPIRIT_DEBUG_RULE(abs_path);
-        SPIRIT_DEBUG_RULE(scheme);
-        SPIRIT_DEBUG_RULE(authority);
-        SPIRIT_DEBUG_RULE(opaque_part);
         SPIRIT_DEBUG_RULE(query);
-        SPIRIT_DEBUG_RULE(path_segments);
-        SPIRIT_DEBUG_RULE(segment);
-        SPIRIT_DEBUG_RULE(param);
-        SPIRIT_DEBUG_RULE(pchar);
-        SPIRIT_DEBUG_RULE(unreserved);
-        SPIRIT_DEBUG_RULE(mark);
-        SPIRIT_DEBUG_RULE(escaped);
-        SPIRIT_DEBUG_RULE(server);
-        SPIRIT_DEBUG_RULE(userinfo);
-        SPIRIT_DEBUG_RULE(hostport);
-        SPIRIT_DEBUG_RULE(reg_name);
-        SPIRIT_DEBUG_RULE(host);
-        SPIRIT_DEBUG_RULE(hostname);
-        SPIRIT_DEBUG_RULE(domainlabel);
-        SPIRIT_DEBUG_RULE(toplabel);
-        SPIRIT_DEBUG_RULE(IPv4address);
-        SPIRIT_DEBUG_RULE(port);
-        SPIRIT_DEBUG_RULE(uric_no_slash);
-        SPIRIT_DEBUG_RULE(uric);
-        SPIRIT_DEBUG_RULE(reserved);
         SPIRIT_DEBUG_RULE(general_header);
         SPIRIT_DEBUG_RULE(quoted_pair);
         SPIRIT_DEBUG_RULE(token);
@@ -267,7 +243,6 @@ class HTTPRequest
         SPIRIT_DEBUG_RULE(message_body);
         SPIRIT_DEBUG_RULE(entity_body);
         SPIRIT_DEBUG_RULE(Connection);
-        SPIRIT_DEBUG_RULE(LWS);
         SPIRIT_DEBUG_RULE(connection_token);
         SPIRIT_DEBUG_RULE(Date);
         SPIRIT_DEBUG_RULE(HTTP_date);
