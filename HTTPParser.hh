@@ -24,13 +24,18 @@ class HTTPParser
 
     static bool have_complete_header_line(const std::string& input);
 
+    // Parse an HTTP request line.
+
+    size_t parse_request_line(HTTPRequest& request, const std::string& input) const;
+
     // Split an HTTP header into the header's name and data part.
 
     size_t parse_header(std::string& name, std::string& data, const std::string& input) const;
 
-    // Parse an HTTP request line.
+    // Parse various headers.
 
-    size_t parse_request_line(HTTPRequest& request, const std::string& input) const;
+    size_t parse_host_header(HTTPRequest& request, const std::string& input) const;
+    size_t parse_if_modified_since_header(HTTPRequest& request, const std::string& input) const;
 
   private:                      // Don't copy me.
     HTTPParser(const HTTPParser&);

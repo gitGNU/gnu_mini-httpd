@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <stdexcept>
 #include "HTTPParser.hh"
 #include <boost/spirit/attr/semantics.hpp>
 
@@ -239,53 +240,6 @@ HTTPParser::HTTPParser()
     HTTP_date     = rfc1123_date | rfc850_date | asctime_date;
     If_Modified_Since_Header = HTTP_date;
 
-    // Switch debugging on.
-
-    SPIRIT_DEBUG_RULE(CRLF);
-    SPIRIT_DEBUG_RULE(mark);
-    SPIRIT_DEBUG_RULE(reserved);
-    SPIRIT_DEBUG_RULE(unreserved);
-    SPIRIT_DEBUG_RULE(escaped);
-    SPIRIT_DEBUG_RULE(pchar);
-    SPIRIT_DEBUG_RULE(param);
-    SPIRIT_DEBUG_RULE(segment);
-    SPIRIT_DEBUG_RULE(segments);
-    SPIRIT_DEBUG_RULE(abs_path);
-    SPIRIT_DEBUG_RULE(domainlabel);
-    SPIRIT_DEBUG_RULE(toplabel);
-    SPIRIT_DEBUG_RULE(hostname);
-    SPIRIT_DEBUG_RULE(IPv4address);
-    SPIRIT_DEBUG_RULE(Host);
-    SPIRIT_DEBUG_RULE(Method);
-    SPIRIT_DEBUG_RULE(uric);
-    SPIRIT_DEBUG_RULE(Query);
-    SPIRIT_DEBUG_RULE(http_URL);
-    SPIRIT_DEBUG_RULE(Request_URI);
-    SPIRIT_DEBUG_RULE(HTTP_Version);
-    SPIRIT_DEBUG_RULE(Request_Line);
-    SPIRIT_DEBUG_RULE(CTL);
-    SPIRIT_DEBUG_RULE(TEXT);
-    SPIRIT_DEBUG_RULE(separators);
-    SPIRIT_DEBUG_RULE(token);
-    SPIRIT_DEBUG_RULE(LWS);
-    SPIRIT_DEBUG_RULE(quoted_pair);
-    SPIRIT_DEBUG_RULE(qdtext);
-    SPIRIT_DEBUG_RULE(quoted_string);
-    SPIRIT_DEBUG_RULE(field_content);
-    SPIRIT_DEBUG_RULE(field_value);
-    SPIRIT_DEBUG_RULE(field_name);
-    SPIRIT_DEBUG_RULE(Header);
-    SPIRIT_DEBUG_RULE(Host_Header);
-    SPIRIT_DEBUG_RULE(date1);
-    SPIRIT_DEBUG_RULE(date2);
-    SPIRIT_DEBUG_RULE(date3);
-    SPIRIT_DEBUG_RULE(time);
-    SPIRIT_DEBUG_RULE(rfc1123_date);
-    SPIRIT_DEBUG_RULE(rfc850_date);
-    SPIRIT_DEBUG_RULE(asctime_date);
-    SPIRIT_DEBUG_RULE(HTTP_date);
-    SPIRIT_DEBUG_RULE(If_Modified_Since_Header);
-
     // Initialize the global variables telling us our time zone and
     // stuff. We'll need that to turn the GMT dates in the headers to
     // local time.
@@ -329,6 +283,69 @@ size_t HTTPParser::parse_request_line(HTTPRequest& request, const string& input)
         return info.length;
     else
         return 0;
+    }
+
+size_t HTTPParser::parse_host_header(HTTPRequest& request, const std::string& input) const
+    {
+    req_ptr = &request;
+
+    parse_info_t info = parse(input.data(), input.data() + input.size(), Host_Header);
+    if (info.match)
+        return info.length;
+    else
+        return 0;
+    }
+
+size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const std::string& input) const
+    {
+    memset(&tm_date, 0, sizeof(tm_date));
+
+    parse_info_t info = parse(input.data(), input.data() + input.size(), If_Modified_Since_Header);
+    if (!info.match)
+        return 0;
+
+    // Make sure the tm structure contains no nonsense.
+
+    if (tm_date.tm_year < 1970 || tm_date.tm_hour > 23 || tm_date.tm_min > 59 || tm_date.tm_sec > 59)
+        return 0;
+
+    switch(tm_date.tm_mon)
+        {
+        case 0: case 2: case 4:
+        case 6: case 7: case 9:
+        case 11:
+            if (tm_date.tm_mday > 31)
+                return 0;
+            break;
+        case 1:
+            if (tm_date.tm_year % 4 == 0 && tm_date.tm_year % 100 != 0)
+                {
+                if (tm_date.tm_mday > 29)
+                    return 0;
+                }
+            else
+                {
+                if (tm_date.tm_mday > 28)
+                    return 0;
+                }
+            break;
+        case 3: case 5: case 8:
+        case 10:
+            if (tm_date.tm_mday > 30)
+                return 0;
+            break;
+        default:
+            throw logic_error("The month in HTTPParser::tm_date is screwed badly.");
+        }
+
+    // The date is fine. Now turn it into a time_t.
+
+    tm_date.tm_year -= 1900;
+    request.if_modified_since = mktime(&tm_date) - timezone;
+
+    // Done.
+
+    return info.length;
     }
 
 // And here comes the global parser instance.
