@@ -52,8 +52,6 @@ class TCPListener : public scheduler::event_handler
         prop.read_timeout = 0;
         mysched.register_handler(sockfd, *this, prop);
 
-        debug(("Listening on TCP port %d for incoming requests ...", port_no));
-
         sg_sockfd.Dismiss();
 	}
 
@@ -61,7 +59,6 @@ class TCPListener : public scheduler::event_handler
 	{
 	mysched.remove_handler(sockfd);
 	close(sockfd);
-	debug(("Shutting TCP listener down."));
 	}
 
   private:
