@@ -54,12 +54,12 @@ class configuration
     configuration(const configuration&);
     configuration& operator= (const configuration&);
 
-    struct eqstr
+    struct ltstr
 	{
 	bool operator()(const char* lhs, const char* rhs) const
-	    { return strcasecmp(lhs, rhs) == 0; }
+	    { return strcasecmp(lhs, rhs) < 0; }
 	};
-    typedef std::map<const char*, const char*, eqstr> map_t;
+    typedef std::map<const char*, const char*, ltstr> map_t;
     map_t content_types;
     };
 extern const configuration* config;
