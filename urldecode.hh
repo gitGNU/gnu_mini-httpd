@@ -10,7 +10,7 @@ inline void urldecode(std::string& url)
     {
     for(std::string::iterator i = url.begin(); i != url.end(); ++i)
         {
-        if(*i == '+')
+        if (*i == '+')
             *i = ' ';
         else if(*i == '%')
             {
@@ -20,7 +20,7 @@ inline void urldecode(std::string& url)
             if (++i == url.end())
                 throw std::runtime_error("Invalid encoded character in url!");
 
-            if (*i >= '0' && *i <= '0')
+            if (*i >= '0' && *i <= '9')
                 c = *i - '0';
             else if (*i >= 'a' && *i <= 'f')
                 c = *i - 'a' + 10;
@@ -33,7 +33,7 @@ inline void urldecode(std::string& url)
             if (++i == url.end())
                 throw std::runtime_error("Invalid encoded character in url!");
 
-            if (*i >= '0' && *i <= '0')
+            if (*i >= '0' && *i <= '9')
                 c += *i - '0';
             else if (*i >= 'a' && *i <= 'f')
                 c += *i - 'a' + 10;
