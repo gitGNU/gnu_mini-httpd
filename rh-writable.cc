@@ -15,15 +15,18 @@ void RequestHandler::fd_is_writable(int)
  	{
         // If there is output waiting in the write buffer, write it.
 
-        ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
-        if (rc < 0)
-            throw system_error("read() failed");
-        else if (rc == 0)
-            throw runtime_error("peer closed the connection");
-        else
+        if (state != TERMINATE && !write_buffer.empty())
             {
-            write_buffer.erase(0, rc);
-            bytes_sent += rc;
+            ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
+            if (rc < 0)
+                throw system_error("read() failed");
+            else if (rc == 0)
+                throw runtime_error("peer closed the connection");
+            else
+                {
+                write_buffer.erase(0, rc);
+                bytes_sent += rc;
+                }
             }
 
         // Call state handler.

@@ -54,6 +54,7 @@ class RequestHandler : public scheduler::event_handler
     bool parse_host_header();
     bool parse_user_agent_header();
     bool parse_referer_header();
+    bool parse_connection_header();
 
     typedef bool (RequestHandler::*parse_header_fun_t)();
     struct header_parser_t
@@ -77,6 +78,7 @@ class RequestHandler : public scheduler::event_handler
 
     char peer_addr_str[32];
     std::string method, host, path, user_agent, referer;
+    std::string connection;
     unsigned int returned_status_code;
     size_t returned_object_size;
 

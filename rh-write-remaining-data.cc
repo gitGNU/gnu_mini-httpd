@@ -18,8 +18,6 @@ bool RequestHandler::write_remaining_data()
         state = TERMINATE;
         if (shutdown(sockfd, SHUT_RDWR) == -1)
             delete this;
-        return false;
         }
-    else
-        return false;
+    return false;
     }

@@ -15,6 +15,7 @@ const RequestHandler::header_parser_t RequestHandler::header_parsers[] =
     { "host",       &RequestHandler::parse_host_header       },
     { "user-agent", &RequestHandler::parse_user_agent_header },
     { "referer",    &RequestHandler::parse_referer_header    },
+    { "connection", &RequestHandler::parse_connection_header },
     { 0, 0 }                    // end of array
     };
 
@@ -105,5 +106,14 @@ bool RequestHandler::parse_referer_header()
 
     debug(("%d: Referer header: data = '%s'", sockfd, http_parser.res_data.c_str()));
     referer = http_parser.res_data;
+    return true;
+    }
+
+bool RequestHandler::parse_connection_header()
+    {
+    TRACE();
+
+    debug(("%d: Connection header: data = '%s'", sockfd, http_parser.res_data.c_str()));
+    connection = http_parser.res_data;
     return true;
     }
