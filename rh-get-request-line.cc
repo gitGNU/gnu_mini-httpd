@@ -35,6 +35,7 @@ bool RequestHandler::get_request_line()
             host   = http_parser.res_host;
             path   = http_parser.res_path; urldecode(path);
             read_buffer.erase(0, info.length);
+            debug(("Request line is complete; going into READ_REQUEST_HEADER state."));
             state = READ_REQUEST_HEADER;
             return true;
             }

@@ -12,7 +12,7 @@ using namespace std;
 void RequestHandler::protocol_error(const char* message)
     {
     TRACE();
-    debug(("%d: Create protocol-error page in buffer and write it back to the user.", sockfd));
+    debug(("%d: Protocol error; going into WRITE_REMAINING_DATA state.", sockfd));
     char buf[4096];
     snprintf(buf, sizeof(buf),
              "HTTP/1.1 400 Bad Request\r\n"                                   \
@@ -41,7 +41,7 @@ void RequestHandler::protocol_error(const char* message)
 void RequestHandler::file_not_found(const char* url)
     {
     TRACE();
-    debug(("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, url));
+    debug(("%d: file '%s' not found; going into WRITE_REMAINING_DATA state.", sockfd, url));
     char buf[4096];
     snprintf(buf, sizeof(buf),
                        "HTTP/1.0 404 Not Found\r\n"                                             \
@@ -67,7 +67,7 @@ void RequestHandler::file_not_found(const char* url)
 void RequestHandler::moved_permanently(const char* url)
     {
     TRACE();
-    debug(("%d: Create page-has-moved page to URL %s in buffer and write it back to the user.", sockfd, url));
+    debug(("%d: Requested page has moved to '%s'; going into WRITE_REMAINING_DATA state.", sockfd, url));
     char buf[4096];
     snprintf(buf, sizeof(buf),
                        "HTTP/1.0 301 Moved Permanently\r\n"                             \

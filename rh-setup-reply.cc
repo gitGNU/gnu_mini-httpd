@@ -66,7 +66,7 @@ bool RequestHandler::setup_reply()
     if (method == "HEAD")
         {
         state = WRITE_REMAINING_DATA;
-        debug(("%d: Answering HEAD: Going into WRITE_REMAINING_DATA state.", sockfd));
+        debug(("%d: Answering HEAD; going into WRITE_REMAINING_DATA state.", sockfd));
 
         char buf[4096];
         snprintf(buf, sizeof(buf),
@@ -88,7 +88,7 @@ bool RequestHandler::setup_reply()
             return false;
             }
         state = COPY_FILE;
-        debug(("%d: Retrieved file from disk: Going into COPY_FILE state.", sockfd));
+        debug(("%d: Answering GET; going into COPY_FILE state.", sockfd));
 
         char buf[4096];
         snprintf(buf, sizeof(buf),

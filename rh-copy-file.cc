@@ -28,7 +28,6 @@ bool RequestHandler::copy_file()
             }
         else
             {
-            debug(("%d: Read %d bytes from file.", sockfd, rc));
             write_buffer.assign(buf, rc);
             }
         }

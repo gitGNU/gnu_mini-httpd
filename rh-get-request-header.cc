@@ -23,6 +23,7 @@ bool RequestHandler::get_request_header()
     if (read_buffer.find("\r\n") == 0)
         {
         read_buffer.erase(0, 2);
+        debug(("Request header is complete; going into READ_REQUEST_BODY state."));
         state = READ_REQUEST_BODY;
         return true;
         }
