@@ -32,7 +32,6 @@ class HTTPParser
 
     range_t CHAR;
     chlit_t HT, LF, CR, SP;
-
     rule_t CRLF;
     rule_t mark, reserved, unreserved, escaped, pchar,
         param, segment, segments, abs_path, domainlabel,
@@ -41,10 +40,9 @@ class HTTPParser
         Request_Line, CTL, TEXT, separators, token, LWS,
         quoted_pair, qdtext, quoted_string, field_content,
         field_value, field_name, Header, Host_Header,
-        wkday, date1, date2, date3,
-        rfc1123_date, rfc850_date, asctime_date, time,
-        HTTP_date,If_Modified_Since_Header;
-    symbol_t weekday, month;
+        date1, date2, date3, time, rfc1123_date, rfc850_date,
+        asctime_date, HTTP_date, If_Modified_Since_Header;
+    symbol_t weekday, month, wkday;
 
     static bool have_complete_header_line(std::string::const_iterator begin, std::string::const_iterator end)
         {
@@ -61,13 +59,16 @@ class HTTPParser
         }
 
   private:
-    struct commit_month_t
+    template <typename T>
+    class stval_ref
         {
-        commit_month_t(HTTPParser& parser_) : parser(parser_) { }
-        void operator() (iterator_t begin, iterator_t end) const;
-        HTTPParser& parser;
+      public:
+        stval_ref(T& r_) : r(r_) { }
+        void operator()(iterator_t const& first, iterator_t const& last, T& val) const { r = val; }
+      private:
+        T& r;
         };
-    commit_month_t commit_month;
+    template <typename T> stval_ref<T> st_data(T& r) const { return stval_ref<T>(r); }
     };
 
 extern HTTPParser http_parser;
