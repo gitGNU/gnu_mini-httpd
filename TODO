@@ -1,2 +1,4 @@
 - Check that htdocs for a host is a readable directory before going on.
   Maybe normalize the htdocs path in configuration() to begin with.
+
+- Make custom version of escape_quotes().
