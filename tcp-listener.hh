@@ -107,10 +107,9 @@ class TCPListener : public scheduler::event_handler
 	error("TCPListener get on error condition on the socket. Terminating.");
 	delete this;
         }
-    virtual void pollhup(int)
+    virtual void pollhup(int fd)
         {
-	error("TCPListener get on error condition on the socket. Terminating.");
-	delete this;
+	error_condition(fd);
         }
 
     scheduler&   mysched;

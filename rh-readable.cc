@@ -72,7 +72,7 @@ void RequestHandler::fd_is_readable(int fd)
 			struct stat sbuf;
 			if (stat(filename.c_str(), &sbuf) == -1)
 			    {
-			    error("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+			    info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
 			    file_not_found(url);
 			    return;
 			    }
@@ -83,7 +83,7 @@ void RequestHandler::fd_is_readable(int fd)
 			filefd = open(filename.c_str(), O_RDONLY | O_NONBLOCK, 0);
 			if (filefd == -1)
 			    {
-			    error("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
+			    info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
 			    file_not_found(filename);
 			    return;
 			    }
