@@ -5,7 +5,7 @@ include autoconf.mk
 
 DESTDIR		=
 
-OPTIMFLAGS     +=
+OPTIMFLAGS     += -O0
 WARNFLAGS      +=
 DEFS	       += -DSPIRIT_DEBUG
 CPPFLAGS       +=
