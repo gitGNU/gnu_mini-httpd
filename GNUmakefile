@@ -89,8 +89,8 @@ config.o: log.hh version.h config.hh resetable-variable.hh
 log.o: log.hh config.hh resetable-variable.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
-main.o: libscheduler/pollvector.hh log.hh RequestHandler.hh HTTPRequest.hh
-main.o: resetable-variable.hh config.hh version.h
+main.o: libscheduler/pollvector.hh RequestHandler.hh HTTPRequest.hh
+main.o: resetable-variable.hh log.hh config.hh version.h
 rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
 rh-construction.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-construction.o: libscheduler/pollvector.hh HTTPRequest.hh
