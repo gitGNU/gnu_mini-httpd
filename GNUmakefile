@@ -70,8 +70,6 @@ depend::
 
 HTTPParser.o: HTTPParser.hh
 config.o: config.hh log.hh
-rh-copy-file.o: system-error/system-error.hh request-handler.hh
-rh-copy-file.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
 log.o: log.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
@@ -79,27 +77,33 @@ main.o: libscheduler/pollvector.hh log.hh request-handler.hh config.hh
 rh-construction.o: system-error/system-error.hh request-handler.hh
 rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 rh-construction.o: config.hh log.hh
+rh-copy-file.o: system-error/system-error.hh request-handler.hh
+rh-copy-file.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
 rh-errors.o: request-handler.hh libscheduler/scheduler.hh
 rh-errors.o: libscheduler/pollvector.hh config.hh log.hh
+rh-get-request-body.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-body.o: libscheduler/pollvector.hh log.hh
+rh-get-request-header.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-header.o: libscheduler/pollvector.hh HTTPParser.hh log.hh
+rh-get-request-line.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-line.o: libscheduler/pollvector.hh HTTPParser.hh
+rh-get-request-line.o: urldecode.hh log.hh
+rh-readable.o: system-error/system-error.hh request-handler.hh
+rh-readable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-readable.o: config.hh log.hh
 rh-setup-reply.o: request-handler.hh libscheduler/scheduler.hh
 rh-setup-reply.o: libscheduler/pollvector.hh config.hh log.hh
-rh-readable.o: system-error/system-error.hh request-handler.hh
-rh-readable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
+rh-terminate.o: request-handler.hh libscheduler/scheduler.hh
+rh-terminate.o: libscheduler/pollvector.hh log.hh
 rh-timeouts.o: request-handler.hh libscheduler/scheduler.hh
 rh-timeouts.o: libscheduler/pollvector.hh log.hh
 rh-writable.o: system-error/system-error.hh request-handler.hh
 rh-writable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
+rh-write-remaining-data.o: request-handler.hh libscheduler/scheduler.hh
+rh-write-remaining-data.o: libscheduler/pollvector.hh log.hh
 libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-get-request-line.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-line.o: libscheduler/pollvector.hh HTTPParser.hh
-rh-get-request-line.o: urldecode.hh log.hh
-rh-get-request-header.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-header.o: libscheduler/pollvector.hh HTTPParser.hh log.hh
-rh-get-request-body.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-body.o: libscheduler/pollvector.hh log.hh
-rh-write-remaining-data.o: request-handler.hh libscheduler/scheduler.hh
-rh-write-remaining-data.o: libscheduler/pollvector.hh log.hh
-rh-terminate.o: request-handler.hh libscheduler/scheduler.hh
-rh-terminate.o: libscheduler/pollvector.hh log.hh
+rh-log-access.o: system-error/system-error.hh request-handler.hh
+rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-log-access.o: config.hh log.hh
