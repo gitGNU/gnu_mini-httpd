@@ -120,6 +120,8 @@ void RequestHandler::fd_is_writable(int)
 void RequestHandler::read_timeout(int)
     {
     TRACE();
+    debug(("%d: read_timeout(): state = %d, read_buffer.size() = %u", sockfd,
+          state, read_buffer.size()));
     if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
         info("No activity on connection to %s for %u seconds; shutting down.",
              peer_address, config->network_read_timeout);
@@ -129,9 +131,8 @@ void RequestHandler::read_timeout(int)
 void RequestHandler::write_timeout(int)
     {
     TRACE();
-    if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
-        info("Couldn't send any data to %s for %u seconds; shutting down.",
-             peer_address, config->network_write_timeout);
+    info("Couldn't send any data to %s for %u seconds; shutting down.",
+         peer_address, config->network_write_timeout);
     delete this;
     }
 
