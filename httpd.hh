@@ -26,14 +26,26 @@ class RequestHandler : public scheduler::event_handler
     virtual void read_timeout(int);
     virtual void write_timeout(int);
 
+    void read_request();
+    void read_file();
+    void file_not_found(const string& file);
+
+    enum state_t
+	{
+	READ_REQUEST,
+	WRITE_ANSWER,
+	TERMINATE
+	};
+    state_t state;
+
     scheduler& mysched;
     int sockfd;
+    int filefd;
     char peer_addr_str[32];
     scheduler::handler_properties prop;
     string buffer;
     string host, uri;
 
-  private:
     static const RegExp full_get_regex;
     static const RegExp get_regex;
     static const RegExp host_regex;

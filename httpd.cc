@@ -4,6 +4,7 @@
  */
 
 #include <stdexcept>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -18,7 +19,7 @@ const RegExp RequestHandler::get_regex("^GET +([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)"
 const RegExp RequestHandler::host_regex("^Host: +([^ ]+)", REG_EXTENDED);
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: mysched(sched), sockfd(fd)
+	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1)
     {
     TRACE();
 
@@ -47,7 +48,7 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 
     prop.poll_events   = POLLIN;
     prop.read_timeout  = 30;
-    prop.write_timeout = 0;
+    prop.write_timeout = 30;
     mysched.register_handler(sockfd, *this, prop);
     }
 
@@ -56,20 +57,85 @@ RequestHandler::~RequestHandler()
     TRACE();
     mysched.remove_handler(sockfd);
     close(sockfd);
+    if (filefd >= 0)
+	{
+	mysched.remove_handler(filefd);
+	close(filefd);
+	}
     }
 
 void RequestHandler::fd_is_readable(int)
+    {
+    TRACE();
+    switch(state)
+	{
+	case READ_REQUEST:
+	    trace("%d: fd_is_readable() invoked in READ_REQUEST state.", sockfd);
+	    read_request();
+	    break;
+	case WRITE_ANSWER:
+	    trace("%d: fd_is_readable() invoked in WRITE_ANSWER state.", sockfd);
+	    read_file();
+	    break;
+	case TERMINATE:
+	    throw logic_error("The reading handler should not be registered in this state!");
+	default:
+	    throw logic_error("The internal state of the RequestHandler is messed up.");
+	}
+    }
+
+void RequestHandler::fd_is_writable(int)
+    {
+    TRACE();
+    ssize_t rc = write(sockfd, buffer.c_str(), buffer.size());
+    if (rc <= 0)
+	{
+	info("%d: Writing to connection returned an error; closing connection.", sockfd);
+	delete this;
+	return;
+	}
+    debug("%d: Wrote %d bytes from buffer to peer.", sockfd, rc);
+    buffer.erase(0, rc);
+
+    if (state == WRITE_ANSWER && buffer.size() < 4*1024)
+	{
+	debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
+	prop.poll_events   = POLLIN;
+	prop.read_timeout  = 0;
+	mysched.register_handler(filefd, *this, prop);
+	}
+    if (state == TERMINATE && buffer.empty())
+	{
+	debug("%d: Buffer is empty and we're in TERMINATE state ... terminating.", sockfd);
+	delete this;
+	}
+    }
+
+void RequestHandler::read_timeout(int)
+    {
+    TRACE();
+    info("%d: Read timout; terminating connection.", sockfd);
+    delete this;
+    }
+
+void RequestHandler::write_timeout(int)
+    {
+    TRACE();
+    info("%d: Write timout; terminating connection.", sockfd);
+    delete this;
+    }
+
+void RequestHandler::read_request()
     {
     TRACE();
     char buf[1024];
     ssize_t rc = read(sockfd, buf, sizeof(buf));
     if (rc <= 0)
 	{
-	info("%d: Connection broke down!", sockfd);
+	info("%d: Reading from connection returned an error; closing connection.", sockfd);
 	delete this;
 	return;
 	}
-
     buffer.append(buf, rc);
     while(!buffer.empty())
 	{
@@ -95,62 +161,112 @@ void RequestHandler::fd_is_readable(int)
 		{
 		host = vec[1];
 		}
-	    else
-		;		// Unknown contents of 'line'.
 	    }
 	else
 	    {
+	    // We have the complete request. Now we can open the file
+	    // we'll reply with and continue to the next state.
+
 	    string filename = string(DOCUMENT_ROOT) + "/" + host + uri;
+	    struct stat sbuf;
+	    if (stat(filename.c_str(), &sbuf) == -1)
+		{
+		error("Can't stat requested file %s: %s", filename.c_str(), strerror(errno));
+		file_not_found(filename);
+		return;
+		}
+
+	    if (S_ISDIR(sbuf.st_mode))
+		filename.append("/index.html");
+
+	    filefd = open(filename.c_str(), O_RDONLY, 0);
+	    if (filefd == -1)
+		{
+		error("Can't open requested file %s: %s", filename.c_str(), strerror(errno));
+		file_not_found(filename);
+		return;
+		}
+
 	    info("%d: %s GET %s --> %s", sockfd, peer_addr_str, uri.c_str(), filename.c_str());
+	    state = WRITE_ANSWER;
+	    debug("%d: Registering read-handler to read from file; going into WRITE_ANSWER state.", sockfd);
+	    prop.poll_events  = POLLIN;
+	    prop.read_timeout = 0;
+	    mysched.register_handler(filefd, *this, prop);
 
-	    buffer = \
-		"HTTP/1.0 200 OK\r\n" \
-		"Content-Type: text/html\r\n" \
-		"\r\n" \
-		"<html>\r\n" \
-		"<head>\r\n" \
-		"  <title>Virtual Page</title>\r\n" \
-		"</head>\r\n" \
-		"<body>\r\n" \
-		"This is not a real page ...\r\n" \
-		"</body>\r\n" \
-		"</html>\r\n";
-
-	    prop.poll_events   = POLLOUT;
-	    prop.read_timeout  = 0;
-	    prop.write_timeout = 30;
-	    mysched.register_handler(sockfd, *this, prop);
 	    break;
 	    }
 	}
     }
 
-void RequestHandler::fd_is_writable(int)
+void RequestHandler::read_file()
     {
     TRACE();
-    ssize_t rc = write(sockfd, buffer.c_str(), buffer.size());
-    if (rc <= 0)
+    char buf[16 * 1024];
+    ssize_t rc = read(filefd, buf, sizeof(buf));
+    if (rc < 0)
 	{
-	info("%d: Connection broke down!", sockfd);
+	error("%d: Reading from file returned an error; closing connection.", sockfd);
 	delete this;
-	return;
 	}
-
-    buffer.erase(0, rc);
-    if (buffer.empty())
-	delete this;		// done
+    else if (rc == 0)
+	{
+	if (!buffer.empty())
+	    {
+	    debug("%d: Read whole file; going into TERMINATE state.", sockfd);
+	    state = TERMINATE;
+	    prop.poll_events = POLLOUT;
+	    prop.write_timeout = 30;
+	    mysched.register_handler(sockfd, *this, prop);
+	    mysched.remove_handler(filefd);
+	    filefd = -1;
+	    close(filefd);
+	    }
+	else
+	    {
+	    debug("%d: Read and sent the whole file; terminating.", sockfd);
+	    delete this;
+	    }
+	}
+    else
+	{
+	debug("%d: Read %d bytes from file into the buffer.", sockfd, rc);
+	buffer.append(buf, rc);
+	prop.poll_events = POLLOUT;
+	prop.write_timeout = 30;
+	mysched.register_handler(sockfd, *this, prop);
+	if (buffer.size() <= 8 * 1024)
+	    {
+	    debug("%d: Buffer contains %d bytes, so we'll continue to read into it.", sockfd, buffer.size());
+	    prop.poll_events = POLLIN;
+	    prop.read_timeout = 0;
+	    mysched.register_handler(filefd, *this, prop);
+	    }
+	else
+	    {
+	    debug("%d: Buffer contains %d bytes; we'll empty it before continuing to read from file.", sockfd, buffer.size());
+	    mysched.remove_handler(filefd);
+	    }
+	}
     }
 
-void RequestHandler::read_timeout(int)
+void RequestHandler::file_not_found(const string& file)
     {
     TRACE();
-    info("%d: Read timout; terminating connection.", sockfd);
-    delete this;
-    }
-
-void RequestHandler::write_timeout(int)
-    {
-    TRACE();
-    info("%d: Write timout; terminating connection.", sockfd);
-    delete this;
+    debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, file.c_str());
+    buffer = \
+	"HTTP/1.0 200 OK\r\n" \
+	"Content-Type: text/html\r\n" \
+	"\r\n" \
+	"<html>\r\n" \
+	"<head>\r\n" \
+	"  <title>Page does not exist!</title>\r\n" \
+	"</head>\r\n" \
+	"<body>\r\n" \
+	"The page you requested does not exist on this server ...\r\n" \
+	"</body>\r\n" \
+	"</html>\r\n";
+    state = TERMINATE;
+    prop.poll_events = POLLOUT;
+    mysched.register_handler(sockfd, *this, prop);
     }
