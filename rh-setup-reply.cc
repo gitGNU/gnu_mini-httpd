@@ -67,8 +67,15 @@ bool RequestHandler::setup_reply()
         {
         if (request.url.host.empty())
             {
-            protocol_error("<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
-            return false;
+            if (!config->default_hostname.empty() &&
+                (request.major_version == 0 || (request.major_version == 1 && request.minor_version == 0))
+               )
+                request.host = config->default_hostname;
+            else
+                {
+                protocol_error("<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
+                return false;
+                }
             }
         else
             request.host = request.url.host;
