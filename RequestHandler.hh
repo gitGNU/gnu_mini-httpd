@@ -6,6 +6,7 @@
 #ifndef HTTPD_HH
 #define HTTPD_HH
 
+#include <sstream>
 #include <string>
 #include <ctime>
 #include <unistd.h>
@@ -79,8 +80,9 @@ class RequestHandler : public scheduler::event_handler
     void moved_permanently(const char*);
 
     void log_access() const throw();
+
     bool is_persistent_connection() const;
-    const char* make_connection_header() const;
+    std::ostream& connect_header(std::ostream&);
 
     scheduler& mysched;
     int sockfd;

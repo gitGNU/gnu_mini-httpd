@@ -22,16 +22,12 @@ bool RequestHandler::is_persistent_connection() const
     return false;
     }
 
-
-static const char non_persistant[] = "Connection: close\r\n";
-static const char persistant[]     = "Connection: Keep-Alive\r\nKeep-Alive: timeout=15\r\n"; // TODO
-
-const char* RequestHandler::make_connection_header() const
+ostream& RequestHandler::connect_header(ostream& os)
     {
-    TRACE();
-
     if (is_persistent_connection())
-        return persistant;
+        os << "Keep-Alive: timeout=" << config->network_read_timeout << ", max=100\r\n"
+           << "Connection: Keep-Alive\r\n";
     else
-        return non_persistant;
+        os << "Connection: close\r\n";
+    return os;
     }

@@ -71,19 +71,14 @@ bool RequestHandler::setup_reply()
         state = WRITE_REMAINING_DATA;
         debug(("%d: Answering HEAD; going into WRITE_REMAINING_DATA state.", sockfd));
 
-        char buf[4096];
-        snprintf(buf, sizeof(buf),
-                 "HTTP/1.0 200 OK\r\n"     \
-                 "Content-Type: %s\r\n"    \
-                 "Date: %s\r\n"            \
-                 "Last-Modified: %s\r\n"   \
-                 "%s"                      \
-                 "\r\n",
-                 config->get_content_type(filename.c_str()),
-                 time_to_ascii(time(0)).c_str(),
-                 time_to_ascii(sbuf.st_mtime).c_str(),
-                 make_connection_header());
-        write_buffer = buf;
+        ostringstream buf;
+        buf << "HTTP/1.1 200 OK\r\n"
+            << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
+            << "Date: " << time_to_ascii(time(0)) << " \r\n"
+            << "Last-Modified: " << time_to_ascii(sbuf.st_mtime) << "\r\n";
+        connect_header(buf);
+        buf << "\r\n";
+        write_buffer = buf.str();
         returned_status_code = 200;
         returned_object_size = 0;
         }
@@ -99,21 +94,15 @@ bool RequestHandler::setup_reply()
         state = COPY_FILE;
         debug(("%d: Answering GET; going into COPY_FILE state.", sockfd));
 
-        char buf[4096];
-        snprintf(buf, sizeof(buf),
-                 "HTTP/1.0 200 OK\r\n"     \
-                 "Content-Type: %s\r\n"    \
-                 "Content-Length: %ld\r\n" \
-                 "Date: %s\r\n"            \
-                 "Last-Modified: %s\r\n"   \
-                 "%s"                      \
-                 "\r\n",
-                 config->get_content_type(filename.c_str()),
-                 sbuf.st_size,
-                 time_to_ascii(time(0)).c_str(),
-                 time_to_ascii(sbuf.st_mtime).c_str(),
-                 make_connection_header());
-        write_buffer = buf;
+        ostringstream buf;
+        buf << "HTTP/1.1 200 OK\r\n"
+            << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
+            << "Content-Length: " << sbuf.st_size << "\r\n"
+            << "Date: " << time_to_ascii(time(0)) << " \r\n"
+            << "Last-Modified: " << time_to_ascii(sbuf.st_mtime) << "\r\n";
+        connect_header(buf);
+        buf << "\r\n";
+        write_buffer = buf.str();
         returned_status_code = 200;
         returned_object_size = sbuf.st_size;
         }
