@@ -4,6 +4,7 @@
  */
 
 #include <climits>
+#include <cctype>
 #include <cstdlib>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,10 +12,25 @@
 #include "system-error/system-error.hh"
 #include "RequestHandler.hh"
 #include "timestamp-to-string.hh"
+#include "escape-html-specials.hh"
+#include "urldecode.hh"
 #include "config.hh"
 #include "log.hh"
 
 using namespace std;
+
+/*
+  This routine will normalize the path of our document root and of the
+  file that our client is trying to access. Then it will check,
+  whether that file is _in_ the document root. As a nice side effect,
+  realpath() will report any kind of error, for instance, if a part of
+  the path gives us "permission denied", does not exist or whatever.
+
+  I am not happy with this routine, nor am I happy with this whole
+  approach. I'll improve it soon.
+
+  Greetings to Ralph!
+*/
 
 static inline bool is_path_in_hierarchy(const char* hierarchy, const char* path)
     {
@@ -34,60 +50,111 @@ bool RequestHandler::setup_reply()
     {
     TRACE();
 
-    // Make sure we have a hostname.
+    // Now that we have the whole request, we can get to work. Let's
+    // start by testing whether we understand the request at all.
+
+    if (request.method == "GET" && request.method != "HEAD")
+        {
+        protocol_error(string("<p>This server does not support an HTTP request called <tt>")
+                       + escape_html_specials(request.method) + "</tt>.</p>\r\n");
+        return false;
+        }
+
+    // Make sure we have a hostname, and make sure it's in lowercase.
 
     if (request.host.empty())
         {
-        protocol_error("Your HTTP request did not contain a <tt>Host</tt> header.\r\n");
-        return false;
+        if (request.url.host.empty())
+            {
+            protocol_error("<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
+            return false;
+            }
+        else
+            request.host = request.url.host;
+        }
+    for (string::iterator i = request.host.begin(); i != request.host.end(); ++i)
+        *i = tolower(*i);
+
+    // Make sure we have a port number.
+
+    if (request.port.empty())
+        {
+        if (!request.url.port.empty())
+            request.port = request.url.port;
         }
 
     // Construct the actual file name associated with the hostname and
-    // URL, then check whether the file exists. If not, report an
-    // error. If the URL points to a directory, send a redirect reply
-    // pointing to the "index.html" file in that directory.
+    // URL, then check whether we can send that file.
 
-    document_root = string(config->document_root) + "/" + request.host.data();
-    filename = document_root + request.url.path.data();
-    struct stat sbuf;
-    if (is_path_in_hierarchy(document_root.c_str(), filename.c_str()) == false||
-        stat(filename.c_str(), &sbuf) == -1)
+    document_root = config->document_root + "/" + request.host;
+    filename = document_root + urldecode(request.url.path);
+
+    if (!is_path_in_hierarchy(document_root.c_str(), filename.c_str()))
         {
-        info("%d: Can't stat requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-        file_not_found(request.url.path);
+        info("Peer %s requested URL 'http://%s:%u%s' ('%s'), which fails the hirarchy check.",
+             peer_address, request.host.c_str(), request.port.data(), request.url.path.c_str(),
+             filename.c_str());
+        file_not_found();
         return false;
         }
-    if (S_ISDIR(sbuf.st_mode))
+
+  stat_again:
+    if (stat(filename.c_str(), &file_stat) == -1)
+        {
+        if (errno != ENOENT)
+            {
+            info("Peer %s requested URL 'http://%s:%u%s' ('%s'), but stat() failed: %s",
+                 peer_address, request.host.c_str(), request.port.data(), request.url.path.c_str(),
+                 filename.c_str(), strerror(errno));
+            }
+        file_not_found();
+        return false;
+        }
+
+    if (S_ISDIR(file_stat.st_mode))
         {
         if (*request.url.path.rbegin() == '/')
-            moved_permanently(request.url.path + config->default_page);
+            {
+            filename += config->default_page;
+            goto stat_again;    // What the fuck does Nikolas Wirth know?
+            }
         else
+            {
             moved_permanently(request.url.path + "/" + config->default_page);
-        return false;
+            return false;
+            }
         }
 
     // Check whether the If-Modified-Since header applies.
 
-#if 0
-    debug(("%d: file mtime = %d; if-modified-since = %d; timezone = %d", sockfd, sbuf.st_mtime, if_modified_since, timezone));
-    if (if_modified_since > 0 && sbuf.st_mtime <= if_modified_since)
+    if (!request.if_modified_since.empty())
         {
-        not_modified();
-        return false;
+        if (file_stat.st_mtime <= request.if_modified_since)
+            {
+            debug(("%d: Requested file ('%s') has mtime '%d' and if-modified-since was '%d: Not modified.",
+                   sockfd, filename.c_str(), file_stat.st_mtime, request.if_modified_since.data()));
+            not_modified();
+            return false;
+            }
+        else
+            debug(("%d: Requested file ('%s') has mtime '%d' and if-modified-since was '%d: Modified.",
+                   sockfd, filename.c_str(), file_stat.st_mtime, request.if_modified_since.data()));
         }
-#endif
 
     // Now answer the request, which may be either HEAD or GET.
 
     ostringstream buf;
     buf << "HTTP/1.1 200 OK\r\n"
+        << "Server: " << config->server_string << "\r\n"
+        << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
         << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
-        << "Content-Length: " << sbuf.st_size << "\r\n";
-    buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n";
-    buf << "Last-Modified: " << time_to_rfcdate(sbuf.st_mtime) << "\r\n";
-    buf << "\r\n";
-    write_buffer = buf.str();
-    request_status_code = 200;
+        << "Content-Length: " << file_stat.st_size << "\r\n"
+        << "Last-Modified: " << time_to_rfcdate(file_stat.st_mtime) << "\r\n"
+        << "Connection: close\r\n"
+        << "\r\n";
+    write_buffer        = buf.str();
+    request.status_code = 200;
+    request.object_size = file_stat.st_size;
 
     if (request.method == "HEAD")
         {
@@ -99,18 +166,14 @@ bool RequestHandler::setup_reply()
         filefd = open(filename.c_str(), O_RDONLY, 0);
         if (filefd == -1)
             {
-            info("%d: Can't open requested file %s: %s", sockfd, filename.c_str(), strerror(errno));
-            file_not_found(request.url.path);
+            error("Can't open requested file %s: %s", filename.c_str(), strerror(errno));
+            file_not_found();
             return false;
             }
-        object_size = sbuf.st_size;
         state = COPY_FILE;
         debug(("%d: Answering GET; going into COPY_FILE state.", sockfd));
         }
 
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
+    go_to_write_mode();
     return false;
     }
