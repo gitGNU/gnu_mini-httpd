@@ -28,9 +28,20 @@ class RequestHandler : public scheduler::event_handler
     virtual void error_condition(int);
     virtual void pollhup(int);
 
-    void read_request();
-    void read_file();
     void file_not_found(const string& file);
+    void protocol_error(const string& message);
+
+    bool process_input(const char* begin, const char* end);
+
+    void register_network_read_handler();
+    void remove_network_read_handler();
+    void register_network_write_handler();
+    void remove_network_write_handler();
+    void register_file_read_handler();
+    void remove_file_read_handler();
+
+    scheduler::handler_properties network_properties;
+    scheduler::handler_properties file_properties;
 
     enum state_t
 	{
@@ -44,7 +55,7 @@ class RequestHandler : public scheduler::event_handler
     int sockfd;
     int filefd;
     char peer_addr_str[32];
-    scheduler::handler_properties prop;
+
     string buffer;
     string host, uri;
 
