@@ -13,6 +13,7 @@ using namespace std;
 #include "httpd.hh"
 #include "system-error.hh"
 #include "log.hh"
+#include "config.hh"
 
 const RegExp RequestHandler::full_get_regex("^GET http://([^/]+)([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
 const RegExp RequestHandler::get_regex("^GET +([^ ]+) +HTTP/([0-9]+)\\.([0-9]+)", REG_EXTENDED);
@@ -47,8 +48,7 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     // Register ourselves with the scheduler.
 
     prop.poll_events   = POLLIN;
-    prop.read_timeout  = 30;
-    prop.write_timeout = 30;
+    prop.read_timeout  = config->network_read_timeout;
     mysched.register_handler(sockfd, *this, prop);
     }
 
@@ -108,7 +108,7 @@ void RequestHandler::fd_is_writable(int)
 	    {
 	    debug("%d: Write buffer contains %d bytes; engage read handler again.", sockfd, buffer.size());
 	    prop.poll_events   = POLLIN;
-	    prop.read_timeout  = 0;
+	    prop.read_timeout  = config->file_read_timeout;
 	    mysched.register_handler(filefd, *this, prop);
 	    }
 	}
@@ -175,7 +175,7 @@ void RequestHandler::read_request()
 	    // We have the complete request. Now we can open the file
 	    // we'll reply with and continue to the next state.
 
-	    string filename = string(DOCUMENT_ROOT) + "/" + host + uri;
+	    string filename = config->document_root + "/" + host + uri;
 	    struct stat sbuf;
 	    if (stat(filename.c_str(), &sbuf) == -1)
 		{
@@ -199,7 +199,7 @@ void RequestHandler::read_request()
 	    state = WRITE_ANSWER;
 	    debug("%d: Registering read-handler to read from file; going into WRITE_ANSWER state.", sockfd);
 	    prop.poll_events  = POLLIN;
-	    prop.read_timeout = 0;
+	    prop.read_timeout = config->file_read_timeout;
 	    mysched.register_handler(filefd, *this, prop);
 
 	    break;
@@ -224,7 +224,7 @@ void RequestHandler::read_file()
 	    debug("%d: Read whole file; going into TERMINATE state.", sockfd);
 	    state = TERMINATE;
 	    prop.poll_events = POLLOUT;
-	    prop.write_timeout = 30;
+	    prop.write_timeout = config->network_write_timeout;
 	    mysched.register_handler(sockfd, *this, prop);
 	    mysched.remove_handler(filefd);
 	    filefd = -1;
@@ -241,13 +241,13 @@ void RequestHandler::read_file()
 	debug("%d: Read %d bytes from file into the buffer.", sockfd, rc);
 	buffer.append(buf, rc);
 	prop.poll_events = POLLOUT;
-	prop.write_timeout = 30;
+	prop.write_timeout = config->network_write_timeout;
 	mysched.register_handler(sockfd, *this, prop);
 	if (buffer.size() <= 8 * 1024)
 	    {
 	    debug("%d: Buffer contains %d bytes, so we'll continue to read into it.", sockfd, buffer.size());
 	    prop.poll_events = POLLIN;
-	    prop.read_timeout = 0;
+	    prop.read_timeout = config->file_read_timeout;
 	    mysched.register_handler(filefd, *this, prop);
 	    }
 	else

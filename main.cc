@@ -10,10 +10,17 @@ using namespace std;
 #include "tcp-listener.hh"
 #include "httpd.hh"
 #include "log.hh"
+#include "config.hh"
+
+const configuration* config;
 
 int main(int, char** argv)
 try
     {
+    // Create our configuration.
+
+    config = new configuration;
+
     // Start-up scheduler and listener.
 
     scheduler sched;
@@ -23,6 +30,7 @@ try
 
     // Exit gracefully.
 
+    delete config;
     return 0;
     }
 catch(const exception& e)

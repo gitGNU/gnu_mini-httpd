@@ -2,7 +2,6 @@
 
 httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
 		      +lib=(libscheduler/libscheduler.a) \
-                      +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
                       +define='DISABLE_TRACER NDEBUG' \
 		      +optimize=3 \
                       :exe
@@ -11,6 +10,7 @@ httpd == %httpd.cc.sm +cxx_flags='-Wall -ansi -pedantic' \
     main.cc
     httpd.cc
     log.cc
+    config.cc +define='DOCUMENT_ROOT="/home/simons/projects/httpd"'
 
 %clean ! == !<<
     rm -f httpd libscheduler/libscheduler.a
