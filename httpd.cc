@@ -226,7 +226,11 @@ void RequestHandler::read_request()
 		}
 
 	    info("%d: %s GET %s --> %s", sockfd, peer_addr_str, uri.c_str(), filename.c_str());
+
 	    state = WRITE_ANSWER;
+	    buffer = "HTTP/1.0 200 OK\r\nContent-Type: ";
+	    buffer += config->get_content_type(filename);
+	    buffer += "\r\n\r\n";
 	    debug("%d: Registering read-handler to read from file; going into WRITE_ANSWER state.", sockfd);
 	    prop.poll_events  = POLLIN;
 	    prop.read_timeout = config->file_read_timeout;
@@ -292,7 +296,7 @@ void RequestHandler::file_not_found(const string& file)
     TRACE();
     debug("%d: Create file-not-found-page for %s in buffer and write it back to the user.", sockfd, file.c_str());
     buffer = \
-	"HTTP/1.0 200 OK\r\n" \
+	"HTTP/1.0 404 Not Found\r\n" \
 	"Content-Type: text/html\r\n" \
 	"\r\n" \
 	"<html>\r\n" \
