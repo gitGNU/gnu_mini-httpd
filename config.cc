@@ -251,6 +251,8 @@ configuration::configuration(int argc, char** argv)
     content_types["xwd"]     = "image/x-xwindowdump";
     content_types["xyz"]     = "chemical/x-pdb";
     content_types["zip"]     = "application/zip";
+    content_types["hpp"]     = "text/plain";
+    content_types["cpp"]     = "text/plain";
     }
 
 configuration::~configuration()
