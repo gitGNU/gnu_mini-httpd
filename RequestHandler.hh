@@ -13,8 +13,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "libscheduler/scheduler.hh"
-#include "RegExp/RegExp.hh"
-#include "log.hh"
 
 class RequestHandler : public scheduler::event_handler
     {
@@ -30,47 +28,46 @@ class RequestHandler : public scheduler::event_handler
     virtual void error_condition(int);
     virtual void pollhup(int);
 
-    static size_t myread(int, void*, size_t);
-    static size_t mywrite(int, const void*, size_t);
-
-    void file_not_found(const char* url);
-    void moved_permanently(const char* url);
-    void protocol_error(const char* message);
-    bool process_input(char* begin, char* end);
-
     enum state_t
 	{
-	READ_REQUEST,
+	READ_REQUEST_LINE,
+	READ_REQUEST_HEADER,
+	READ_REQUEST_BODY,
+        SETUP_REPLY,
 	COPY_FILE,
 	WRITE_REMAINING_DATA,
 	TERMINATE
 	};
     state_t state;
 
+    bool get_request_line();
+    bool get_request_header();
+    bool get_request_body();
+    bool setup_reply();
+    bool copy_file();
+    bool write_remaining_data();
+    bool terminate();
+
+    typedef bool (RequestHandler::*state_fun_t)();
+    static const state_fun_t state_handlers[];
+
+    void protocol_error(const char*);
+    void file_not_found(const char*);
+    void moved_permanently(const char*);
+
     scheduler& mysched;
     int sockfd;
     int filefd;
-    char peer_addr_str[32];
-    std::string host, url, user_agent, referer;
 
-    char* buffer;
-    char* buffer_end;
-    char* data;
-    char* data_end;
+    std::string read_buffer, write_buffer;
+
+    char peer_addr_str[32];
+    std::string host, path;
 
     size_t bytes_sent, bytes_received;
-    size_t read_calls, write_calls;
     timeval connection_start;
 
     static unsigned int instances;
-
-    static const RegExp full_get_port_regex;
-    static const RegExp full_get_regex;
-    static const RegExp get_regex;
-    static const RegExp host_regex;
-    static const RegExp host_port_regex;
-    static const RegExp referer_regex;
-    static const RegExp user_agent_regex;
     };
 
 #endif

@@ -12,9 +12,11 @@ CPPFLAGS       +=
 CXXFLAGS       +=
 LDFLAGS	       +=
 
-OBJS	       += main.o log.o config.o rh-construction.o rh-misc.o \
-		  rh-process-input.o rh-readable.o rh-timeouts.o \
-		  rh-writable.o rh-errors.o
+OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
+		  rh-copy-file.o rh-errors.o rh-get-request-body.o     \
+		  rh-get-request-header.o rh-get-request-line.o        \
+		  rh-readable.o rh-setup-reply.o rh-terminate.o        \
+		  rh-timeouts.o rh-writable.o rh-write-remaining-data.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -28,9 +30,6 @@ all:		httpd
 
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
-
-http-parser:	http-parser.o HTTPParser.o
-	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
 config.o:	config.cc
 	$(CXX) -DDOCUMENT_ROOT=\"/home/simons/projects/httpd\" $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
@@ -50,7 +49,7 @@ clean::
 	@find . -name '*.a'   -exec rm -f {} \;
 	@find . -name '*.o'   -exec rm -f {} \;
 	@find . -name '*.so'  -exec rm -f {} \;
-	@rm -f httpd http-parser
+	@rm -f httpd
 	@echo All dependent files have been removed.
 
 distclean:: clean
@@ -66,33 +65,40 @@ depend::
 
 # Dependencies
 
+HTTPParser.o: HTTPParser.hh
 config.o: config.hh log.hh
+rh-copy-file.o: request-handler.hh libscheduler/scheduler.hh
+rh-copy-file.o: libscheduler/pollvector.hh log.hh
 log.o: log.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
-main.o: libscheduler/pollvector.hh log.hh request-handler.hh
-main.o: RegExp/RegExp.hh config.hh
-rh-construction.o: ScopeGuard/ScopeGuard.hh system-error/system-error.hh
-rh-construction.o: request-handler.hh libscheduler/scheduler.hh
-rh-construction.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-construction.o: config.hh
+main.o: libscheduler/pollvector.hh log.hh request-handler.hh config.hh
+rh-construction.o: system-error/system-error.hh request-handler.hh
+rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-construction.o: config.hh log.hh
 rh-errors.o: request-handler.hh libscheduler/scheduler.hh
-rh-errors.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh config.hh
-rh-misc.o: system-error/system-error.hh request-handler.hh
-rh-misc.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-misc.o: RegExp/RegExp.hh log.hh config.hh
-rh-process-input.o: request-handler.hh libscheduler/scheduler.hh
-rh-process-input.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-readable.o: request-handler.hh libscheduler/scheduler.hh
-rh-readable.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh config.hh
-rh-readable.o: urldecode.hh
+rh-errors.o: libscheduler/pollvector.hh config.hh log.hh
+rh-setup-reply.o: request-handler.hh libscheduler/scheduler.hh
+rh-setup-reply.o: libscheduler/pollvector.hh log.hh
+rh-readable.o: system-error/system-error.hh request-handler.hh
+rh-readable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
 rh-timeouts.o: request-handler.hh libscheduler/scheduler.hh
-rh-timeouts.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
-rh-writable.o: request-handler.hh libscheduler/scheduler.hh
-rh-writable.o: libscheduler/pollvector.hh RegExp/RegExp.hh log.hh
+rh-timeouts.o: libscheduler/pollvector.hh log.hh
+rh-writable.o: system-error/system-error.hh request-handler.hh
+rh-writable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh log.hh
 libscheduler/scheduler.o: libscheduler/scheduler.hh
 libscheduler/scheduler.o: libscheduler/pollvector.hh
 libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-RegExp/test.o: RegExp/RegExp.hh
-http-parser.o: system-error/system-error.hh HTTPParser.hh
-HTTPParser.o: HTTPParser.hh
+rh-get-request-line.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-line.o: libscheduler/pollvector.hh HTTPParser.hh
+rh-get-request-line.o: urldecode.hh log.hh
+rh-get-request-header.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-header.o: libscheduler/pollvector.hh HTTPParser.hh log.hh
+rh-get-request-body.o: request-handler.hh libscheduler/scheduler.hh
+rh-get-request-body.o: libscheduler/pollvector.hh log.hh
+rh-write-remaining-data.o: request-handler.hh libscheduler/scheduler.hh
+rh-write-remaining-data.o: libscheduler/pollvector.hh log.hh
+rh-terminate.o: request-handler.hh libscheduler/scheduler.hh
+rh-terminate.o: libscheduler/pollvector.hh log.hh
+delete-me.o: request-handler.hh libscheduler/scheduler.hh
+delete-me.o: libscheduler/pollvector.hh HTTPParser.hh urldecode.hh log.hh

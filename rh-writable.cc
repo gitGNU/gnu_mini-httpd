@@ -3,8 +3,9 @@
  * All rights reserved.
  */
 
-#include <unistd.h>
+#include "system-error/system-error.hh"
 #include "request-handler.hh"
+#include "log.hh"
 using namespace std;
 
 void RequestHandler::fd_is_writable(int)
@@ -12,6 +13,42 @@ void RequestHandler::fd_is_writable(int)
     TRACE();
     try
  	{
+        // If there is output waiting in the write buffer, write it.
+
+        debug(("%d: write_buffer contains %d characters.", sockfd, write_buffer.size()));
+
+        ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
+        debug(("%d: write() returned %d.", sockfd, rc));
+        if (rc < 0)
+            throw system_error("read() failed");
+        else if (rc == 0)
+            throw runtime_error("peer closed the connection");
+        else
+            {
+            write_buffer.erase(0, rc);
+            bytes_sent += rc;
+            }
+
+        // Call state handler.
+
+        while ((this->*state_handlers[state])())
+            ;
+        }
+    catch(const exception& e)
+ 	{
+ 	debug(("%d: Caught exception: %s", sockfd, e.what()));
+ 	delete this;
+ 	}
+    catch(...)
+ 	{
+ 	debug(("%d: Caught unknown exception. Terminating.", sockfd));
+ 	delete this;
+ 	}
+    }
+
+
+
+#if 0
 	if (state == COPY_FILE && data_end == data)
 	    {
 	    // Buffer is empty. Read new data from file before
@@ -51,14 +88,4 @@ void RequestHandler::fd_is_writable(int)
 	if (state == TERMINATE)
 	    delete this;
  	}
-    catch(const exception& e)
- 	{
- 	debug(("%d: Caught exception: %s", sockfd, e.what()));
- 	delete this;
- 	}
-    catch(...)
- 	{
- 	debug(("%d: Caught unknown exception. Terminating.", sockfd));
- 	delete this;
- 	}
-    }
+#endif

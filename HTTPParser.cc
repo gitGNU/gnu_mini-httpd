@@ -1,5 +1,4 @@
-/* -*- mode: c++; eval: (c-set-offset 'statement-cont `c-lineup-math); -*-
- *
+/*
  * Copyright (c) 2001 by Peter Simons <simons@ieee.org>.
  * All rights reserved.
  */
@@ -11,13 +10,54 @@
 using namespace std;
 using namespace spirit;
 
+HTTPParser http_parser;
+
 HTTPParser::HTTPParser()
-        : SP   (32),
-          CR   (13),
-          LF   (10),
+        : CHAR (0, 127),
           HT   (9),
-          CHAR (0, 127)
+          LF   (10),
+          CR   (13),
+          SP   (32)
     {
+    CRLF          = CR >> LF;
+    mark          = chset_t("-_.!~*'()");
+    reserved      = chset_t(";/?:@&=+$,");
+    unreserved    = alnum_p | mark;
+    escaped       = '%' >> xdigit_p >> xdigit_p;
+    pchar         = unreserved | escaped | chset_t(":@&=+$,");
+    param         = *pchar;
+    segment       = *pchar >> *( ';' >> param );
+    segments      = segment >> *( '/' >> segment );
+    abs_path      = ( '/' >> segments );
+    domainlabel   = alnum_p >> *( !ch_p('-') >> alnum_p );
+    toplabel      = alpha_p >> *( !ch_p('-') >> alnum_p );
+    hostname      = *( domainlabel >> '.' ) >> toplabel >> !ch_p('.');
+    IPv4address   = (+digit_p >> '.' ).repeat(3) >> +digit_p;
+    Host          = hostname | IPv4address;
+    Method        = str_p("GET") | "HEAD";
+    uric          = reserved | unreserved | escaped;
+    Query         = *uric;
+    http_URL      = nocase_d["http://"] >> Host[ref(res_host)] >> !( ':' >> uint_p[ref(res_port)] )
+                    >> !( abs_path[ref(res_path)] >> !( '?' >> Query[ref(res_query)] ) );
+    Request_URI   = http_URL | abs_path[ref(res_path)] >> !( '?' >> Query[ref(res_query)] );
+    HTTP_Version  = nocase_d["http/"] >> +digit_p >> '.' >> +digit_p;
+    Request_Line  = Method[ref(res_method)] >> SP >> Request_URI >> SP >> HTTP_Version >> CRLF;
+
+    CTL           = range_t(0, 31) | chlit_t(127);
+    TEXT          = anychar_p - CTL;
+    separators    = chset_t("()<>@,;:\\\"/[]?={}\x20\x09");
+    token         = +( CHAR - ( CTL | separators ) );
+    LWS           = !CRLF >> +( SP | HT );
+    quoted_pair   = '\\' >> CHAR;
+    qdtext        = anychar_p - '"';
+    quoted_string = ( '"' >> *(qdtext | quoted_pair ) >> '"' );
+    field_content = +TEXT | ( token | separators | quoted_string );
+    field_value   = *( field_content | LWS );
+    field_name    = token;
+    Header        = ( field_name[ref(res_name)] >> *LWS >> ":" >> *LWS >> !( field_value[ref(res_data)] ) ) >> CRLF;
+
+
+#if 0
     CRLF            = CR >> LF;
 
     LWS             = !CRLF >> +( SP | HT );
@@ -169,9 +209,6 @@ HTTPParser::HTTPParser()
                       >> *(( general_header | request_header | entity_header ) >> CRLF )
                       >> CRLF
                       >> !message_body;
+#endif
     }
 
-bool HTTPParser::operator() (const char* begin, const char* end) const
-    {
-    return parse(begin, end, Request).full;
-    }

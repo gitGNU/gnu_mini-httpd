@@ -6,27 +6,28 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <arpa/inet.h>
-#include "ScopeGuard/ScopeGuard.hh"
 #include "system-error/system-error.hh"
 #include "request-handler.hh"
 #include "config.hh"
+#include "log.hh"
 
 unsigned int RequestHandler::instances = 0;
 
-namespace
+const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
     {
-    template<class T>
-    void free_array(T obj)
-        {
-        delete[] obj;
-        }
-    }
+    &RequestHandler::get_request_line,
+    &RequestHandler::get_request_header,
+    &RequestHandler::get_request_body,
+    &RequestHandler::setup_reply,
+    &RequestHandler::copy_file,
+    &RequestHandler::write_remaining_data,
+    &RequestHandler::terminate
+    };
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: state(READ_REQUEST), mysched(sched), sockfd(fd), filefd(-1),
-	  bytes_sent(0), bytes_received(0), read_calls(0), write_calls(0)
+	: state(READ_REQUEST_LINE), mysched(sched), sockfd(fd), filefd(-1),
+          bytes_sent(0), bytes_received(0)
     {
     TRACE();
 
@@ -34,14 +35,6 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     // later.
 
     gettimeofday(&connection_start, 0);
-
-    // Initialize the internal buffer.
-
-    buffer     = new char[config->io_buffer_size + 1];
-    ScopeGuard sg_buffer = MakeGuard(free_array<char*>, buffer);
-    buffer_end = buffer + config->io_buffer_size;
-    data       = buffer;
-    data_end   = buffer;
 
     // Store the peer's address as ASCII string; we'll need that
     // again later.
@@ -72,8 +65,6 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
               config->hard_poll_interval_threshold, config->hard_poll_interval));
         mysched.set_poll_interval(config->hard_poll_interval * 1000);
         }
-
-    sg_buffer.Dismiss();
     }
 
 RequestHandler::~RequestHandler()
@@ -83,10 +74,6 @@ RequestHandler::~RequestHandler()
     timeval now, runtime;
     gettimeofday(&now, 0);
     timersub(&now, &connection_start, &runtime);
-
-    log_access((state == TERMINATE), host.c_str(), url.c_str(), peer_addr_str,
-               referer.c_str(), user_agent.c_str(), sockfd, runtime, bytes_received,
-	       bytes_sent, read_calls, write_calls);
 
     if (--instances == config->hard_poll_interval_threshold)
 	{
@@ -98,6 +85,4 @@ RequestHandler::~RequestHandler()
     close(sockfd);
     if (filefd >= 0)
 	close(filefd);
-    if (buffer != 0)
-	delete[] buffer;
     }

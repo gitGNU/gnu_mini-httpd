@@ -4,6 +4,7 @@
  */
 
 #include "request-handler.hh"
+#include "log.hh"
 
 void RequestHandler::read_timeout(int)
     {
