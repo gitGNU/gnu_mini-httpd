@@ -8,7 +8,7 @@ DESTDIR		=
 OPTIMFLAGS     +=
 WARNFLAGS      +=
 DEFS	       +=
-CPPFLAGS       +=
+CPPFLAGS       += -I.
 CXXFLAGS       +=
 LDFLAGS	       +=
 
