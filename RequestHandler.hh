@@ -48,6 +48,12 @@ class RequestHandler : public scheduler::event_handler
     bool write_remaining_data();
     bool terminate();
 
+    void call_state_handler()
+        {
+        while((this->*state_handlers[state])())
+            ;
+        }
+
     typedef bool (RequestHandler::*state_fun_t)();
     static const state_fun_t state_handlers[];
 

@@ -39,8 +39,7 @@ void RequestHandler::fd_is_readable(int)
 
         // Call the state handler.
 
-        while((this->*state_handlers[state])())
-            ;
+        call_state_handler();
         }
     catch(const exception& e)
 	{

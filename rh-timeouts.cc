@@ -31,10 +31,7 @@ void RequestHandler::pollhup(int)
     {
     TRACE();
     if (state == TERMINATE)
-        {
-        while((this->*state_handlers[state])())
-            ;
-        }
+        call_state_handler();
     else
         {
         debug(("%d: poll() says the other end aborted; terminating connection.", sockfd));
