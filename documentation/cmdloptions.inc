@@ -130,6 +130,27 @@ a request for a directory is received. The default is
       </listitem>
     </varlistentry>
 
+    <varlistentry>
+      <term><option>-D</option></term>
+      <term><option>--no-detach</option></term>
+      <listitem>
+        <para>This option tells &httpd; not to detach from the controlling
+terminal but to run in the foreground. The default is to detach.</para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>-H <replaceable>string</replaceable></option></term>
+      <term><option>--default-hostname <replaceable>string</replaceable></option></term>
+      <listitem>
+        <para>This option sets default host name &httpd; should use when a pre
+HTTP/1.1 request is received that does not specify the <literal>Host:</literal>
+header. If the default hostname is empty or this option is omitted, &httpd; will
+reject requests that do not provide the <literal>Host:</literal> header or give
+the complete URL in the request.</para>
+      </listitem>
+    </varlistentry>
+
   </variablelist>
 
 <!--

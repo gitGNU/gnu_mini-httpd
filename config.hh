@@ -41,11 +41,13 @@ class configuration
 
     // Run-time stuff.
     static char*                      default_content_type;
+    static std::string                default_hostname;
     static unsigned int               http_port;
     static std::string                server_string;
     static resetable_variable<uid_t>  setuid_user;
     static resetable_variable<gid_t>  setgid_group;
     static bool                       debugging;
+    static bool                       detach;
 
     // Content-type mapping.
     const char* get_content_type(const char* filename) const;

@@ -6,6 +6,10 @@
 #include <stdexcept>
 #include <csignal>
 #include <ctime>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "tcp-listener.hh"
 #include "RequestHandler.hh"
 #include "log.hh"
@@ -65,10 +69,34 @@ try
                 throw system_error("setuid() failed");
         }
 
-    // Run ...
+#if 0
+    // Detach from terminal.
+
+    if (config->detach)
+        {
+        switch (fork())
+            {
+            case -1:
+                throw system_error("can't fork()");
+            case 0:
+                setsid();
+                close(STDIN_FILENO);
+                close(STDOUT_FILENO);
+                close(STDERR_FILENO);
+                break;
+            default:
+                return 0;
+            }
+        }
+#endif
+
+    // Log some helpful information.
 
     info("httpd %s starting up: listen port = %u, user id = %u, group id = %u, chroot = '%s'",
          VERSION, config->http_port, getuid(), getgid(), config->chroot_directory.c_str());
+
+    // Run ...
+
     while(!got_terminate_sig && !sched.empty())
         {
 	sched.schedule();
@@ -97,6 +125,7 @@ try
 
     // Exit gracefully.
 
+    info("httpd shutting down.");
     return 0;
     }
 catch(const configuration::no_error&)

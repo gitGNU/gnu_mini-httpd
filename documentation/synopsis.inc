@@ -35,6 +35,14 @@
       <arg choice="opt">--gid <replaceable>gid</replaceable></arg>
     </group>
     <arg choice="opt">--default-page <replaceable>filename</replaceable></arg>
+    <group>
+      <arg choice="opt">-D</arg>
+      <arg choice="opt">--no-detach</arg>
+    </group>
+    <group>
+      <arg choice="opt">-H <replaceable>string</replaceable></arg>
+      <arg choice="opt">--default-hostname <replaceable>string</replaceable></arg>
+    </group>
   </cmdsynopsis>
 
 <!--

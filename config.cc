@@ -34,11 +34,13 @@ string configuration::default_page                       = "index.html";
 
 // Run-time stuff.
 string configuration::server_string                      = "peti-httpd";
+string configuration::default_hostname;
 char* configuration::default_content_type                = "application/octet-stream";
 unsigned int configuration::http_port                    = 80;
 resetable_variable<uid_t> configuration::setuid_user;
 resetable_variable<gid_t> configuration::setgid_group;
 bool configuration::debugging                            = false;
+bool configuration::detach                               = true;
 
 #define USAGE_MSG \
     "Usage: httpd [-h | --help] [--version] [-d | --debug]\n" \
@@ -53,7 +55,7 @@ configuration::configuration(int argc, char** argv)
 
     // Parse the command line.
 
-    const char* optstring = "hdp:r:l:s:u:g:";
+    const char* optstring = "hdp:r:l:s:u:g:DH:";
     const option longopts[] =
         {
         { "help",               no_argument,       0, 'h' },
@@ -65,6 +67,8 @@ configuration::configuration(int argc, char** argv)
         { "server-string",      required_argument, 0, 's' },
         { "uid",                required_argument, 0, 'u' },
         { "gid",                required_argument, 0, 'g' },
+        { "no-detach",          required_argument, 0, 'D' },
+        { "default-hostname",   required_argument, 0, 'H' },
         { "document-root",      required_argument, 0, 'y' },
         { "default-page",       required_argument, 0, 'z' },
         { 0, 0, 0, 0 }          // mark end of array
@@ -109,6 +113,12 @@ configuration::configuration(int argc, char** argv)
                 break;
             case 's':
                 server_string = optarg;
+                break;
+            case 'D':
+                detach = false;
+                break;
+            case 'H':
+                default_hostname = optarg;
                 break;
             default:
                 fprintf(stderr, USAGE_MSG);
