@@ -117,12 +117,42 @@ void RequestHandler::fd_is_readable(int)
 	    cerr << sockfd << ": Got complete request.\n";
 	    string filename = string(DOCUMENT_ROOT) + "/" + host + uri;
 	    cout << sockfd << ": Getting " << filename << "\n";
+
+	    buffer = \
+		"HTTP/1.0 200 OK\r\n" \
+		"Content-Type: text/html\r\n" \
+		"\r\n" \
+		"<html>\r\n" \
+		"<head>\r\n" \
+		"  <title>Virtual Page</title>\r\n" \
+		"</head>\r\n" \
+		"<body>\r\n" \
+		"This is not a real page ...\r\n" \
+		"</body>\r\n" \
+		"</html>\r\n";
+
+	    prop.poll_events   = POLLOUT;
+	    prop.read_timeout  = 0;
+	    prop.write_timeout = 30;
+	    mysched.register_handler(sockfd, *this, prop);
+	    break;
 	    }
 	}
     }
 
 void RequestHandler::fd_is_writable(int)
     {
+    ssize_t rc = write(sockfd, buffer.c_str(), buffer.size());
+    if (rc <= 0)
+	{
+	cerr << sockfd << ": Connection broke down!\n";
+	delete this;
+	return;
+	}
+
+    buffer.erase(0, rc);
+    if (buffer.empty())
+	delete this;
     }
 
 void RequestHandler::read_timeout(int)

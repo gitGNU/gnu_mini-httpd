@@ -30,6 +30,8 @@ class RequestHandler : public scheduler::event_handler
     scheduler::handler_properties prop;
     string buffer;
     string host, uri;
+
+  private:
     static const RegExp full_get_regex;
     static const RegExp get_regex;
     static const RegExp host_regex;

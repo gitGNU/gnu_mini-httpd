@@ -2,6 +2,7 @@
 
 httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) \
                       +define='DOCUMENT_ROOT="/home/simons/projects/httpd"' \
+		      +optimize=0 \
                       :exe
 
 %httpd.cc.sm == <<
@@ -9,4 +10,4 @@ httpd == %httpd.cc.sm +lib=(libscheduler/libscheduler.a) \
     httpd.cc
 
 %clean ! == !<<
-    rm -f httpd libscheduler.a
+    rm -f httpd libscheduler/libscheduler.a
