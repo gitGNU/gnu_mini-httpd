@@ -5,3 +5,5 @@
 
 - Add code that will detach the process from the terminal. Also add -D
   switch to disable detaching.
+
+- Allow names of users and groups rather than the numerical id.
