@@ -3,12 +3,13 @@
  * All rights reserved.
  */
 
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"
 
 using namespace std;
 
+#if 0
 bool RequestHandler::is_persistent_connection() const
     {
     TRACE();
@@ -32,3 +33,4 @@ ostream& RequestHandler::connect_header(ostream& os)
         os << "Connection: close\r\n";
     return os;
     }
+#endif

@@ -3,7 +3,7 @@
  * All rights reserved.
  */
 
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "log.hh"
 
 void RequestHandler::read_timeout(int)

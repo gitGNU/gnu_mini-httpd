@@ -3,29 +3,19 @@
  * All rights reserved.
  */
 
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "HTTPParser.hh"
 #include "log.hh"
 
 using namespace std;
-using namespace spirit;
-
-const RequestHandler::header_parser_t RequestHandler::header_parsers[] =
-    {
-    { "host",                   &RequestHandler::parse_host_header              },
-    { "user-agent",             &RequestHandler::parse_user_agent_header        },
-    { "referer",                &RequestHandler::parse_referer_header           },
-    { "connection",             &RequestHandler::parse_connection_header        },
-    { "keep-alive",             &RequestHandler::parse_keep_alive_header        },
-    { "if-modified-since",      &RequestHandler::parse_if_modified_since_header },
-    { 0, 0 }                    // end of array
-    };
 
 bool RequestHandler::get_request_header()
     {
     TRACE();
 
-    if (read_buffer.find("\r\n") == 0)
+    // An empty line will terminate the request header.
+
+    if (read_buffer.size() >= 2 && read_buffer[0] == '\r' && read_buffer[1] == '\n')
         {
         read_buffer.erase(0, 2);
         debug(("Request header is complete; going into READ_REQUEST_BODY state."));
@@ -33,35 +23,30 @@ bool RequestHandler::get_request_header()
         return true;
         }
 
-    if (HTTPParser::have_complete_header_line(read_buffer.begin(), read_buffer.end()))
+    // If we do have a complete header line in the read buffer,
+    // process it. If not, we need more I/O before we can proceed.
+
+    if (HTTPParser::have_complete_header_line(read_buffer))
         {
-        http_parser.res_name.erase();
-        http_parser.res_data.erase();
-
-        HTTPParser::parse_info_t info =
-            parse(read_buffer.data(), read_buffer.data() + read_buffer.size(), http_parser.Header);
-        if (info.match)
+        std::string name, data;
+        size_t len = http_parser.parse_header(name, data, read_buffer);
+        if (len > 0)
             {
-            read_buffer.erase(0, info.length);
-
-            for (const header_parser_t* p = header_parsers; p->name; ++p)
-                {
-                if (strcasecmp(p->name, http_parser.res_name.c_str()) == 0)
-                    {
-                    return (this->*(p->parser))();
-                    }
-                }
-
-            debug(("%d: name = '%s'; data = '%s'", sockfd, http_parser.res_name.c_str(), http_parser.res_data.c_str()));
+            debug(("%d: Read header: '%s' = '%s'", sockfd, name.c_str(), data.c_str()));
+            read_buffer.erase(0, len);
             return true;
             }
         else
-            protocol_error("The HTTP request you sent was syntactically incorrect.\r\n");
+            {
+            protocol_error("Your HTTP request is syntactically incorrect.\r\n");
+            return false;
+            }
         }
 
     return false;
     }
 
+#if 0
 bool RequestHandler::parse_host_header()
     {
     TRACE();
@@ -193,3 +178,4 @@ bool RequestHandler::parse_if_modified_since_header()
          peer_addr_str, http_parser.res_data.c_str());
     return false;
     }
+#endif

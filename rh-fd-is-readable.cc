@@ -4,7 +4,7 @@
  */
 
 #include "system-error/system-error.hh"
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"
 using namespace std;

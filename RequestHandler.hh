@@ -14,6 +14,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "libscheduler/scheduler.hh"
+#include "HTTPRequest.hh"
+
+// This is the HTTP protocol driver class.
 
 class RequestHandler : public scheduler::event_handler
     {
@@ -22,14 +25,30 @@ class RequestHandler : public scheduler::event_handler
     virtual ~RequestHandler();
 
   private:
-    void init();
+    // This function will (re-)initialize all internals. It will be
+    // used to start the request handler over when using persistent
+    // connections.
 
-    virtual void fd_is_readable(int);
-    virtual void fd_is_writable(int);
-    virtual void read_timeout(int);
-    virtual void write_timeout(int);
-    virtual void error_condition(int);
-    virtual void pollhup(int);
+    void reset();
+
+  private:
+    // These are the callbacks required by the scheduler. These will
+    // be called when the file descriptor we're registered for become
+    // readable, writable, etc.
+
+    virtual void fd_is_readable(int fd);
+    virtual void fd_is_writable(int fd);
+    virtual void read_timeout(int fd);
+    virtual void write_timeout(int fd);
+    virtual void error_condition(int fd);
+    virtual void pollhup(int fd);
+
+  private:
+    // The whole class is implemented as a state machine. Depending on
+    // the contents of the state variable, the appropriate state
+    // handler will be called via a lookup table. each state handler
+    // may return true (go on) or false (re-schedule). errors are
+    // reported via exceptions.
 
     enum state_t
 	{
@@ -38,17 +57,22 @@ class RequestHandler : public scheduler::event_handler
 	READ_REQUEST_BODY,
         SETUP_REPLY,
 	COPY_FILE,
-	WRITE_REMAINING_DATA,
+	FLUSH_BUFFER_AND_RESET,
+	FLUSH_BUFFER_AND_TERMINATE,
 	TERMINATE
 	};
     state_t state;
+
+    typedef bool (RequestHandler::*state_fun_t)();
+    static const state_fun_t state_handlers[];
 
     bool get_request_line();
     bool get_request_header();
     bool get_request_body();
     bool setup_reply();
     bool copy_file();
-    bool write_remaining_data();
+    bool flush_buffer_and_reset();
+    bool flush_buffer_and_terminate();
     bool terminate();
 
     void call_state_handler()
@@ -57,50 +81,41 @@ class RequestHandler : public scheduler::event_handler
             ;
         }
 
-    typedef bool (RequestHandler::*state_fun_t)();
-    static const state_fun_t state_handlers[];
+  private:
+    // These are helper functions that will create the standard
+    // replies of the server. The names should be rather descriptive.
 
-    bool parse_host_header();
-    bool parse_user_agent_header();
-    bool parse_referer_header();
-    bool parse_connection_header();
-    bool parse_keep_alive_header();
-    bool parse_if_modified_since_header();
-
-    typedef bool (RequestHandler::*parse_header_fun_t)();
-    struct header_parser_t
-        {
-        const char*        name;
-        parse_header_fun_t parser;
-        };
-    static const header_parser_t header_parsers[];
-
-    void protocol_error(const char*);
-    void file_not_found(const char*);
-    void moved_permanently(const char*);
+    void protocol_error(const std::string& message);
+    void file_not_found(const std::string& url);
+    void moved_permanently(const std::string& url);
     void not_modified();
 
-    void log_access() const throw();
+  private:
+    // Our I/O interface.
 
-    bool is_persistent_connection() const;
-    std::ostream& connect_header(std::ostream&);
+    scheduler&  mysched;
+    int         sockfd;
+    std::string read_buffer;
+    std::string write_buffer;
 
-    scheduler& mysched;
-    int sockfd;
-    int filefd;
+  private:
+    // Information associated with the HTTP request.
 
-    std::string read_buffer, write_buffer;
+    char         peer_address[64];
+    HTTPRequest  request;
+    unsigned int request_status_code;
+    size_t       object_size;
 
-    char peer_addr_str[32];
-    std::string method, host, path, user_agent, referer;
-    std::string connection, keep_alive;
-    unsigned int port;
-    unsigned int returned_status_code;
-    size_t returned_object_size;
-    unsigned int minor_version, major_version;
-    time_t if_modified_since;
+  private:
+    // Information about the file associated with the request.
+
+    std::string document_root;
+    std::string filename;
+    int         filefd;
 
   public:
+    // The number of instantiated RequestHandlers.
+
     static unsigned int instances;
     };
 

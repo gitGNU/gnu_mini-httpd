@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <ctime>
 #include "system-error/system-error.hh"
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "config.hh"
 #include "timestamp-to-string.hh"
 #include "log.hh"
@@ -30,7 +30,7 @@ namespace
         return tmp;
         }
     }
-
+#if 0
 void RequestHandler::log_access() const throw()
     {
     try
@@ -72,3 +72,4 @@ void RequestHandler::log_access() const throw()
         {
         }
     }
+#endif

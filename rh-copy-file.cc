@@ -4,7 +4,7 @@
  */
 
 #include "system-error/system-error.hh"
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "log.hh"
 
 using namespace std;
@@ -21,8 +21,8 @@ bool RequestHandler::copy_file()
             throw system_error("read() from hard disk failed");
         else if (rc == 0)
             {
-            debug(("%d: The complete file is copied: going into WRITE_REMAINING_DATA state.", sockfd));
-            state = WRITE_REMAINING_DATA;
+            debug(("%d: The complete file is copied: going into FLUSH_BUFFER_AND_TERMINATE state.", sockfd));
+            state = FLUSH_BUFFER_AND_TERMINATE;
             close(filefd);
             filefd = -1;
             }

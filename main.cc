@@ -7,7 +7,7 @@
 #include <csignal>
 #include <ctime>
 #include "tcp-listener.hh"
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "log.hh"
 #include "config.hh"
 using namespace std;
@@ -35,10 +35,6 @@ try
     signal(SIGHUP, &set_sig_term);
     signal(SIGQUIT, &set_sig_term);
     signal(SIGPIPE, SIG_IGN);
-
-    // Set global variables with our timezone information.
-
-    tzset();
 
     // Start-up scheduler and listener, drop root priviledges, and
     // start running.

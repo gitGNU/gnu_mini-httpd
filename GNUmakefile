@@ -13,11 +13,11 @@ CXXFLAGS       +=
 LDFLAGS	       +=
 
 OBJS	       += main.o log.o config.o HTTPParser.o rh-construction.o \
-		  rh-copy-file.o rh-errors.o rh-get-request-body.o     \
-		  rh-get-request-header.o rh-get-request-line.o        \
-		  rh-readable.o rh-setup-reply.o rh-terminate.o        \
-		  rh-timeouts.o rh-writable.o rh-log-access.o          \
-		  rh-write-remaining-data.o rh-persistent-connections.o
+		  rh-copy-file.o rh-errors.o rh-read-request-body.o    \
+		  rh-read-request-header.o rh-read-request-line.o      \
+		  rh-fd-is-readable.o rh-setup-reply.o rh-terminate.o  \
+		  rh-timeouts.o rh-fd-is-writable.o rh-log-access.o    \
+		  rh-flush-buffer.o rh-persistent-connections.o
 LIBOBJS	       += libscheduler/scheduler.o
 LIBS	       +=
 
@@ -28,6 +28,9 @@ LIBS	       +=
 	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) $(WARNFLAGS) $(OPTIMFLAGS) -c $< -o $@
 
 all:		httpd
+
+test:		test.o HTTPParser.o log.o
+	$(CXX) $(LDFLAGS) $^ -o $@
 
 httpd:		$(OBJS) $(LIBOBJS)
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBOBJS) $(LIBS) -o $@
@@ -182,51 +185,48 @@ depend::
 
 # Dependencies
 
-libscheduler/scheduler.o: libscheduler/scheduler.hh
-libscheduler/scheduler.o: libscheduler/pollvector.hh
-libscheduler/test.o: libscheduler/scheduler.hh
-libscheduler/test.o: libscheduler/pollvector.hh
-HTTPParser.o: HTTPParser.hh
+HTTPParser.o: HTTPParser.hh HTTPRequest.hh
 config.o: config.hh log.hh
 log.o: log.hh
 main.o: tcp-listener.hh ScopeGuard/ScopeGuard.hh
 main.o: system-error/system-error.hh libscheduler/scheduler.hh
-main.o: libscheduler/pollvector.hh log.hh request-handler.hh config.hh
-rh-construction.o: system-error/system-error.hh request-handler.hh
+main.o: libscheduler/pollvector.hh log.hh RequestHandler.hh HTTPRequest.hh
+main.o: config.hh
+rh-construction.o: system-error/system-error.hh RequestHandler.hh
 rh-construction.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-construction.o: config.hh log.hh
-rh-copy-file.o: system-error/system-error.hh request-handler.hh
+rh-construction.o: HTTPRequest.hh config.hh log.hh
+rh-copy-file.o: system-error/system-error.hh RequestHandler.hh
 rh-copy-file.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-copy-file.o: log.hh
-rh-errors.o: request-handler.hh libscheduler/scheduler.hh
-rh-errors.o: libscheduler/pollvector.hh config.hh log.hh
-rh-get-request-body.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-body.o: libscheduler/pollvector.hh log.hh
-rh-get-request-header.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-header.o: libscheduler/pollvector.hh HTTPParser.hh log.hh
-rh-get-request-line.o: request-handler.hh libscheduler/scheduler.hh
-rh-get-request-line.o: libscheduler/pollvector.hh HTTPParser.hh
-rh-get-request-line.o: urldecode.hh log.hh
-rh-log-access.o: system-error/system-error.hh request-handler.hh
+rh-copy-file.o: HTTPRequest.hh log.hh
+rh-errors.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-errors.o: libscheduler/pollvector.hh HTTPRequest.hh config.hh log.hh
+rh-read-request-line.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-read-request-line.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-read-request-line.o: HTTPParser.hh urldecode.hh log.hh
+rh-fd-is-readable.o: system-error/system-error.hh RequestHandler.hh
+rh-fd-is-readable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-fd-is-readable.o: HTTPRequest.hh config.hh log.hh
+rh-fd-is-writable.o: system-error/system-error.hh RequestHandler.hh
+rh-fd-is-writable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-fd-is-writable.o: HTTPRequest.hh log.hh
+rh-log-access.o: system-error/system-error.hh RequestHandler.hh
 rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-log-access.o: config.hh timestamp-to-string.hh log.hh
-rh-persistent-connections.o: request-handler.hh libscheduler/scheduler.hh
-rh-persistent-connections.o: libscheduler/pollvector.hh config.hh log.hh
-rh-readable.o: system-error/system-error.hh request-handler.hh
-rh-readable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-readable.o: config.hh log.hh
-rh-setup-reply.o: request-handler.hh libscheduler/scheduler.hh
-rh-setup-reply.o: libscheduler/pollvector.hh timestamp-to-string.hh
-rh-setup-reply.o: config.hh log.hh
-rh-terminate.o: request-handler.hh libscheduler/scheduler.hh
-rh-terminate.o: libscheduler/pollvector.hh log.hh
-rh-timeouts.o: request-handler.hh libscheduler/scheduler.hh
-rh-timeouts.o: libscheduler/pollvector.hh log.hh
-rh-writable.o: system-error/system-error.hh request-handler.hh
-rh-writable.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-writable.o: log.hh
-rh-write-remaining-data.o: request-handler.hh libscheduler/scheduler.hh
-rh-write-remaining-data.o: libscheduler/pollvector.hh log.hh
+rh-log-access.o: HTTPRequest.hh config.hh timestamp-to-string.hh log.hh
+rh-persistent-connections.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-persistent-connections.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-persistent-connections.o: config.hh log.hh
+rh-setup-reply.o: system-error/system-error.hh RequestHandler.hh
+rh-setup-reply.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
+rh-setup-reply.o: HTTPRequest.hh timestamp-to-string.hh config.hh log.hh
+rh-terminate.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-terminate.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
+rh-timeouts.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-timeouts.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
+rh-read-request-body.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-read-request-body.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh
+libscheduler/scheduler.o: libscheduler/scheduler.hh
+libscheduler/scheduler.o: libscheduler/pollvector.hh
+libscheduler/test.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
 spirit/libs/example/cpp/cpp.o: spirit/libs/example/cpp/cpp.hpp
 spirit/libs/example/cpp/cpp.o: spirit/libs/example/cpp/config.hpp
 spirit/libs/example/cpp/cpp.o: spirit/libs/example/cpp/cpp_line.hpp
@@ -342,3 +342,9 @@ spirit/libs/example/slex/lexer.o: spirit/libs/example/slex/lexer.hpp
 spirit/libs/example/slex/lextest.o: spirit/libs/example/slex/lexer.hpp
 spirit/libs/example/xml/ast_xml.o: spirit/libs/example/xml/xml_grammar.hpp
 spirit/libs/example/xml/xml.o: spirit/libs/example/xml/xml_grammar.hpp
+rh-read-request-header.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-read-request-header.o: libscheduler/pollvector.hh HTTPRequest.hh
+rh-read-request-header.o: HTTPParser.hh log.hh
+test.o: HTTPParser.hh HTTPRequest.hh log.hh
+rh-flush-buffer.o: RequestHandler.hh libscheduler/scheduler.hh
+rh-flush-buffer.o: libscheduler/pollvector.hh HTTPRequest.hh log.hh

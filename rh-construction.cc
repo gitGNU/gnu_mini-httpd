@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "system-error/system-error.hh"
-#include "request-handler.hh"
+#include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"
 
@@ -21,7 +21,8 @@ const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
     &RequestHandler::get_request_body,
     &RequestHandler::setup_reply,
     &RequestHandler::copy_file,
-    &RequestHandler::write_remaining_data,
+    &RequestHandler::flush_buffer_and_reset,
+    &RequestHandler::flush_buffer_and_terminate,
     &RequestHandler::terminate
     };
 
@@ -30,11 +31,10 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
     {
     TRACE();
 
-    // Store the peer's address as ASCII string; we'll need that
-    // again later.
+    // Store the peer's address as ASCII string.
 
-    if (inet_ntop(AF_INET, &sin.sin_addr, peer_addr_str, sizeof(peer_addr_str)) == NULL)
-        strcpy(peer_addr_str, "unknown");
+    if (inet_ntop(AF_INET, &sin.sin_addr, peer_address, sizeof(peer_address)) == 0)
+        throw system_error("inet_ntop() failed");
 
     // Set socket parameters.
 
@@ -49,29 +49,27 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 
     // Initialize internal variables.
 
-    init();
+    reset();
     ++instances;
     }
 
-void RequestHandler::init()
+void RequestHandler::reset()
     {
-    // Init the class' internal variables. May be used in persistent
-    // connections.
+    TRACE();
+
+    // Initialize the internal variables.
 
     state = READ_REQUEST_LINE;
+
     if (filefd >= 0)
         {
 	close(filefd);
         filefd = -1;
         }
-    user_agent           = "-";
-    referer              = "-";
-    returned_status_code = 0;
-    returned_object_size = 0;
-    port                 = 0;
-    minor_version        = 0;
-    major_version        = 0;
-    if_modified_since    = 0;
+
+    request          = HTTPRequest();
+    request.url.port = 80;
+    request.port     = 80;
 
     // Register ourselves with the scheduler.
 
