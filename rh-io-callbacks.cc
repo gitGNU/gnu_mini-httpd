@@ -44,7 +44,8 @@ void RequestHandler::fd_is_readable(int)
             }
         else if (rc == 0)
             {
-            info("Connection to %s was terminated by peer.", peer_address);
+            if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+                info("Connection to %s was terminated by peer.", peer_address);
             state = TERMINATE;
             }
         else
