@@ -205,7 +205,8 @@ rh-read-request-line.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-read-request-line.o: HTTPParser.hh urldecode.hh log.hh
 rh-log-access.o: system-error/system-error.hh RequestHandler.hh
 rh-log-access.o: libscheduler/scheduler.hh libscheduler/pollvector.hh
-rh-log-access.o: HTTPRequest.hh config.hh timestamp-to-string.hh log.hh
+rh-log-access.o: HTTPRequest.hh timestamp-to-string.hh escape-char.hh
+rh-log-access.o: config.hh log.hh
 rh-persistent-connections.o: RequestHandler.hh libscheduler/scheduler.hh
 rh-persistent-connections.o: libscheduler/pollvector.hh HTTPRequest.hh
 rh-persistent-connections.o: config.hh log.hh
