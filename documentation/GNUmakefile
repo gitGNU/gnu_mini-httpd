@@ -1,7 +1,7 @@
 #
 # Build the httpd documentation
 #
-DOCBOOKBASE	= /usr/local/sgml/dsssl/docbook
+DOCBOOKBASE	= /usr/share/sgml/docbook/dsssl-stylesheets-1.77
 
 .SUFFIXES:
 
@@ -10,9 +10,6 @@ DOCBOOKBASE	= /usr/local/sgml/dsssl/docbook
 
 %.html : %.sgml
 	openjade -t sgml -d peti.dsl#html -D $(DOCBOOKBASE)/html $< >$@
-
-%.txt : %.sgml
-	sgmltools -b w3m $<
 
 %.dvi : %.tex
 	jadetex \\nonstopmode\\input $<; \
@@ -27,19 +24,16 @@ DOCBOOKBASE	= /usr/local/sgml/dsssl/docbook
 
 .PHONY: all clean distclean realclean
 
-all:	httpd.html httpd.pdf man-page.txt readme.txt
-
-man-page.html:	synopsis.inc description.inc cmdloptions.inc license.inc
+all:	httpd.html httpd.pdf httpd.8 readme.txt
 
 httpd.html httpd.tex: license.inc building.inc synopsis.inc cmdloptions.inc ../VERSION
 httpd.html httpd.tex: setup.inc peti.dsl
 
 readme.txt:	readme.sgml building.inc setup.inc ../VERSION peti.dsl
+	docbook2txt readme.sgml
 
-man-page.html:	man-page.sgml synopsis.inc description.inc cmdloptions.inc license.inc
-
-man-page.txt:  man-page.html
-	lynx -width=80 -nolist -dump $< >$@
+httpd.8:  man-page.sgml synopsis.inc description.inc cmdloptions.inc license.inc
+	docbook2man man-page.sgml
 
 clean distclean:
 	@rm -f *.aux *.dvi *.log *.toc
@@ -47,5 +41,5 @@ clean distclean:
 	@rm -f *.tex defconfig.inc defreqmail.inc
 
 realclean:	clean
-	@rm -f *.txt *.pdf *.html
+	@rm -f *.txt *.pdf *.html *.8
 

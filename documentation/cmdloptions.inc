@@ -19,7 +19,7 @@ the debug code is not included in the binary.</para>
     <varlistentry>
       <term><option>--version</option></term>
       <listitem>
-        <para>Show httpd's version string and exit.
+        <para>Show httpd's version string and exit.</para>
       </listitem>
     </varlistentry>
 

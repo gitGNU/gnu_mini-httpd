@@ -1,1 +1,2 @@
-*.txt *.html *.ps *.pdf *.aux *.log *.tex
+*.txt *.html *.ps *.pdf *.aux *.log *.tex *.8
+manpage.links manpage.refs
