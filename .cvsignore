@@ -4,3 +4,4 @@ version.h
 gmon.out
 *.rpo
 logs htdocs
+autom4te-2.53a.cache
