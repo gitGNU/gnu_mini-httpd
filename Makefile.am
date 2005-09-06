@@ -11,7 +11,7 @@ httpd_SOURCES   = main.cc log.cc config.cc HTTPParser.cc                \
                   rh-io-callbacks.cc rh-read-request-body.cc
 
 httpd_CPPFLAGS  = -DPREFIX=\"${prefix}\"
-httpd_LDADD     = ${LIBOBJS}
+httpd_LDADD     = ${LIBOBJS} -lboost_prg_exec_monitor
 
 noinst_HEADERS  = HTTPParser.hh HTTPRequest.hh RequestHandler.hh        \
                   config.hh escape-html-specials.hh log.hh              \
@@ -39,6 +39,4 @@ init-src:
 	monotone --branch=to.cryp.system-error co system-error
 	monotone --branch=to.cryp.libscheduler co libscheduler
 	monotone --branch=to.cryp.libgetopt co libgetopt
-	aclocal-1.7
-	autoconf
-	automake -a
+	autoreconf -i --force

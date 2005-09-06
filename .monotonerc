@@ -10,7 +10,7 @@ function ignore_file(name)
   if (name == "httpd") then return true end
   if (name == "config.log") then return true end
   if (name == "config.status") then return true end
-  if (name == "httpd.8") then return true end
+  if (name == "httpd.en.8") then return true end
   if (name == "manpage.links") then return true end
   if (name == "manpage.refs") then return true end
 
