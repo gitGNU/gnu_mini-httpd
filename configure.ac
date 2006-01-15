@@ -30,8 +30,8 @@ AC_CHECK_FUNC(getopt_long, have_getopt=yes, have_getopt=no)
 if test "x$have_getopt_h" != "xyes" -o "x$have_getopt" != "xyes"; then
     AC_MSG_RESULT([Using our own version instead.])
     CPPFLAGS="$CPPFLAGS -Ilibgetopt"
-    AC_LIBOBJ(libgetopt/getopt)
-    AC_LIBOBJ(libgetopt/getopt1)
+    AC_LIBOBJ($srcdir/libgetopt/getopt)
+    AC_LIBOBJ($srcdir/libgetopt/getopt1)
 fi
 
 dnl Include debug code?
