@@ -1,0 +1,17 @@
+# build mini-httpd
+
+exe mini-httpd
+    : main.cpp
+      HTTPParser.cpp
+      config.cpp
+      RequestHandler.cpp
+      rh-log-access.cpp
+      rh-setup-reply.cpp
+      rh-standard-replies.cpp
+    : <use>/boost
+      <use>/ioxx
+      <library>/boost/test//boost_prg_exec_monitor
+      <library>/boost/log//boost_log
+      <library>../ioxx//ioxx
+    : <threading>single
+    ;
