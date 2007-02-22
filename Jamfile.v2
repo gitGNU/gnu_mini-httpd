@@ -6,7 +6,6 @@ exe mini-httpd
       config.cpp
       RequestHandler.cpp
       rh-log-access.cpp
-      rh-setup-reply.cpp
       rh-standard-replies.cpp
     : <use>/boost
       <use>/ioxx
