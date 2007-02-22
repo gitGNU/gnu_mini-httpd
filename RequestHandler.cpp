@@ -11,10 +11,11 @@
  */
 
 #include "RequestHandler.hpp"
-
-#include <sys/socket.h>         // POSIX.1-2001: shutdown(2)
+#include <fstream>
+#include <boost/algorithm/string/replace.hpp>
 #include <ioxx/shared-handler.hpp>
 #include <sanity/system-error.hpp>
+#include <sys/socket.h>         // POSIX.1-2001: shutdown(2)
 #include "HTTPParser.hpp"
 #include "urldecode.hpp"
 #include "timestamp-to-string.hpp"
@@ -28,7 +29,7 @@ using namespace std;
 RequestHandler::RequestHandler(ioxx::socket s) : _sockfd(s)
 {
   I(s);
-  HTRACE() << "accepted connection";
+  HTRACE() "accepted connection";
   _buf_array.resize(config->max_line_length);
   _inbuf = ioxx::stream_buffer<char>(&_buf_array[0], &_buf_array[_buf_array.size()]);
   reset();
@@ -115,7 +116,7 @@ ioxx::event RequestHandler::operator() (ioxx::socket s, ioxx::event ev, ioxx::pr
     terminate();
   }
 
-  HTRACE() << "requesting evmask " << _evmask;
+  HTRACE() "requesting evmask " << _evmask;
   return _evmask;
 }
 
@@ -506,4 +507,59 @@ bool RequestHandler::setup_reply()
 
   go_to_write_mode();
   return false;
+}
+
+// ----- Logging --------------------------------------------------------------
+
+inline void escape_quotes(string & input)
+{
+  boost::algorithm::replace_all(input, "\"", "\\\"");
+}
+
+void RequestHandler::log_access()
+{
+  if (!request.status_code)
+  {
+    HERROR() "Can't write access log entry because there is no status code.";
+    return;
+  }
+
+  string logfile( config->logfile_directory + "/" );
+  if (request.host.empty())     logfile += "no-hostname";
+  else                          logfile += request.host + "-access";
+
+  // Convert the object size now, so that we can write a string.
+  // That's necessary, because in some cases we write "-" rather
+  // than a number.
+
+  char object_size[32];
+  if (!request.object_size)
+    strcpy(object_size, "-");
+  else
+  {
+    int len = snprintf(object_size, sizeof(object_size), "%u", *request.object_size);
+    if (len < 0 || len > static_cast<int>(sizeof(object_size)))
+      HERROR() "internal error: snprintf() exceeded buffer size while formatting log entry";
+  }
+  // Open it and write the entry.
+
+  ofstream os(logfile.c_str(), ios_base::out); // no ios_base::trunc
+  if (!os.is_open())
+    throw system_error((string("Can't open logfile '") + logfile + "'"));
+
+  escape_quotes(request.url.path);
+  escape_quotes(request.referer);
+  escape_quotes(request.user_agent);
+
+  // "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %s \"%s\" \"%s\"\n"
+  os << "TODO" << " - - [" << time_to_logdate(request.start_up_time) << "]"
+     << " \"" << request.method
+     << " "  << request.url.path
+     << " HTTP/" << request.major_version
+     << "." << request.minor_version << "\""
+     << " " << *request.status_code
+     << " " << object_size
+     << " \"" << request.referer << "\""
+     << " \"" << request.user_agent << "\""
+     << endl;
 }
