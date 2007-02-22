@@ -5,7 +5,6 @@ exe mini-httpd
       HTTPParser.cpp
       config.cpp
       RequestHandler.cpp
-      rh-standard-replies.cpp
     : <use>/boost
       <use>/ioxx
       <library>/boost/test//boost_prg_exec_monitor
