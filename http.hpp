@@ -21,20 +21,105 @@
 #include <string>
 #include <ctime>
 #include <stdexcept>
+#include <utility>
+#include <boost/cstdint.hpp>
+#include <boost/range.hpp>
 #include <boost/optional.hpp>
 #include <boost/spirit.hpp>
 #include <boost/spirit/utility/chset.hpp>
 #include <boost/spirit/symbols/symbols.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/assert.hpp>
 
 namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 {
+  namespace spirit = boost::spirit;
+
+  // core types
+
+  typedef char const *                          char_pointer;
+  typedef boost::uint16_t                       port_t;
+  typedef boost::iterator_range<char_pointer>   buffer_t;
+
+  inline buffer_t drop_front(buffer_t const & buf, buffer_t::size_type n)
+  {
+    BOOST_ASSERT(n <= buf.size());
+    return buffer_t(buf.begin() + n, buf.end());
+  }
+
+  struct version_t : spirit::closure<version_t, unsigned int, unsigned int>
+  {
+    member1 major;
+    member2 minor;
+  };
+
+  spirit::rule<spirit::scanner<char_pointer>, version_t::context_t> const version_p
+    (   spirit::str_p("HTTP")
+    >>  spirit::uint_p[ spirit::assign_a(version_p.major) ]
+    >>  spirit::ch_p('/')
+    >>  spirit::uint_p[ spirit::assign_a(version_p.minor) ]
+    );
+
+  struct Version : public std::pair<unsigned int, unsigned int>
+  {
+    typedef std::pair<unsigned int, unsigned int> pair;
+
+    Version()                               : pair(0u, 0u)              { }
+    Version(unsigned int x, unsigned int y) : pair(x,   y)              { }
+    Version(pair p)                         : pair(p)                   { }
+    Version(version_t const & v)            : pair(v.major, v.minor)    { }
+
+    unsigned int major() const  { return first; }
+    unsigned int minor() const  { return second; }
+  };
+
+
+  inline bool parse(buffer_t & data, Version & vers)
+  {
+    using namespace spirit;
+    //parse_info<> r( parse(data.begin(), data.end(), version_p[ assign_a(vers) ]) );
+    // return r.hit;
+    return false;
+  }
+
+  struct Uri
+  {
+    enum method_t { http };
+
+    method_t    method;
+    buffer_t    host;
+    port_t      port;           // 0 is invalid
+    buffer_t    path;
+    buffer_t    query;
+  };
+
+
+  // http data types and parsers for them
+
+  spirit::chlit<> const ht_p(9);        // '\t'
+  spirit::chlit<> const lf_p(10);       // '\n'
+  spirit::chlit<> const cr_p(13);       // '\r'
+  spirit::chlit<> const sp_p(32);       // ' '
+  spirit::range<> const char_p(0, 127);
+  spirit::chset<> const mark_p("-_.!~*'()");
+  spirit::chset<> const reserved_p(";/?:@&=+$,");
+  spirit::chset<> const separators_p("()<>@,;:\\\"/[]?={}\x20\x09");
+
+  struct Request_line
+  {
+    enum method_t { get, head };
+
+    method_t    method;
+    Uri         uri;
+    Version     version;
+  };
+
   struct URL
   {
     URL() : port(0u) { }
 
     std::string   host;
-    unsigned int  port;
+    port_t        port;
     std::string   path;
     std::string   query;
   };
@@ -62,16 +147,6 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     boost::optional<size_t>          object_size;
   };
 
-  namespace spirit = boost::spirit;
-
-  spirit::chlit<> const ht_p(9);        // '\t'
-  spirit::chlit<> const lf_p(10);       // '\n'
-  spirit::chlit<> const cr_p(13);       // '\r'
-  spirit::chlit<> const sp_p(32);       // ' '
-  spirit::range<> const char_p(0, 127);
-  spirit::chset<> const mark_p("-_.!~*'()");
-  spirit::chset<> const reserved_p(";/?:@&=+$,");
-  spirit::chset<> const separators_p("()<>@,;:\\\"/[]?={}\x20\x09");
 
 #define GEN_PARSER(NAME, GRAMMAR)                                       \
   struct NAME ## _parser : public spirit::grammar<NAME ## _parser>      \
