@@ -10,12 +10,11 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include "HTTPParser.hpp"
+#include "http.hpp"
 #include <stdexcept>
 
 using namespace std;
-using namespace boost::spirit;
-using namespace rfc2616;
+// using namespace boost::spirit;
 
 /**
  *  \todo A lot of this code is unnecessary with the latest Spirit
@@ -29,7 +28,7 @@ class var_assign
 {
 public:
   var_assign(classT** i) : instance(i) { }
-  void operator() (const classT& val) const
+  void operator() (classT const & val) const
   {
     *instance = val;
   }
@@ -113,8 +112,10 @@ inline member_assign<classT,memberT> assign(classT** dst, memberT classT::* var)
 
 // The parser.
 
-HTTPParser::HTTPParser() : name_ptr(0), data_ptr(0), url_ptr(0), req_ptr(0)
+http::parser::parser() : name_ptr(0), data_ptr(0), url_ptr(0), req_ptr(0)
 {
+  using namespace spirit;
+
   http_URL      = nocase_d["http://"]
                   >> host_p[assign(&url_ptr, &URL::host)]
                   >> !( ':' >> uint_p[assign(&url_ptr, &URL::port)] )
@@ -122,14 +123,14 @@ HTTPParser::HTTPParser() : name_ptr(0), data_ptr(0), url_ptr(0), req_ptr(0)
                   >> !( '?' >> query_p[assign(&url_ptr, &URL::query)] ) );
   Request_URI   = http_URL | abs_path_p[assign(&url_ptr, &URL::path)]
                   >> !( '?' >> query_p[assign(&url_ptr, &URL::query)] );
-  HTTP_Version  = nocase_d["http/"] >> uint_p[assign(&req_ptr, &HTTPRequest::major_version)]
-                  >> '.' >> uint_p[assign(&req_ptr, &HTTPRequest::minor_version)];
-  Request_Line  = method_p[assign(&req_ptr, &HTTPRequest::method)] >> sp_p >> Request_URI >> sp_p >> HTTP_Version >> crlf_p;
+  HTTP_Version  = nocase_d["http/"] >> uint_p[assign(&req_ptr, &Request::major_version)]
+                  >> '.' >> uint_p[assign(&req_ptr, &Request::minor_version)];
+  Request_Line  = method_p[assign(&req_ptr, &Request::method)] >> sp_p >> Request_URI >> sp_p >> HTTP_Version >> crlf_p;
 
   Header        = ( field_name_p[assign(&name_ptr)] >> *lws_p >> ":" >> *lws_p
                   >> !( field_value_p[assign(&data_ptr)] ) ) >> crlf_p;
-  Host_Header   = host_p[assign(&req_ptr, &HTTPRequest::host)]
-                  >> !( ":" >> uint_p[assign(&req_ptr, &HTTPRequest::port)] );
+  Host_Header   = host_p[assign(&req_ptr, &Request::host)]
+                  >> !( ":" >> uint_p[assign(&req_ptr, &Request::port)] );
   weekday       = "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday";
   wkday         = "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun";
   month.add       ("Jan", 0)("Feb", 1)("Mar", 2)("Apr", 3)("May", 4)("Jun", 5)
@@ -163,16 +164,9 @@ HTTPParser::HTTPParser() : name_ptr(0), data_ptr(0), url_ptr(0), req_ptr(0)
   BOOST_SPIRIT_DEBUG_NODE(asctime_date);
   BOOST_SPIRIT_DEBUG_NODE(HTTP_date);
   BOOST_SPIRIT_DEBUG_NODE(If_Modified_Since_Header);
+}
 
-  // Initialize the global variables telling us our time zone and
-  // stuff. We'll need that to turn the GMT dates in the headers to
-  // local time.
-
-  tzset();
-  }
-
-
-bool HTTPParser::supports_persistent_connection(const HTTPRequest& request)
+bool http::parser::supports_persistent_connection(const Request & request)
 {
   if (strcasecmp(request.connection.c_str(), "close") == 0)
     return false;
@@ -184,7 +178,7 @@ bool HTTPParser::supports_persistent_connection(const HTTPRequest& request)
     return false;
 }
 
-size_t HTTPParser::parse_header(string& name, string& data, const string& input) const
+size_t http::parser::parse_header(string & name, string & data, string const & input) const
 {
   name_ptr = &name;
   data_ptr = &data;
@@ -196,7 +190,7 @@ size_t HTTPParser::parse_header(string& name, string& data, const string& input)
     return 0;
 }
 
-size_t HTTPParser::parse_request_line(HTTPRequest& request, const string& input) const
+size_t http::parser::parse_request_line(Request & request, string const & input) const
 {
   req_ptr = &request;
   url_ptr = &request.url;
@@ -208,7 +202,7 @@ size_t HTTPParser::parse_request_line(HTTPRequest& request, const string& input)
     return 0;
 }
 
-size_t HTTPParser::parse_host_header(HTTPRequest& request, const std::string& input) const
+size_t http::parser::parse_host_header(Request & request, string const & input) const
 {
   req_ptr = &request;
 
@@ -219,7 +213,7 @@ size_t HTTPParser::parse_host_header(HTTPRequest& request, const std::string& in
     return 0;
 }
 
-size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const std::string& input) const
+size_t http::parser::parse_if_modified_since_header(Request & request, string const & input) const
 {
   memset(&tm_date, 0, sizeof(tm_date));
 
@@ -258,7 +252,7 @@ size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const st
         return 0;
       break;
     default:
-      throw logic_error("The month in HTTPParser::tm_date is screwed badly.");
+      throw logic_error("The month in http::parser::tm_date is screwed badly.");
   }
 
   // The date is fine. Now turn it into a time_t.
@@ -273,4 +267,4 @@ size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const st
 
 // The global parser instance.
 
-HTTPParser const        http_parser;
+http::parser const        http::http_parser;

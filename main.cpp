@@ -12,7 +12,7 @@
 
 #include <stdexcept>
 #include <csignal>
-#include <ctime>
+#include <ctime>                // must have tzset(3)
 #include <iostream>
 #include <boost/log/log_impl.hpp>
 #include <boost/log/functions.hpp>
@@ -24,19 +24,10 @@
 #include "sanity/system-error.hpp"
 #include "ioxx/tcp-acceptor.hpp"
 #include "ioxx/logging.hpp"
-#include "RequestHandler.hpp"
-#include "log.hpp"
-#include "config.hpp"
+#include "http-daemon.hpp"
 
 using namespace std;
 using namespace ioxx;
-
-namespace logging
-{
-  BOOST_DEFINE_LOG(httpd_debug,  "httpd.debug")
-  BOOST_DEFINE_LOG(httpd_misc,   "httpd.misc")
-  BOOST_DEFINE_LOG(httpd_access, "httpd.access")
-}
 
 namespace
 {
@@ -65,8 +56,14 @@ namespace
 int main(int argc, char** argv)
 try
 {
+  using namespace http;
+
   ios::sync_with_stdio(false);
   init_logging();
+
+  // Initialize the global variables telling us our time zone.
+
+  tzset();
 
   // Create our configuration and place it in the global pointer.
 
@@ -85,7 +82,7 @@ try
 
   boost::scoped_ptr<probe> probe( make_probe_poll() );
   if (!probe) throw system_error("no probe implementation");
-  socket listen_port( add_tcp_service<RequestHandler>(*probe, config->http_port) );
+  socket listen_port( add_tcp_service<http::daemon>(*probe, config->http_port) );
 
   // Change root to our sandbox.
 
@@ -144,7 +141,7 @@ try
   INFO() << "httpd shutting down.";
   return 0;
 }
-catch(configuration::no_error)
+catch(http::configuration::no_error)
 {
   return 0;
 }

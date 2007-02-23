@@ -1,10 +1,22 @@
-ROOT   = $(shell pwd)
-HTDOCS = ${ROOT}/dist
-LOGS   = ${ROOT}/dist
-HTTPD  = bin/gcc-3.4.6/debug/mini-httpd
+TOOLSET  = gcc-3.4.6
+#TOOLSET = intel-linux-9.1
 
-run:		${LOGS} ${HTDOCS}
-	${HTTPD} -d -D -p 8080 -l ${LOGS} --document-root ${HTDOCS}
+VARIANT  = debug
+#VARIANT = release
 
-${LOGS} ${HTDOCS}:
+DISTDIR  = $(shell pwd)/dist
+HTTPD    = bin/${TOOLSET}/${VARIANT}/mini-httpd
+
+.PHONY: all run clean
+
+all:
+	bjam --without-mpi toolset="${TOOLSET}" variant="${VARIANT}"
+
+run:		all ${DISTDIR}
+	${HTTPD} -d -D -p 8080 -l ${DISTDIR} --document-root ${DISTDIR}
+
+clean:
+	rm -rf bin
+
+${DISTDIR}:
 	mkdir $@

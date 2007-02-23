@@ -2,9 +2,8 @@
 
 exe mini-httpd
     : main.cpp
-      HTTPParser.cpp
-      config.cpp
-      RequestHandler.cpp
+      http.cpp
+      http-daemon.cpp
     : <use>/boost
       <use>/ioxx
       <library>/boost/test//boost_prg_exec_monitor

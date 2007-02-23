@@ -10,8 +10,8 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#ifndef HTTPPARSER_HH
-#define HTTPPARSER_HH
+#ifndef MINI_HTTPD_HTTP_HPP
+#define MINI_HTTPD_HTTP_HPP
 
 #if 0                           // enable spirit debugging
 #  define BOOST_SPIRIT_DEBUG
@@ -20,14 +20,48 @@
 
 #include <string>
 #include <ctime>
+#include <stdexcept>
+#include <boost/optional.hpp>
 #include <boost/spirit.hpp>
 #include <boost/spirit/utility/chset.hpp>
 #include <boost/spirit/symbols/symbols.hpp>
 #include <boost/noncopyable.hpp>
-#include "HTTPRequest.hpp"
 
-namespace rfc2616               // http://www.faqs.org/rfcs/rfc2616.html
+namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 {
+  struct URL
+  {
+    URL() : port(0u) { }
+
+    std::string   host;
+    unsigned int  port;
+    std::string   path;
+    std::string   query;
+  };
+
+
+  // This class contains all relevant information in an HTTP request.
+
+  struct Request
+  {
+    Request() : port(0u) { }
+
+    std::string                      method;
+    URL                              url;
+    time_t                           start_up_time;
+    unsigned int                     major_version;
+    unsigned int                     minor_version;
+    std::string                      host;
+    unsigned int                     port;
+    std::string                      connection;
+    std::string                      keep_alive;
+    boost::optional<time_t>          if_modified_since;
+    std::string                      user_agent;
+    std::string                      referer;
+    boost::optional<unsigned int>    status_code;
+    boost::optional<size_t>          object_size;
+  };
+
   namespace spirit = boost::spirit;
 
   spirit::chlit<> const ht_p(9);        // '\t'
@@ -91,83 +125,157 @@ namespace rfc2616               // http://www.faqs.org/rfcs/rfc2616.html
 
 #undef GEN_PARSER
 
-}
-
-
-class HTTPParser : private boost::noncopyable
-{
-public:
-  HTTPParser();
-
-  // Find the end of an RFC-style line (and consequently the begin of
-  // the next one). Lines may be continued by beginning the next line
-  // with a whitespace. Return iterator positioned _after_ the CRLF,
-  // or end to signal an incomplete line.
-
-  template <class iteratorT>
-  static inline iteratorT find_next_line(iteratorT begin, iteratorT end)
+  class parser : private boost::noncopyable
   {
-    for (/**/; begin != end; ++begin)
+  public:
+    parser();
+
+    // Find the end of an RFC-style line (and consequently the begin of
+    // the next one). Lines may be continued by beginning the next line
+    // with a whitespace. Return iterator positioned _after_ the CRLF,
+    // or end to signal an incomplete line.
+
+    template <class iteratorT>
+    static inline iteratorT find_next_line(iteratorT begin, iteratorT end)
     {
-      if (*begin == '\r')
+      for (/**/; begin != end; ++begin)
       {
-        iteratorT p( begin );
-        if (++p == end) return end;
-        if (*p == '\n')
+        if (*begin == '\r')
         {
-          ++begin;
-          if ( ++p == end || (*p != ' ' && *p != '\t') )
-            return p;
+          iteratorT p( begin );
+          if (++p == end) return end;
+          if (*p == '\n')
+          {
+            ++begin;
+            if ( ++p == end || (*p != ' ' && *p != '\t') )
+              return p;
+          }
         }
       }
+      return begin;
     }
-    return begin;
+
+    // Does the given request allow a persistent connection?
+
+    static bool supports_persistent_connection(Request const &);
+
+    // Parse an HTTP request line.
+
+    size_t parse_request_line(Request &, std::string const & input) const;
+
+    // Split an HTTP header into the header's name and data part.
+
+    size_t parse_header(std::string& name, std::string& data, std::string const & input) const;
+
+    // Parse various headers.
+
+    size_t parse_host_header(Request &, std::string const & input) const;
+    size_t parse_if_modified_since_header(Request &, std::string const & input) const;
+
+  private:
+    typedef char                                    value_t;
+    typedef const value_t*                          iterator_t;
+    typedef boost::spirit::chlit<value_t>           chlit_t;
+    typedef boost::spirit::range<value_t>           range_t;
+    typedef boost::spirit::chset<value_t>           chset_t;
+    typedef boost::spirit::rule<>                   rule_t;
+    typedef boost::spirit::symbols<int, value_t>    symbol_t;
+    typedef boost::spirit::parse_info<iterator_t>   parse_info_t;
+
+    rule_t http_URL, Request_URI, HTTP_Version,
+      Request_Line, Header, Host_Header,
+      date1, date2, date3, time, rfc1123_date, rfc850_date,
+      asctime_date, HTTP_date, If_Modified_Since_Header;
+    symbol_t weekday, month, wkday;
+
+    // Because the parsers dereference pointers at construction time,
+    // we need an layer of indirection to assign the parser's results
+    // to the variables the caller has given us.
+
+    mutable std::string* name_ptr;
+    mutable std::string* data_ptr;
+    mutable URL*         url_ptr;
+    mutable Request *    req_ptr;
+    mutable struct tm    tm_date;
+  };
+
+  extern parser const http_parser;
+
+
+  /**
+   * Throwing an exception in case the URL contains a syntax error may
+   * seem a bit harsh, but consider that this should never happen as all
+   * URL stuff we see went through the HTTP parser, who would not let
+   * the URL pass if it contained an error.
+   */
+
+  inline std::string urldecode(std::string const & input)
+  {
+    std::string url = input;
+    for(std::string::iterator i = url.begin(); i != url.end(); ++i)
+    {
+      if (*i == '+')
+        *i = ' ';
+      else if(*i == '%')
+      {
+        unsigned char c;
+        std::string::size_type start = i - url.begin();
+
+        if (++i == url.end())
+          throw std::runtime_error("Invalid encoded character in URL!");
+
+        if (*i >= '0' && *i <= '9')
+          c = *i - '0';
+        else if (*i >= 'a' && *i <= 'f')
+          c = *i - 'a' + 10;
+        else if (*i >= 'A' && *i <= 'F')
+          c = *i - 'A' + 10;
+        else
+          throw std::runtime_error("Invalid encoded character in URL!");
+        c = c << 4;
+
+        if (++i == url.end())
+          throw std::runtime_error("Invalid encoded character in URL!");
+
+        if (*i >= '0' && *i <= '9')
+          c += *i - '0';
+        else if (*i >= 'a' && *i <= 'f')
+          c += *i - 'a' + 10;
+        else if (*i >= 'A' && *i <= 'F')
+          c += *i - 'A' + 10;
+        else
+          throw std::runtime_error("Invalid encoded character in URL!");
+
+        url.replace(start, 3, 1, c);
+      }
+    }
+    return url;
   }
 
-  // Does the given request allow a persistent connection?
+  inline std::string escape_html_specials(std::string const & input)
+  {
+    std::string tmp = input;
+    for (std::string::size_type pos = 0; pos <= tmp.size(); ++pos)
+    {
+      switch(tmp[pos])
+      {
+        case '<':
+          tmp.replace(pos, 1, "&lt;");
+          pos += 3;
+          break;
+        case '>':
+          tmp.replace(pos, 1, "&gt;");
+          pos += 3;
+          break;
+        case '&':
+          tmp.replace(pos, 1, "&amp;");
+          pos += 4;
+          break;
+      }
+    }
+    return tmp;
+  }
 
-  static bool supports_persistent_connection(const HTTPRequest& request);
+} // namespace http
 
-  // Parse an HTTP request line.
-
-  size_t parse_request_line(HTTPRequest& request, const std::string& input) const;
-
-  // Split an HTTP header into the header's name and data part.
-
-  size_t parse_header(std::string& name, std::string& data, const std::string& input) const;
-
-  // Parse various headers.
-
-  size_t parse_host_header(HTTPRequest& request, const std::string& input) const;
-  size_t parse_if_modified_since_header(HTTPRequest& request, const std::string& input) const;
-
-private:
-  typedef char                                    value_t;
-  typedef const value_t*                          iterator_t;
-  typedef boost::spirit::chlit<value_t>           chlit_t;
-  typedef boost::spirit::range<value_t>           range_t;
-  typedef boost::spirit::chset<value_t>           chset_t;
-  typedef boost::spirit::rule<>                   rule_t;
-  typedef boost::spirit::symbols<int, value_t>    symbol_t;
-  typedef boost::spirit::parse_info<iterator_t>   parse_info_t;
-
-  rule_t http_URL, Request_URI, HTTP_Version,
-    Request_Line, Header, Host_Header,
-    date1, date2, date3, time, rfc1123_date, rfc850_date,
-    asctime_date, HTTP_date, If_Modified_Since_Header;
-  symbol_t weekday, month, wkday;
-
-  // Because the parsers dereference pointers at construction time,
-  // we need an layer of indirection to assign the parser's results
-  // to the variables the caller has given us.
-
-  mutable std::string* name_ptr;
-  mutable std::string* data_ptr;
-  mutable URL*         url_ptr;
-  mutable HTTPRequest* req_ptr;
-  mutable struct tm    tm_date;
-};
-
-extern HTTPParser const http_parser;
-
-#endif // !defined(HTTPPARSER_HH)
+#endif // MINI_HTTPD_HTTP_HPP

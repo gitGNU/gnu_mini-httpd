@@ -10,23 +10,22 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include "mini-httpd.hpp"
-
+#include "http-daemon.hpp"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <ioxx/shared-handler.hpp>
 #include <sanity/system-error.hpp>
 #include <sys/socket.h>         // POSIX.1-2001: shutdown(2)
-#include "HTTPParser.hpp"
-#include "urldecode.hpp"
-#include "escape-html-specials.hpp"
-#include "config.hpp"
+
+#ifdef _GNU_SOURCE
+#  include <getopt.h>           // getopt_long(3)
+#endif
 
 using namespace std;
 
 // ----- Construction/Destruction ---------------------------------------------
 
-RequestHandler::RequestHandler(ioxx::socket s) : _sockfd(s)
+http::daemon::daemon(ioxx::socket s) : _sockfd(s)
 {
   I(s);
   HTRACE() "accepted connection";
@@ -35,7 +34,7 @@ RequestHandler::RequestHandler(ioxx::socket s) : _sockfd(s)
   reset();
 }
 
-RequestHandler::~RequestHandler()
+http::daemon::~daemon()
 {
   HTRACE() "closing connection";
 }
@@ -44,26 +43,26 @@ RequestHandler::~RequestHandler()
 // (Re-)initialize internals before reading a new request over a persistent
 // connection.
 
-void RequestHandler::reset()
+void http::daemon::reset()
 {
   state = READ_REQUEST_LINE;
   _filefd.reset();
-  request = HTTPRequest();
+  request = Request();
   request.start_up_time = time(0);
   go_to_read_mode();
 }
 
 // ----- i/o code -------------------------------------------------------------
 
-void RequestHandler::acceptor::operator()(ioxx::socket const & s, ioxx::probe & p) const
+void http::daemon::acceptor::operator()(ioxx::socket const & s, ioxx::probe & p) const
 {
   I(s);
   ioxx::add_shared_handler( p, s, ioxx::Readable
-                          , boost::shared_ptr<RequestHandler>(new RequestHandler(s))
+                          , boost::shared_ptr<daemon>(new daemon(s))
                           );
 }
 
-void RequestHandler::fd_is_readable()
+void http::daemon::fd_is_readable()
 {
   if (!_inbuf.full())
   {
@@ -80,7 +79,7 @@ void RequestHandler::fd_is_readable()
   call_state_handler();
 }
 
-void RequestHandler::fd_is_writable()
+void http::daemon::fd_is_writable()
 {
   if (state != TERMINATE && !write_buffer.empty())
   {
@@ -91,7 +90,7 @@ void RequestHandler::fd_is_writable()
   call_state_handler();
 }
 
-ioxx::event RequestHandler::operator() (ioxx::socket s, ioxx::event ev, ioxx::probe &)
+ioxx::event http::daemon::operator() (ioxx::socket s, ioxx::event ev, ioxx::probe &)
 {
   I(s == _sockfd);
   if (ioxx::is_error(ev))      return ioxx::Error;
@@ -126,19 +125,19 @@ ioxx::event RequestHandler::operator() (ioxx::socket s, ioxx::event ev, ioxx::pr
  *  State handler configuration.
  */
 
-RequestHandler::state_fun_t const RequestHandler::state_handlers[] =
-  { &RequestHandler::get_request_line
-  , &RequestHandler::get_request_header
-  , &RequestHandler::get_request_body
-  , &RequestHandler::setup_reply
-  , &RequestHandler::copy_file
-  , &RequestHandler::flush_buffer
-  , &RequestHandler::terminate
+http::daemon::state_fun_t const http::daemon::state_handlers[] =
+  { &http::daemon::get_request_line
+  , &http::daemon::get_request_header
+  , &http::daemon::get_request_body
+  , &http::daemon::setup_reply
+  , &http::daemon::copy_file
+  , &http::daemon::flush_buffer
+  , &http::daemon::terminate
   };
 
 /// \todo get rid of the string copy
 
-bool RequestHandler::get_request_line()
+bool http::daemon::get_request_line()
 {
   for (char const * p = _inbuf.data().begin(); p != _inbuf.data().end(); ++p)
   {
@@ -153,7 +152,7 @@ bool RequestHandler::get_request_line()
         << ": method = "        << request.method
         << ", http version = "  << request.major_version << '.' << request.minor_version
         << ", host = "          << request.url.host
-        << ", port = "          << (!request.url.port ? -1 : static_cast<int>(*request.url.port))
+        << ", port = "          << request.url.port
         << ", path = '"         << request.url.path << "'"
         << ", query = '"        << request.url.query << "'"
         ;
@@ -176,7 +175,7 @@ bool RequestHandler::get_request_line()
 /// copy operation just because the bloody string interface is
 /// hard-coded.
 
-bool RequestHandler::get_request_header()
+bool http::daemon::get_request_header()
 {
   // An empty line will terminate the request header.
 
@@ -191,7 +190,7 @@ bool RequestHandler::get_request_header()
   // If we do have a complete header line in the read buffer,
   // process it. If not, we need more I/O before we can proceed.
 
-  char const * p = HTTPParser::find_next_line(_inbuf.data().begin(), _inbuf.data().end());
+  char const * p = parser::find_next_line(_inbuf.data().begin(), _inbuf.data().end());
   if (p != _inbuf.data().end())
   {
     size_t const llen = p - _inbuf.data().begin();
@@ -211,7 +210,7 @@ bool RequestHandler::get_request_header()
         else
           HTRACE() "Read Host header"
             << ": host = " << request.host
-            << "; port = " << (!request.port ? -1 : static_cast<int>(*request.port))
+            << "; port = " << request.port
             ;
       }
       else if (strcasecmp("If-Modified-Since", name.c_str()) == 0)
@@ -257,7 +256,7 @@ bool RequestHandler::get_request_header()
   return false;
 }
 
-bool RequestHandler::get_request_body()
+bool http::daemon::get_request_body()
 {
   // We ain't reading any bodies yet.
 
@@ -272,7 +271,7 @@ bool RequestHandler::get_request_body()
  *  any of the FLUSH_BUFFER states -- depending on whether we support
  *  persistent connections or not -- to go on.
  */
-bool RequestHandler::copy_file()
+bool http::daemon::copy_file()
 {
   if (write_buffer.empty())
   {
@@ -293,7 +292,7 @@ bool RequestHandler::copy_file()
 /**
  *  In FLUSH_BUFFER state, ...
  */
-bool RequestHandler::flush_buffer()
+bool http::daemon::flush_buffer()
 {
   if (write_buffer.empty())
   {
@@ -350,7 +349,7 @@ inline string to_rfcdate(time_t t)
   return buffer;
 }
 
-bool RequestHandler::setup_reply()
+bool http::daemon::setup_reply()
 {
   struct ::stat         file_stat;
 
@@ -368,7 +367,7 @@ bool RequestHandler::setup_reply()
 
   if (request.host.empty())
   {
-    if (request.url.host.empty())
+    if (request.host.empty())
     {
       if (!config->default_hostname.empty() &&
          (request.major_version == 0 || (request.major_version == 1 && request.minor_version == 0))
@@ -389,7 +388,7 @@ bool RequestHandler::setup_reply()
   // Make sure we have a port number.
 
   if (!request.port && request.url.port)
-      request.port = *request.url.port;
+      request.port = request.url.port;
 
   // Construct the actual file name associated with the hostname and
   // URL, then check whether we can send that file.
@@ -403,7 +402,7 @@ bool RequestHandler::setup_reply()
     {
       HINFO() "peer requested URL "
         << "'http://" << request.host
-        << ':' << (!request.port ? 80 : *request.port)
+        << ':' << (request.port ? request.port : 80u)
         << request.url.path
         << "' ('" << filename << "'), which fails the hierarchy check"
         ;
@@ -419,7 +418,7 @@ bool RequestHandler::setup_reply()
     {
       HINFO() "peer requested URL "
         << "'http://" << request.host
-        << ':' << (!request.port ? 80 : *request.port)
+        << ':' << (!request.port ? 80 : request.port)
         << request.url.path
         << "' ('" << filename << "'), which fails stat(2): "
         << ::strerror(errno)
@@ -445,7 +444,7 @@ bool RequestHandler::setup_reply()
 
   // Decide whether to use a persistent connection.
 
-  use_persistent_connection = HTTPParser::supports_persistent_connection(request);
+  use_persistent_connection = parser::supports_persistent_connection(request);
 
   // Check whether the If-Modified-Since header applies.
 
@@ -534,7 +533,7 @@ inline string to_logdate(time_t t)
   return buffer;
 }
 
-void RequestHandler::log_access()
+void http::daemon::log_access()
 {
   if (!request.status_code)
   {
@@ -584,7 +583,7 @@ void RequestHandler::log_access()
 
 // ----- Standard Responses ---------------------------------------------------
 
-void RequestHandler::protocol_error(string const & message)
+void http::daemon::protocol_error(string const & message)
 {
   HINFO() "protocol error: closing connection";
 
@@ -617,7 +616,7 @@ void RequestHandler::protocol_error(string const & message)
   go_to_write_mode();
 }
 
-void RequestHandler::file_not_found()
+void http::daemon::file_not_found()
 {
   HINFO() "URL '" << request.url.path << "' not found";
 
@@ -649,7 +648,7 @@ void RequestHandler::file_not_found()
   go_to_write_mode();
 }
 
-void RequestHandler::moved_permanently(string const & path)
+void http::daemon::moved_permanently(string const & path)
 {
   HTRACE() "Requested page "
     << request.url.path << " has moved to '"
@@ -663,8 +662,8 @@ void RequestHandler::moved_permanently(string const & path)
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n"
       << "Location: http://" << request.host;
-  if (request.port && *request.port != 80)
-    buf << ":" << *request.port;
+  if (request.port && request.port != 80)
+    buf << ":" << request.port;
   buf << path << "\r\n";
   if (!request.connection.empty())
     buf << "Connection: close\r\n";
@@ -676,8 +675,8 @@ void RequestHandler::moved_permanently(string const & path)
       << "<body>\r\n"
       << "<h1>Document Has Moved</h1>\r\n"
       << "<p>The document has moved <a href=\"http://" << request.host;
-  if (request.port && *request.port != 80)
-    buf << ":" << *request.port;
+  if (request.port && request.port != 80)
+    buf << ":" << request.port;
   buf << path << "\">here</a>.\r\n"
       << "</body>\r\n"
       << "</html>\r\n";
@@ -689,7 +688,7 @@ void RequestHandler::moved_permanently(string const & path)
   go_to_write_mode();
 }
 
-void RequestHandler::not_modified()
+void http::daemon::not_modified()
 {
   HTRACE() "requested page not modified: going into FLUSH_BUFFER state";
 
@@ -716,3 +715,281 @@ void RequestHandler::not_modified()
   state = FLUSH_BUFFER;
   go_to_write_mode();
 }
+
+
+// ----- Boost.Log ------------------------------------------------------------
+
+#include <boost/log/log.hpp>
+namespace http { namespace logging
+{
+  BOOST_DEFINE_LOG(access, "httpd.access")
+  BOOST_DEFINE_LOG(misc,   "httpd.misc")
+  BOOST_DEFINE_LOG(debug,  "httpd.debug")
+}}
+
+// ----- Configuration --------------------------------------------------------
+
+#define kb * 1024
+#define mb * 1024 kb
+#define sec * 1
+
+#define USAGE_MSG                                                       \
+  "Usage: httpd  [ --version ]\n"                                       \
+  "              [ -h        | --help ]\n"                              \
+  "              [ -d        | --debug ]\n"                             \
+  "              [ -D        | --no-detach ]\n"                         \
+  "              [ -p number | --port               number ]\n"         \
+  "              [ -r path   | --change-root        path   ]\n"         \
+  "              [ -l path   | --logfile-directory  path   ]\n"         \
+  "              [ -s string | --server-string      string ]\n"         \
+  "              [ -u uid    | --uid                uid    ]\n"         \
+  "              [ -g gid    | --gid                gid    ]\n"         \
+  "              [ -H string | --default-hostname   string ]\n"         \
+  "              [ --default-page  filename ]\n"    \
+  "              [ --document-root path ]\n"
+
+http::configuration::configuration(int argc, char** argv)
+{
+  // timeouts
+  network_read_timeout                  = 30 sec;
+  network_write_timeout                 = 30 sec;
+
+  // buffer size
+  max_line_length                       =  4 kb;
+
+  // paths
+  chroot_directory                      = "";
+  logfile_directory                     = "/logs";
+  document_root                         = "/htdocs";
+  default_page                          = "index.html";
+
+  // run-time stuff
+  server_string                         = "mini-httpd";
+  default_hostname                      = "localhost";
+  default_content_type                  = "application/octet-stream";
+  http_port                             = 80;
+
+  debugging                             = false;
+  detach                                = true;
+
+  // Parse the command line.
+
+  char const * optstring = "hdp:r:l:s:u:g:DH:";
+  const option longopts[] =
+    {
+      { "help",               no_argument,       0, 'h' },
+      { "version",            no_argument,       0, 'v' },
+      { "debug",              no_argument,       0, 'd' },
+      { "port",               required_argument, 0, 'p' },
+      { "change-root",        required_argument, 0, 'r' },
+      { "logfile-directory",  required_argument, 0, 'l' },
+      { "server-string",      required_argument, 0, 's' },
+      { "uid",                required_argument, 0, 'u' },
+      { "gid",                required_argument, 0, 'g' },
+      { "no-detach",          required_argument, 0, 'D' },
+      { "default-hostname",   required_argument, 0, 'H' },
+      { "document-root",      required_argument, 0, 'y' },
+      { "default-page",       required_argument, 0, 'z' },
+      { 0, 0, 0, 0 }          // mark end of array
+    };
+  int rc;
+  opterr = 0;
+  while ((rc = getopt_long(argc, argv, optstring, longopts, 0)) != -1)
+  {
+    switch(rc)
+    {
+      case 'h':
+        fprintf(stderr, USAGE_MSG);
+        throw no_error();
+      case 'v':
+        printf("mini-httpd version 2006-12-06\n");
+        throw no_error();
+      case 'd':
+        debugging = true;
+        break;
+      case 'p':
+        http_port = atoi(optarg);
+        if (http_port > 65535)
+          throw runtime_error("The specified port number is out of range!");
+        break;
+      case 'g':
+        setgid_group = atoi(optarg);
+        break;
+      case 'u':
+        setuid_user = atoi(optarg);
+        break;
+      case 'r':
+        chroot_directory = optarg;
+        break;
+      case 'y':
+        document_root = optarg;
+        break;
+      case 'z':
+        default_page = optarg;
+        break;
+      case 'l':
+        logfile_directory = optarg;
+        break;
+      case 's':
+        server_string = optarg;
+        break;
+      case 'D':
+        detach = false;
+        break;
+      case 'H':
+        default_hostname = optarg;
+        break;
+      default:
+        fprintf(stderr, USAGE_MSG);
+        throw runtime_error("Incorrect command line syntax.");
+    }
+
+    // Consistency checks on the configured parameters.
+
+    if (default_page.empty())
+      throw invalid_argument("Setting an empty --default-page is not allowed.");
+    if (document_root.empty())
+      throw invalid_argument("Setting an empty --document-root is not allowed.");
+    if (logfile_directory.empty())
+      throw invalid_argument("Setting an empty --document-root is not allowed.");
+  }
+
+  // Initialize the content type lookup map.
+
+  content_types["ai"]      = "application/postscript";
+  content_types["aif"]     = "audio/x-aiff";
+  content_types["aifc"]    = "audio/x-aiff";
+  content_types["aiff"]    = "audio/x-aiff";
+  content_types["asc"]     = "text/plain";
+  content_types["au"]      = "audio/basic";
+  content_types["avi"]     = "video/x-msvideo";
+  content_types["bcpio"]   = "application/x-bcpio";
+  content_types["bmp"]     = "image/bmp";
+  content_types["cdf"]     = "application/x-netcdf";
+  content_types["cpio"]    = "application/x-cpio";
+  content_types["cpt"]     = "application/mac-compactpro";
+  content_types["csh"]     = "application/x-csh";
+  content_types["css"]     = "text/css";
+  content_types["dcr"]     = "application/x-director";
+  content_types["dir"]     = "application/x-director";
+  content_types["doc"]     = "application/msword";
+  content_types["dvi"]     = "application/x-dvi";
+  content_types["dxr"]     = "application/x-director";
+  content_types["eps"]     = "application/postscript";
+  content_types["etx"]     = "text/x-setext";
+  content_types["gif"]     = "image/gif";
+  content_types["gtar"]    = "application/x-gtar";
+  content_types["hdf"]     = "application/x-hdf";
+  content_types["hqx"]     = "application/mac-binhex40";
+  content_types["htm"]     = "text/html";
+  content_types["html"]    = "text/html";
+  content_types["ice"]     = "x-conference/x-cooltalk";
+  content_types["ief"]     = "image/ief";
+  content_types["iges"]    = "model/iges";
+  content_types["igs"]     = "model/iges";
+  content_types["jpe"]     = "image/jpeg";
+  content_types["jpeg"]    = "image/jpeg";
+  content_types["jpg"]     = "image/jpeg";
+  content_types["js"]      = "application/x-javascript";
+  content_types["kar"]     = "audio/midi";
+  content_types["latex"]   = "application/x-latex";
+  content_types["man"]     = "application/x-troff-man";
+  content_types["me"]      = "application/x-troff-me";
+  content_types["mesh"]    = "model/mesh";
+  content_types["mid"]     = "audio/midi";
+  content_types["midi"]    = "audio/midi";
+  content_types["mov"]     = "video/quicktime";
+  content_types["movie"]   = "video/x-sgi-movie";
+  content_types["mp2"]     = "audio/mpeg";
+  content_types["mp3"]     = "audio/mpeg";
+  content_types["mpe"]     = "video/mpeg";
+  content_types["mpeg"]    = "video/mpeg";
+  content_types["mpg"]     = "video/mpeg";
+  content_types["mpga"]    = "audio/mpeg";
+  content_types["ms"]      = "application/x-troff-ms";
+  content_types["msh"]     = "model/mesh";
+  content_types["nc"]      = "application/x-netcdf";
+  content_types["oda"]     = "application/oda";
+  content_types["pbm"]     = "image/x-portable-bitmap";
+  content_types["pdb"]     = "chemical/x-pdb";
+  content_types["pdf"]     = "application/pdf";
+  content_types["pgm"]     = "image/x-portable-graymap";
+  content_types["pgn"]     = "application/x-chess-pgn";
+  content_types["png"]     = "image/png";
+  content_types["pnm"]     = "image/x-portable-anymap";
+  content_types["ppm"]     = "image/x-portable-pixmap";
+  content_types["ppt"]     = "application/vnd.ms-powerpoint";
+  content_types["ps"]      = "application/postscript";
+  content_types["qt"]      = "video/quicktime";
+  content_types["ra"]      = "audio/x-realaudio";
+  content_types["ram"]     = "audio/x-pn-realaudio";
+  content_types["ras"]     = "image/x-cmu-raster";
+  content_types["rgb"]     = "image/x-rgb";
+  content_types["rm"]      = "audio/x-pn-realaudio";
+  content_types["roff"]    = "application/x-troff";
+  content_types["rpm"]     = "audio/x-pn-realaudio-plugin";
+  content_types["rtf"]     = "application/rtf";
+  content_types["rtf"]     = "text/rtf";
+  content_types["rtx"]     = "text/richtext";
+  content_types["sgm"]     = "text/sgml";
+  content_types["sgml"]    = "text/sgml";
+  content_types["sh"]      = "application/x-sh";
+  content_types["shar"]    = "application/x-shar";
+  content_types["silo"]    = "model/mesh";
+  content_types["sit"]     = "application/x-stuffit";
+  content_types["skd"]     = "application/x-koan";
+  content_types["skm"]     = "application/x-koan";
+  content_types["skp"]     = "application/x-koan";
+  content_types["skt"]     = "application/x-koan";
+  content_types["snd"]     = "audio/basic";
+  content_types["spl"]     = "application/x-futuresplash";
+  content_types["src"]     = "application/x-wais-source";
+  content_types["sv4cpio"] = "application/x-sv4cpio";
+  content_types["sv4crc"]  = "application/x-sv4crc";
+  content_types["swf"]     = "application/x-shockwave-flash";
+  content_types["t"]       = "application/x-troff";
+  content_types["tar"]     = "application/x-tar";
+  content_types["tcl"]     = "application/x-tcl";
+  content_types["tex"]     = "application/x-tex";
+  content_types["texi"]    = "application/x-texinfo";
+  content_types["texinfo"] = "application/x-texinfo";
+  content_types["tif"]     = "image/tiff";
+  content_types["tiff"]    = "image/tiff";
+  content_types["tr"]      = "application/x-troff";
+  content_types["tsv"]     = "text/tab-separated-values";
+  content_types["txt"]     = "text/plain";
+  content_types["ustar"]   = "application/x-ustar";
+  content_types["vcd"]     = "application/x-cdlink";
+  content_types["vrml"]    = "model/vrml";
+  content_types["wav"]     = "audio/x-wav";
+  content_types["wrl"]     = "model/vrml";
+  content_types["xbm"]     = "image/x-xbitmap";
+  content_types["xls"]     = "application/vnd.ms-excel";
+  content_types["xml"]     = "text/xml";
+  content_types["xpm"]     = "image/x-xpixmap";
+  content_types["xwd"]     = "image/x-xwindowdump";
+  content_types["xyz"]     = "chemical/x-pdb";
+  content_types["zip"]     = "application/zip";
+  content_types["hpp"]     = "text/plain";
+  content_types["cpp"]     = "text/plain";
+}
+
+char const * http::configuration::get_content_type(char const * filename) const
+{
+  char const * last_dot;
+  char const * current;
+  for (current = filename, last_dot = 0; *current != '\0'; ++current)
+    if (*current == '.')
+      last_dot = current;
+  if (last_dot == 0)
+    return default_content_type;
+  else
+    ++last_dot;
+  map_t::const_iterator i = content_types.find(last_dot);
+  if (i != content_types.end())
+    return i->second;
+  else
+    return default_content_type;
+}
+
+http::configuration const * http::config;
