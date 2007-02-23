@@ -28,6 +28,8 @@
 #include <boost/spirit.hpp>
 #include <boost/spirit/utility/chset.hpp>
 #include <boost/spirit/symbols/symbols.hpp>
+#include <boost/spirit/attribute/closure.hpp>
+#include <boost/spirit/phoenix/binders.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/assert.hpp>
 
@@ -47,19 +49,6 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     return buffer_t(buf.begin() + n, buf.end());
   }
 
-  struct version_t : spirit::closure<version_t, unsigned int, unsigned int>
-  {
-    member1 major;
-    member2 minor;
-  };
-
-  spirit::rule<spirit::scanner<char_pointer>, version_t::context_t> const version_p
-    (   spirit::str_p("HTTP")
-    >>  spirit::uint_p[ spirit::assign_a(version_p.major) ]
-    >>  spirit::ch_p('/')
-    >>  spirit::uint_p[ spirit::assign_a(version_p.minor) ]
-    );
-
   struct Version : public std::pair<unsigned int, unsigned int>
   {
     typedef std::pair<unsigned int, unsigned int> pair;
@@ -67,20 +56,22 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     Version()                               : pair(0u, 0u)              { }
     Version(unsigned int x, unsigned int y) : pair(x,   y)              { }
     Version(pair p)                         : pair(p)                   { }
-    Version(version_t const & v)            : pair(v.major, v.minor)    { }
 
     unsigned int major() const  { return first; }
     unsigned int minor() const  { return second; }
   };
 
-
-  inline bool parse(buffer_t & data, Version & vers)
+  struct version_closure : public spirit::closure<version_closure, Version>
   {
-    using namespace spirit;
-    //parse_info<> r( parse(data.begin(), data.end(), version_p[ assign_a(vers) ]) );
-    // return r.hit;
-    return false;
-  }
+    member1 val;
+  };
+
+  spirit::rule<spirit::scanner<>, version_closure::context_t> const version_p
+    (   spirit::str_p("HTTP")
+    >>  spirit::uint_p[ phoenix::bind(&Version::first)(version_p.val) ]
+    >>  spirit::ch_p('/')
+    >>  spirit::uint_p[ phoenix::bind(&Version::second)(version_p.val) ]
+    );
 
   struct Uri
   {
