@@ -10,7 +10,8 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include "RequestHandler.hpp"
+#include "mini-httpd.hpp"
+
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <ioxx/shared-handler.hpp>
@@ -18,7 +19,6 @@
 #include <sys/socket.h>         // POSIX.1-2001: shutdown(2)
 #include "HTTPParser.hpp"
 #include "urldecode.hpp"
-#include "timestamp-to-string.hpp"
 #include "escape-html-specials.hpp"
 #include "config.hpp"
 
@@ -105,7 +105,7 @@ ioxx::event RequestHandler::operator() (ioxx::socket s, ioxx::event ev, ioxx::pr
     HINFO() << e.what();
     terminate();
   }
-  catch(std::exception const & e)
+  catch(exception const & e)
   {
     HERROR() "run-time error: " << e.what();
     terminate();
@@ -341,6 +341,15 @@ static inline bool is_path_in_hierarchy(char const * hierarchy, char const * pat
   return true;
 }
 
+inline string to_rfcdate(time_t t)
+{
+  char buffer[64];
+  size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
+  if (len == 0 || len >= sizeof(buffer))
+    throw length_error("strftime() failed because an internal buffer is too small!");
+  return buffer;
+}
+
 bool RequestHandler::setup_reply()
 {
   struct ::stat         file_stat;
@@ -466,10 +475,10 @@ bool RequestHandler::setup_reply()
   buf << "HTTP/1.1 200 OK\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
-  buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+  buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
       << "Content-Length: " << file_stat.st_size << "\r\n"
-      << "Last-Modified: " << time_to_rfcdate(file_stat.st_mtime) << "\r\n";
+      << "Last-Modified: " << to_rfcdate(file_stat.st_mtime) << "\r\n";
   if (!request.connection.empty())
   {
     if (use_persistent_connection)
@@ -516,6 +525,15 @@ inline void escape_quotes(string & input)
   boost::algorithm::replace_all(input, "\"", "\\\"");
 }
 
+inline string to_logdate(time_t t)
+{
+  char buffer[64];
+  size_t len = strftime(buffer, sizeof(buffer), "%d/%b/%Y:%H:%M:%S %z", localtime(&t));
+  if (len == 0 || len >= sizeof(buffer))
+    throw length_error("strftime() failed because the internal buffer is too small");
+  return buffer;
+}
+
 void RequestHandler::log_access()
 {
   if (!request.status_code)
@@ -552,7 +570,7 @@ void RequestHandler::log_access()
   escape_quotes(request.user_agent);
 
   // "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %s \"%s\" \"%s\"\n"
-  os << "TODO" << " - - [" << time_to_logdate(request.start_up_time) << "]"
+  os << "TODO" << " - - [" << to_logdate(request.start_up_time) << "]"
      << " \"" << request.method
      << " "  << request.url.path
      << " HTTP/" << request.major_version
@@ -574,7 +592,7 @@ void RequestHandler::protocol_error(string const & message)
   buf << "HTTP/1.1 400 Bad Request\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
-  buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+  buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
   if (!request.connection.empty())
     buf << "Connection: close\r\n";
@@ -607,7 +625,7 @@ void RequestHandler::file_not_found()
   buf << "HTTP/1.1 404 Not Found\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
-  buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+  buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
   if (!request.connection.empty())
     buf << "Connection: close\r\n";
@@ -642,7 +660,7 @@ void RequestHandler::moved_permanently(string const & path)
   buf << "HTTP/1.1 301 Moved Permanently\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
-  buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n"
+  buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n"
       << "Location: http://" << request.host;
   if (request.port && *request.port != 80)
@@ -679,7 +697,7 @@ void RequestHandler::not_modified()
   buf << "HTTP/1.1 304 Not Modified\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
-  buf << "Date: " << time_to_rfcdate(time(0)) << "\r\n";
+  buf << "Date: " << to_rfcdate(time(0)) << "\r\n";
   if (!request.connection.empty())
   {
     if (use_persistent_connection)
