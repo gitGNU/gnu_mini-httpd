@@ -124,12 +124,13 @@ try
 
   // Log some helpful information.
 
-  INFO() << "mini-httpd 2006-12-06 starting up"
-         << ": listen port = "  << config->http_port
-         << ", user id = "      << ::getuid()
-         << ", group id = "     << ::getgid()
-         << ", chroot = "       << config->chroot_directory
-         << ", hostname = "     << config->default_hostname
+  BOOST_LOGL(::http::logging::misc, info)
+    << "mini-httpd 2006-12-06 starting up"
+    << ": listen port = "  << config->http_port
+    << ", user id = "      << ::getuid()
+    << ", group id = "     << ::getgid()
+    << ", chroot = "       << config->chroot_directory
+    << ", hostname = "     << config->default_hostname
     ;
 
   // Run ...
@@ -138,7 +139,7 @@ try
 
   // Exit gracefully.
 
-  INFO() << "httpd shutting down.";
+  BOOST_LOGL(::http::logging::misc, info) << "mini-httpd shutting down";
   return 0;
 }
 catch(http::configuration::no_error)

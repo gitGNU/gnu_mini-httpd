@@ -20,21 +20,6 @@
 #include <ioxx/probe.hpp>
 #include "http.hpp"
 
-// Abstract access to our logger.
-#define TRACE()         BOOST_LOGL(::http::logging::debug, dbg)
-#define INFO()          BOOST_LOGL(::http::logging::misc,  info)
-#define ERROR()         BOOST_LOGL(::http::logging::misc,  err)
-
-// Continue with literal string or operator<<().
-#define SOCKET_TRACE(s) TRACE() << "socket " << s << ": "
-#define SOCKET_INFO(s)  INFO()  << "socket " << s << ": "
-#define SOCKET_ERROR(s) ERROR() << "socket " << s << ": "
-
-// Continue with literal string or operator<<().
-#define HTRACE() SOCKET_TRACE(daemon::_sockfd)
-#define HINFO()  SOCKET_INFO(daemon::_sockfd)
-#define HERROR() SOCKET_ERROR(daemon::_sockfd)
-
 namespace http
 {
   namespace logging
