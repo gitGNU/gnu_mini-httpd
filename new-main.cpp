@@ -10,15 +10,14 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include <csignal>
-#include <cstdlib>
-#include <functional>
-#include <boost/test/prg_exec_monitor.hpp>
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/function.hpp>
-#include <boost/thread.hpp>
-
+#include <boost/range.hpp>
+#include <csignal>
+#include <cstdlib>              // std::size_t, std::ptrdiff_t
+#include <cstring>              // std::memmove()
+#include <boost/test/prg_exec_monitor.hpp>
 #include <boost/log/log_impl.hpp>
 #include <boost/log/functions.hpp>
 
@@ -43,22 +42,75 @@ static void init_logging()
 
 // ----- Central Services -----------------------------------------------------
 
+using std::size_t;
+using std::ptrdiff_t;
 typedef std::vector<char>               io_buffer;
 typedef boost::shared_ptr<io_buffer>    shared_buffer;
 
+typedef boost::iterator_range<char *>           byte_range;
+typedef boost::iterator_range<char const *>     byte_const_range;
+
+class page : public byte_range
+{
+  io_buffer     _buf;
+
+  page(page const &);
+  page & operator= (page const &);
+
+public:
+  explicit page(size_t cap = 0u) : _buf(cap)    { reset(); }
+
+  char *        buf_begin()             { return &_buf[0]; }
+  char const *  buf_begin() const       { return &_buf[0]; }
+  char *        buf_end()               { return &_buf[_buf.size()]; }
+  char const *  buf_end()   const       { return &_buf[_buf.size()]; }
+  size_t        space()     const       { return buf_end() - end();  }
+  bool          full()      const       { return buf_end() == end(); }
+
+  void reset()            { byte_range::operator=(byte_range(buf_begin(), buf_begin())); }
+  void reset(char * b, char * e)
+  {
+    BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
+    if (b != e) byte_range::operator=(byte_range(b, e));
+    else        reset();
+  }
+
+  void realloc(size_t n)    { _buf.resize(n); reset(buf_begin(), buf_begin() + size()); }
+  void pop_front(size_t i)  { reset(begin() + i, end()); }
+  void push_back(size_t i)  { reset(begin(), end() + i); }
+
+  size_t flush_gap()
+  {
+    char * const buf_beg( buf_begin() );
+    char * const data_beg( begin() );
+    BOOST_ASSERT(buf_beg <= data_beg);
+    size_t const gap_len( data_beg - buf_beg );
+    if (gap_len)
+    {
+      size_t const data_len( size() );
+      std::memmove(buf_beg, data_beg, data_len);
+      reset(buf_beg, buf_beg + data_len);
+    }
+    return gap_len;
+  }
+};
+
+typedef boost::shared_ptr<page>         shared_page;
+
 typedef boost::asio::io_service         io_service;
-typedef boost::shared_ptr<io_service>   shared_service;
 
 typedef boost::asio::ip::tcp::socket    tcp_socket;
 typedef boost::shared_ptr<tcp_socket>   shared_socket;
 
 typedef boost::asio::ip::tcp::acceptor  tcp_acceptor;
+typedef boost::shared_ptr<tcp_acceptor> shared_acceptor;
+
 typedef boost::asio::ip::tcp::endpoint  tcp_endpoint;
 
 template <class Handler>
-inline void drive_tcp( tcp_acceptor &   acc
-                     , Handler          f = Handler()
-                     , shared_socket    s = shared_socket()
+inline void drive_tcp( tcp_acceptor & acc
+                     , Handler        f = Handler()
+                     , shared_socket  s = shared_socket()
                      )
 {
   if (s) f(s);
@@ -66,24 +118,66 @@ inline void drive_tcp( tcp_acceptor &   acc
   acc.async_accept(*s, boost::bind(&drive_tcp<Handler>, boost::ref(acc), f, s));
 }
 
+
+template <class Handler>
+struct drive_pager_reader
+{
+  typedef void result_type;
+
+  void operator()( shared_socket  s
+                 , Handler        f     = Handler()
+                 , shared_page    iob   = shared_page(new page(1024u))
+                 , size_t         i     = 0u
+                 , bool           fresh = true
+                 )      const
+  {
+    BOOST_ASSERT(iob);
+    if (i)
+    {
+      iob->push_back(i);
+      f(iob);
+    }
+    else if (!fresh)
+    {
+      TRACE() << "eof";
+      return;
+    }
+
+    if (iob->full())
+      if (iob->flush_gap() == 0u)
+        iob->realloc(iob->size() * 2u);
+    BOOST_ASSERT(!iob->full());
+
+    TRACE() << "buffer gap = " << (iob->begin() - iob->buf_begin)
+            << ", len = "      << iob->size()
+            << ", cap = "      << (iob->buf_end() - iob->buf_begin);
+
+    using boost::asio::placeholders::bytes_transferred;
+    TRACE() << "read at most " << iob->space() << " bytes";
+    s->async_read_some
+      ( boost::asio::buffer(iob->end(), iob->space())
+      , boost::bind( *this, s, f, iob, bytes_transferred, false )
+      );
+  }
+};
+
 template <class Handler>
 struct drive_input
 {
   typedef void result_type;
 
   void operator()( shared_socket  s
-                 , Handler        f   = Handler()
-                 , shared_buffer  iob = shared_buffer(new io_buffer(1024u))
-                 , std::size_t    gap = 0u
-                 , std::size_t    len = 0u
-                 , std::size_t    i   = 0u
-                 , bool           ini = true
-                 )
-    const
+                 , Handler        f     = Handler()
+                 , shared_buffer  iob   = shared_buffer(new io_buffer(1024u))
+                 , std::size_t    gap   = 0u
+                 , std::size_t    len   = 0u
+                 , std::size_t    i     = 0u
+                 , bool           fresh = true
+                 )      const
   {
     BOOST_ASSERT(iob->size());
     BOOST_ASSERT(gap + len + i <= iob->size());
-    if (!ini && !i) { TRACE() << "eof"; return; }
+    if (!fresh && !i) { TRACE() << "eof"; return; }
     if (i)
     {
       TRACE() << i << " new bytes of input available, run handler";
