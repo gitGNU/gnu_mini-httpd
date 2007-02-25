@@ -11,3 +11,14 @@ exe mini-httpd
       <library>../ioxx//ioxx
     : <threading>single
     ;
+
+exe new-main
+    : new-main.cpp
+    : <use>/boost
+      <use>/ioxx
+      <library>/boost/thread//boost_thread
+      <library>/boost/system//boost_system
+      <library>/boost/test//boost_prg_exec_monitor
+      <library>/boost/log//boost_log
+    : <threading>multi
+    ;

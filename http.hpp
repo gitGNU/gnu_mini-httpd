@@ -35,8 +35,6 @@
 
 namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 {
-  namespace spirit = boost::spirit;
-
   // core types
 
   typedef char const *                          char_pointer;
@@ -48,6 +46,19 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     BOOST_ASSERT(n <= buf.size());
     return buffer_t(buf.begin() + n, buf.end());
   }
+
+  // http data types and parsers for them
+
+  namespace spirit = boost::spirit;
+
+  spirit::chlit<> const ht_p(9);        // '\t'
+  spirit::chlit<> const lf_p(10);       // '\n'
+  spirit::chlit<> const cr_p(13);       // '\r'
+  spirit::chlit<> const sp_p(32);       // ' '
+  spirit::range<> const char_p(0, 127);
+  spirit::chset<> const mark_p("-_.!~*'()");
+  spirit::chset<> const reserved_p(";/?:@&=+$,");
+  spirit::chset<> const separators_p("()<>@,;:\\\"/[]?={}\x20\x09");
 
   struct Version : public std::pair<unsigned int, unsigned int>
   {
@@ -84,17 +95,30 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     buffer_t    query;
   };
 
+  struct uri_closure : public spirit::closure<uri_closure, Uri>
+  {
+    member1 val;
+  };
 
-  // http data types and parsers for them
-
-  spirit::chlit<> const ht_p(9);        // '\t'
-  spirit::chlit<> const lf_p(10);       // '\n'
-  spirit::chlit<> const cr_p(13);       // '\r'
-  spirit::chlit<> const sp_p(32);       // ' '
-  spirit::range<> const char_p(0, 127);
-  spirit::chset<> const mark_p("-_.!~*'()");
-  spirit::chset<> const reserved_p(";/?:@&=+$,");
-  spirit::chset<> const separators_p("()<>@,;:\\\"/[]?={}\x20\x09");
+//   spirit::rule<spirit::scanner<>, uri_closure::context_t> const uri_p
+//     (   spirit::str_p("HTTP")
+//
+//
+//   http_URL      = nocase_d["http://"]
+//                   >> host_p[assign(&url_ptr, &URL::host)]
+//                   >> !( ':' >> uint_p[assign(&url_ptr, &URL::port)] )
+//                   >> !( abs_path_p[assign(&url_ptr, &URL::path)]
+//                   >> !( '?' >> query_p[assign(&url_ptr, &URL::query)] ) );
+//   Request_URI   = http_URL | abs_path_p[assign(&url_ptr, &URL::path)]
+//                   >> !( '?' >> query_p[assign(&url_ptr, &URL::query)] );
+//   HTTP_Version  = nocase_d["http/"] >> uint_p[assign(&req_ptr, &Request::major_version)]
+//                   >> '.' >> uint_p[assign(&req_ptr, &Request::minor_version)];
+//
+//     >>  spirit::uint_p[ phoenix::bind(&Version::first)(version_p.val) ]
+//     >>  spirit::ch_p('/')
+//     >>  spirit::uint_p[ phoenix::bind(&Version::second)(version_p.val) ]
+//     );
+//
 
   struct Request_line
   {
