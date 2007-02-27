@@ -14,6 +14,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/range.hpp>
+#include <boost/pending/integer_log2.hpp>
 #include <csignal>
 #include <cstdlib>              // std::size_t, std::ptrdiff_t
 #include <cstring>              // std::memmove()
@@ -40,15 +41,22 @@ static void init_logging()
   flush_log_cache();
 }
 
-// ----- Central Services -----------------------------------------------------
+// ----- Memory Buffers -------------------------------------------------------
 
 using std::size_t;
 using std::ptrdiff_t;
-typedef std::vector<char>               io_buffer;
-typedef boost::shared_ptr<io_buffer>    shared_buffer;
 
-typedef boost::iterator_range<char *>           byte_range;
-typedef boost::iterator_range<char const *>     byte_const_range;
+typedef char                                    byte;
+typedef byte *                                  byte_ptr;
+typedef byte const *                            byte_const_ptr;
+typedef boost::iterator_range<byte_ptr>         byte_range;
+typedef boost::iterator_range<byte_const_ptr>   byte_const_range;
+
+typedef std::allocator<byte>                    byte_allocator;
+typedef std::vector<byte, byte_allocator>       io_buffer;
+typedef boost::shared_ptr<io_buffer>            shared_buffer;
+
+static size_t const min_buf_size( 1024u );
 
 class page : public byte_range
 {
@@ -58,31 +66,46 @@ class page : public byte_range
   page & operator= (page const &);
 
 public:
-  explicit page(size_t cap = 0u) : _buf(cap)    { reset(); }
+  explicit page(size_t cap = 0u) : _buf(cap) { reset(); }
 
-  char *        buf_begin()             { return &_buf[0]; }
-  char const *  buf_begin() const       { return &_buf[0]; }
-  char *        buf_end()               { return &_buf[_buf.size()]; }
-  char const *  buf_end()   const       { return &_buf[_buf.size()]; }
-  size_t        space()     const       { return buf_end() - end();  }
-  bool          full()      const       { return buf_end() == end(); }
+  byte_ptr        buf_begin()           { return &_buf[0]; }
+  byte_const_ptr  buf_begin() const     { return &_buf[0]; }
+  byte_ptr        buf_end()             { return &_buf[_buf.size()]; }
+  byte_const_ptr  buf_end()   const     { return &_buf[_buf.size()]; }
+  size_t          gap()       const     { return begin() - buf_begin(); }
+  size_t          space()     const     { return buf_end() - end();  }
+  bool            full()      const     { return buf_end() == end(); }
 
-  void reset()            { byte_range::operator=(byte_range(buf_begin(), buf_begin())); }
-  void reset(char * b, char * e)
+  void reset()
   {
-    BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
-    if (b != e) byte_range::operator=(byte_range(b, e));
-    else        reset();
+    byte_range::operator=(byte_range(buf_begin(), buf_begin()));
   }
 
-  void realloc(size_t n)    { _buf.resize(n); reset(buf_begin(), buf_begin() + size()); }
+  void reset(byte_ptr b, byte_ptr e)
+  {
+    BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
+    if (b == e) reset();
+    else        byte_range::operator=(byte_range(b, e));
+  }
+
   void pop_front(size_t i)  { reset(begin() + i, end()); }
   void push_back(size_t i)  { reset(begin(), end() + i); }
 
+  void realloc(size_t n)
+  {
+    size_t const gap_( gap() );
+    size_t const size_( size() );
+    BOOST_ASSERT(gap_ + size_ < n);
+    _buf.resize(n);
+    byte_ptr const begin_( &_buf[gap_] );
+    byte_ptr const end_( begin_ + size_ );
+    reset(begin_, end_);
+  }
+
   size_t flush_gap()
   {
-    char * const buf_beg( buf_begin() );
-    char * const data_beg( begin() );
+    byte_ptr const buf_beg( buf_begin() );
+    byte_ptr const data_beg( begin() );
     BOOST_ASSERT(buf_beg <= data_beg);
     size_t const gap_len( data_beg - buf_beg );
     if (gap_len)
@@ -95,7 +118,16 @@ public:
   }
 };
 
+inline std::ostream & operator<< (std::ostream & os, page const & buf)
+{
+  return os << "gap = " << buf.gap()
+            << ", size = " << buf.size()
+            << ", space = " << buf.space() ;
+}
+
 typedef boost::shared_ptr<page>         shared_page;
+
+// ----- Central Services -----------------------------------------------------
 
 typedef boost::asio::io_service         io_service;
 
@@ -108,52 +140,40 @@ typedef boost::shared_ptr<tcp_acceptor> shared_acceptor;
 typedef boost::asio::ip::tcp::endpoint  tcp_endpoint;
 
 template <class Handler>
-inline void drive_tcp( tcp_acceptor & acc
-                     , Handler        f = Handler()
-                     , shared_socket  s = shared_socket()
-                     )
+inline void tcp_driver( tcp_acceptor & acc
+                      , shared_socket  s = shared_socket()
+                      , Handler        f = Handler()
+                      )
 {
   if (s) f(s);
   s.reset( new tcp_socket(acc.io_service()) );
-  acc.async_accept(*s, boost::bind(&drive_tcp<Handler>, boost::ref(acc), f, s));
+  acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), s, f));
 }
 
-
 template <class Handler>
-struct drive_pager_reader
+struct input_driver
 {
   typedef void result_type;
 
   void operator()( shared_socket  s
                  , Handler        f     = Handler()
-                 , shared_page    iob   = shared_page(new page(1024u))
+                 , shared_page    iob   = shared_page(new page(min_buf_size))
                  , size_t         i     = 0u
                  , bool           fresh = true
                  )      const
   {
     BOOST_ASSERT(iob);
-    if (i)
+    if (!fresh)
     {
       iob->push_back(i);
-      f(iob);
+      if (!f(iob, i) || !i)
+        return;
     }
-    else if (!fresh)
-    {
-      TRACE() << "eof";
-      return;
-    }
-
     if (iob->full())
       if (iob->flush_gap() == 0u)
-        iob->realloc(iob->size() * 2u);
+        iob->realloc(std::max(min_buf_size, iob->size() * 2u));
     BOOST_ASSERT(!iob->full());
-
-    TRACE() << "buffer gap = " << (iob->begin() - iob->buf_begin)
-            << ", len = "      << iob->size()
-            << ", cap = "      << (iob->buf_end() - iob->buf_begin);
-
     using boost::asio::placeholders::bytes_transferred;
-    TRACE() << "read at most " << iob->space() << " bytes";
     s->async_read_some
       ( boost::asio::buffer(iob->end(), iob->space())
       , boost::bind( *this, s, f, iob, bytes_transferred, false )
@@ -162,163 +182,69 @@ struct drive_pager_reader
 };
 
 template <class Handler>
-struct drive_input
+struct stream_driver
 {
-  typedef void result_type;
+  typedef bool result_type;
 
-  void operator()( shared_socket  s
-                 , Handler        f     = Handler()
-                 , shared_buffer  iob   = shared_buffer(new io_buffer(1024u))
-                 , std::size_t    gap   = 0u
-                 , std::size_t    len   = 0u
-                 , std::size_t    i     = 0u
-                 , bool           fresh = true
-                 )      const
+  bool operator()(shared_page iob, size_t i, Handler f = Handler()) const
   {
-    BOOST_ASSERT(iob->size());
-    BOOST_ASSERT(gap + len + i <= iob->size());
-    if (!fresh && !i) { TRACE() << "eof"; return; }
+    iob->pop_front( f(iob->begin(), iob->end(), i) );
+    return i;
+  }
+};
+
+// ----- handlers -------------------------------------------------------------
+
+struct tracer
+{
+  void operator() (shared_socket const & s) const
+  {
+    TRACE() << "We just accepted (and ignored) a connection.";
+  }
+
+  bool operator() (shared_page & iob, std::size_t i) const
+  {
+    BOOST_ASSERT(iob);
     if (i)
     {
-      TRACE() << i << " new bytes of input available, run handler";
-      std::size_t const n( f( &(*iob)[gap], &(*iob)[gap + len + i], i) );
-      TRACE() << "handler consumed " << n << " bytes";
-      len += i;
-      BOOST_ASSERT(n <= len);
-      len -= n;
-      gap = len ? gap + n : 0u;
-      BOOST_ASSERT(gap + len <= iob->size());
+      iob->pop_front( (*this)(iob->begin(), iob->end(), i) );
+      return true;
     }
-    TRACE() << "buffer gap = " << gap << ", len = " << len << ", cap = " << iob->size();
-    if (gap + len == iob->size())
+    else
     {
-      TRACE() << "buffer is full";
-      if (gap)
-      {
-        TRACE() << "flush gap";
-        std::copy( &(*iob)[gap], &(*iob)[gap + len], &(*iob)[0] );
-        gap = 0u;
-      }
-      else
-      {
-        iob->reserve(iob->size() * 2);
-        iob->resize(iob->capacity());
-        TRACE() << "re-sized buffer to " << iob->size() << " bytes";
-      }
+      TRACE() << "page contains " << iob->size() << " bytes at time of eof";
+      return false;
     }
-    BOOST_ASSERT(gap + len < iob->size());
-    TRACE() << "read at most " << (iob->size() - gap - len) << " bytes";
-    s->async_read_some
-      ( boost::asio::buffer(&(*iob)[gap + len], iob->size() - gap - len)
-      , boost::bind( *this, s, f, iob, gap, len
-                   , boost::asio::placeholders::bytes_transferred
-                   , false
-                   )
-      );
+  }
+
+  std::size_t operator() (byte_const_ptr begin, byte_const_ptr end, std::size_t i) const
+  {
+    BOOST_ASSERT(begin <= end);
+    BOOST_ASSERT(i <= static_cast<std::size_t>(end - begin));
+    size_t const drop( static_cast<std::size_t>(rand()) % (end - begin));
+    TRACE() << "streambuf: read " << i << " bytes, dropping " << drop;;
+    return drop;
+  }
+
+  void operator() (shared_page const & iob) const
+  {
+    BOOST_ASSERT(iob);
+    TRACE() << "slurped buffer: " << *iob;
   }
 };
 
-// ----- TCP Session ----------------------------------------------------------
-
-class session
+template <class Handler>
+struct slurp
 {
-  tcp_socket            _sock;
-  std::vector<char>     _buf;
-
-public:
-  session(io_service & ios) : _sock(ios), _buf(1024u)
+  bool operator() (shared_page & iob, std::size_t i, Handler f = Handler()) const
   {
-    TRACE() << "init session";
-  }
-
-  ~session()
-  {
-    TRACE() << "close session";
-  }
-
-  tcp_socket & socket()     { return _sock; }
-
-  void start()
-  {
-    _sock.async_read_some
-      ( boost::asio::buffer(_buf, _buf.size())
-      , boost::bind( &session::handle_read, this
-                   , boost::asio::placeholders::error
-                   , boost::asio::placeholders::bytes_transferred
-                   )
-      );
-  }
-
-  void handle_read(boost::system::error_code const & error, size_t bytes_transferred)
-  {
-    if (!error)
-    {
-      boost::asio::async_write(_sock,
-          boost::asio::buffer(_buf, bytes_transferred),
-          boost::bind(&session::handle_write, this,
-            boost::asio::placeholders::error));
-    }
-    else
-    {
-      delete this;
-    }
-  }
-
-  void handle_write(const boost::system::error_code& error)
-  {
-    if (!error)
-    {
-      _sock.async_read_some(boost::asio::buffer(_buf, _buf.size()),
-          boost::bind(&session::handle_read, this,
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::bytes_transferred));
-    }
-    else
-    {
-      delete this;
-    }
+    BOOST_ASSERT(iob);
+    if (!i) f(iob);
+    return i;
   }
 };
 
-class server
-{
-public:
-  server(io_service & ios, short port)
-    : io_service_(ios), acceptor_(ios, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
-  {
-    TRACE() << __PRETTY_FUNCTION__;
-    session* new_session = new session(io_service_);
-    acceptor_.async_accept(new_session->socket(),
-        boost::bind(&server::handle_accept, this, new_session,
-          boost::asio::placeholders::error));
-  }
-
-  ~server()
-  {
-    TRACE() << __PRETTY_FUNCTION__;
-  }
-
-  void handle_accept(session* new_session,
-      const boost::system::error_code& error)
-  {
-    if (!error)
-    {
-      new_session->start();
-      new_session = new session(io_service_);
-      acceptor_.async_accept(new_session->socket(),
-          boost::bind(&server::handle_accept, this, new_session,
-            boost::asio::placeholders::error));
-    }
-    else
-    {
-      delete new_session;
-    }
-  }
-
-private:
-  io_service &          io_service_;
-  tcp_acceptor          acceptor_;
-};
+// ----- test program ---------------------------------------------------------
 
 io_service * the_io_service;
 
@@ -328,37 +254,9 @@ static void stop_service()
   the_io_service->stop();
 }
 
-struct trace_accept
-{
-  void operator() (shared_socket const & s) const
-  {
-    TRACE() << "We just accepted a connection.";
-  }
-};
-
-struct trace_input
-{
-  std::size_t operator() (char const * begin, char const * end, std::size_t i) const
-  {
-    BOOST_ASSERT(begin < end);
-    BOOST_ASSERT(i);
-    BOOST_ASSERT(i <= static_cast<std::size_t>(end - begin));
-    TRACE() << "We just received " << i << " bytes of input";
-    return static_cast<std::size_t>(rand()) % (end - begin);
-  }
-};
-
 int cpp_main(int argc, char ** argv)
 {
   using namespace std;
-
-  // Make sure usage is correct.
-
-  if (argc != 2)
-  {
-    INFO() << "Usage: " << argv[0] << " <port>";
-    return 1;
-  }
 
   // Setup the system.
 
@@ -377,12 +275,17 @@ int cpp_main(int argc, char ** argv)
   // Start the server.
 
   tcp_acceptor port2525(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
-  drive_tcp<trace_accept>(port2525);
+  tcp_driver<tracer>(port2525);
 
   tcp_acceptor port2526(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
-  drive_tcp< drive_input<trace_input> >(port2526);
+  tcp_driver< input_driver< stream_driver< tracer > > >(port2526);
 
-  server s(global_ios, atoi(argv[1]));
+  tcp_acceptor port2527(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2527));
+  tcp_driver< input_driver<tracer> >(port2527);
+
+  tcp_acceptor port2528(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2528));
+  tcp_driver< input_driver< slurp<tracer> > >(port2528);
+
   boost::thread t1(boost::bind(&io_service::run, the_io_service));
   boost::thread t2(boost::bind(&io_service::run, the_io_service));
   boost::thread t3(boost::bind(&io_service::run, the_io_service));
