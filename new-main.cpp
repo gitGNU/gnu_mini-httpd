@@ -14,7 +14,8 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/range.hpp>
-#include <boost/pending/integer_log2.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 #include <csignal>
 #include <cstdlib>              // std::size_t, std::ptrdiff_t
 #include <cstring>              // std::memmove()
@@ -249,7 +250,7 @@ struct tracer
 
 // ----- test program ---------------------------------------------------------
 
-io_service * the_io_service;
+static boost::scoped_ptr<io_service> the_io_service;
 
 static void stop_service()
 {
@@ -266,9 +267,7 @@ int cpp_main(int argc, char ** argv)
   srand(time(0));
   ios::sync_with_stdio(false);
   init_logging();
-
-  io_service global_ios;
-  the_io_service = &global_ios;
+  the_io_service.reset(new io_service);
   signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
@@ -277,25 +276,27 @@ int cpp_main(int argc, char ** argv)
 
   // Start the server.
 
-  tcp_acceptor port2525(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
+  tcp_acceptor port2525(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
   tcp_driver<tracer>(port2525);
 
-  tcp_acceptor port2526(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
+  tcp_acceptor port2526(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
   tcp_driver< input_driver< stream_driver< tracer > > >(port2526);
 
-  tcp_acceptor port2527(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2527));
+  tcp_acceptor port2527(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2527));
   tcp_driver< input_driver<tracer> >(port2527);
 
-  tcp_acceptor port2528(global_ios, tcp_endpoint(boost::asio::ip::tcp::v4(), 2528));
+  tcp_acceptor port2528(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2528));
   tcp_driver< input_driver< slurp<tracer> > >(port2528);
 
-  boost::thread t1(boost::bind(&io_service::run, the_io_service));
-  boost::thread t2(boost::bind(&io_service::run, the_io_service));
-  boost::thread t3(boost::bind(&io_service::run, the_io_service));
-  global_ios.run();
-  t1.join(); t2.join(); t3.join();
+  boost::thread t1(boost::bind(&io_service::run, the_io_service.get()));
+  boost::thread t2(boost::bind(&io_service::run, the_io_service.get()));
+  boost::thread t3(boost::bind(&io_service::run, the_io_service.get()));
+  the_io_service->run();
 
   // Shut down gracefully.
+
+  t1.join(); t2.join(); t3.join();
+  the_io_service.reset();
 
   return 0;
 }
