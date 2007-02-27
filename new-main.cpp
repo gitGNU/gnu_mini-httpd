@@ -141,13 +141,13 @@ typedef boost::asio::ip::tcp::endpoint  tcp_endpoint;
 
 template <class Handler>
 inline void tcp_driver( tcp_acceptor & acc
-                      , shared_socket  s = shared_socket()
                       , Handler        f = Handler()
+                      , shared_socket  s = shared_socket()
                       )
 {
   if (s) f(s);
   s.reset( new tcp_socket(acc.io_service()) );
-  acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), s, f));
+  acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), f, s));
 }
 
 template <class Handler>
@@ -156,12 +156,13 @@ struct input_driver
   typedef void result_type;
 
   void operator()( shared_socket  s
-                 , Handler        f     = Handler()
                  , shared_page    iob   = shared_page(new page(min_buf_size))
+                 , Handler        f     = Handler()
                  , size_t         i     = 0u
                  , bool           fresh = true
                  )      const
   {
+    BOOST_ASSERT(s);
     BOOST_ASSERT(iob);
     if (!fresh)
     {
@@ -176,7 +177,7 @@ struct input_driver
     using boost::asio::placeholders::bytes_transferred;
     s->async_read_some
       ( boost::asio::buffer(iob->end(), iob->space())
-      , boost::bind( *this, s, f, iob, bytes_transferred, false )
+      , boost::bind( *this, s, iob, f, bytes_transferred, false )
       );
   }
 };
@@ -186,7 +187,7 @@ struct stream_driver
 {
   typedef bool result_type;
 
-  bool operator()(shared_page iob, size_t i, Handler f = Handler()) const
+  bool operator()(shared_page & iob, size_t i, Handler f = Handler()) const
   {
     iob->pop_front( f(iob->begin(), iob->end(), i) );
     return i;
