@@ -194,6 +194,19 @@ struct stream_driver
   }
 };
 
+template <class Handler>
+struct slurp
+{
+  typedef bool result_type;
+
+  bool operator() (shared_page & iob, std::size_t i, Handler f = Handler()) const
+  {
+    BOOST_ASSERT(iob);
+    if (!i) f(iob);
+    return i;
+  }
+};
+
 // ----- handlers -------------------------------------------------------------
 
 struct tracer
@@ -231,17 +244,6 @@ struct tracer
   {
     BOOST_ASSERT(iob);
     TRACE() << "slurped buffer: " << *iob;
-  }
-};
-
-template <class Handler>
-struct slurp
-{
-  bool operator() (shared_page & iob, std::size_t i, Handler f = Handler()) const
-  {
-    BOOST_ASSERT(iob);
-    if (!i) f(iob);
-    return i;
   }
 };
 
