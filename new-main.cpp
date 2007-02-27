@@ -214,30 +214,24 @@ struct tracer
 {
   void operator() (shared_socket const & s) const
   {
-    TRACE() << "We just accepted (and ignored) a connection.";
+    TRACE() << "accepted (and ignored) a new connection";
   }
 
   bool operator() (shared_page & iob, std::size_t i) const
   {
     BOOST_ASSERT(iob);
-    if (i)
-    {
-      iob->pop_front( (*this)(iob->begin(), iob->end(), i) );
-      return true;
-    }
-    else
-    {
-      TRACE() << "page contains " << iob->size() << " bytes at time of eof";
-      return false;
-    }
+    TRACE() << "page handler: drop all " << i << " input bytes";
+    iob->pop_front(i);
+    return i;
   }
 
   std::size_t operator() (byte_const_ptr begin, byte_const_ptr end, std::size_t i) const
   {
     BOOST_ASSERT(begin <= end);
-    BOOST_ASSERT(i <= static_cast<std::size_t>(end - begin));
-    size_t const drop( static_cast<std::size_t>(rand()) % (end - begin));
-    TRACE() << "streambuf: read " << i << " bytes, dropping " << drop;;
+    size_t const size( static_cast<std::size_t>(end - begin) );
+    BOOST_ASSERT(i <= size);
+    size_t const drop( static_cast<std::size_t>(rand()) % size );
+    TRACE() << "range handler: size = " << size << ", new = "  << i << ", drop = " << drop;
     return drop;
   }
 
@@ -276,6 +270,8 @@ int cpp_main(int argc, char ** argv)
 
   // Start the server.
 
+  INFO() << "new-mini-httpd 2007-02-27 starting up";
+
   tcp_acceptor port2525(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
   tcp_driver<tracer>(port2525);
 
@@ -292,6 +288,8 @@ int cpp_main(int argc, char ** argv)
   boost::thread t2(boost::bind(&io_service::run, the_io_service.get()));
   boost::thread t3(boost::bind(&io_service::run, the_io_service.get()));
   the_io_service->run();
+
+  INFO() << "new-mini-httpd 2007-02-27 shutting down";
 
   // Shut down gracefully.
 

@@ -125,7 +125,7 @@ try
   // Log some helpful information.
 
   BOOST_LOGL(::http::logging::misc, info)
-    << "mini-httpd 2006-12-06 starting up"
+    << "mini-httpd 2007-02-27 starting up"
     << ": listen port = "  << config->http_port
     << ", user id = "      << ::getuid()
     << ", group id = "     << ::getgid()
