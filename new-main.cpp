@@ -79,9 +79,11 @@ public:
   iobuf(size_t cap = 0u) : _buf(cap)    { reset(); }
 
   byte_ptr        buf_begin()           { return &_buf[0]; }
-  byte_const_ptr  buf_begin() const     { return &_buf[0]; }
+  byte_const_ptr  buf_begin()  const    { return &_buf[0]; }
   byte_ptr        buf_end()             { return &_buf[_buf.size()]; }
-  byte_const_ptr  buf_end()   const     { return &_buf[_buf.size()]; }
+  byte_const_ptr  buf_end()    const    { return &_buf[_buf.size()]; }
+  size_t          front_gap()  const    { return begin() - buf_begin(); }
+  size_t          back_space() const    { return buf_end() - end(); }
 
   void reset()
   {
@@ -100,14 +102,15 @@ public:
 
   size_t flush_gap()
   {
-    byte_ptr const buf_beg( buf_begin() );
-    byte_ptr const data_beg( begin() );
-    BOOST_ASSERT(buf_beg <= data_beg);
-    size_t const gap_len( data_beg - buf_beg );
-    size_t const data_len( size() );
-    std::memmove(buf_beg, data_beg, data_len);
-    reset(buf_beg, buf_beg + data_len);
-    return gap_len;
+    size_t const gap( front_gap() );
+    if (gap)
+    {
+      byte_ptr const base( buf_begin() );
+      size_t const len( size() );
+      std::memmove(base, begin(), len);
+      reset(base, base + len);
+    }
+    return gap;
   }
 
   void realloc(size_t n)
@@ -125,9 +128,9 @@ typedef boost::shared_ptr<iobuf> shared_iobuf;
 
 inline std::ostream & operator<< (std::ostream & os, iobuf const & p)
 {
-  return os << "gap = "     << p.begin() - p.buf_begin()
+  return os << "gap = "     << p.front_gap()
             << ", size = "  << p.size()
-            << ", space = " << p.buf_end() - p.end();
+            << ", space = " << p.back_space();
 }
 
 // ----- Central Services -----------------------------------------------------
@@ -163,12 +166,12 @@ struct input_driver
       if (!f(iob, i) || !i)
         return;
     }
-    size_t space( iob->buf_end() - iob->end() );
+    size_t space( iob->back_space() );
     if (!space)
     {
       if (!iob->flush_gap())
         iob->realloc(std::max(min_buf_size, iob->size() * 2u));
-      space = iob->buf_end() - iob->end();
+      space = iob->back_space();
       BOOST_ASSERT(space);
     }
     using boost::asio::placeholders::bytes_transferred;
