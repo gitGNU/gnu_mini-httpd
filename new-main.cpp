@@ -53,20 +53,10 @@ typedef char                                    byte;
 typedef std::allocator<byte>                    byte_allocator;
 typedef byte_allocator::pointer                 byte_ptr;
 typedef byte_allocator::const_pointer           byte_const_ptr;
+typedef std::vector<byte, byte_allocator>       io_vector;
 
 typedef boost::iterator_range<byte_ptr>         byte_range;
 typedef boost::iterator_range<byte_const_ptr>   byte_const_range;
-
-
-typedef boost::asio::io_service                 io_service;
-typedef std::vector<byte, byte_allocator>       io_vector;
-typedef boost::asio::ip::tcp::socket            tcp_socket;
-typedef boost::asio::ip::tcp::endpoint          tcp_endpoint;
-typedef boost::asio::ip::tcp::acceptor          tcp_acceptor;
-
-typedef boost::shared_ptr<tcp_socket>           shared_socket;
-typedef boost::shared_ptr<tcp_acceptor>         shared_acceptor;
-typedef boost::shared_ptr<io_vector>            shared_vector;
 
 class iobuf : public byte_range
 {
@@ -124,8 +114,6 @@ public:
   }
 };
 
-typedef boost::shared_ptr<iobuf> shared_iobuf;
-
 inline std::ostream & operator<< (std::ostream & os, iobuf const & p)
 {
   return os << "gap = "     << p.front_gap()
@@ -135,6 +123,16 @@ inline std::ostream & operator<< (std::ostream & os, iobuf const & p)
 
 // ----- Central Services -----------------------------------------------------
 
+typedef boost::asio::io_service                 io_service;
+typedef boost::asio::ip::tcp::socket            tcp_socket;
+typedef boost::asio::ip::tcp::endpoint          tcp_endpoint;
+typedef boost::asio::ip::tcp::acceptor          tcp_acceptor;
+
+typedef boost::shared_ptr<tcp_socket>           shared_socket;
+typedef boost::shared_ptr<tcp_acceptor>         shared_acceptor;
+typedef boost::shared_ptr<io_vector>            shared_vector;
+typedef boost::shared_ptr<iobuf>                shared_iobuf;
+
 template <class Handler>
 inline void tcp_driver( tcp_acceptor & acc
                       , Handler        f = Handler()
@@ -142,7 +140,7 @@ inline void tcp_driver( tcp_acceptor & acc
                       )
 {
   if (s) f(s);
-  s.reset( new tcp_socket(acc.io_service()) );
+  s.reset(new tcp_socket( acc.io_service() ));
   acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), f, s));
 }
 
@@ -163,7 +161,7 @@ struct input_driver
     if (!fresh)
     {
       iob->append(i);
-      if (!f(iob, i) || !i)
+      if (!f(*iob, i) || !i)
         return;
     }
     size_t space( iob->back_space() );
@@ -187,10 +185,18 @@ struct stream_driver
 {
   typedef bool result_type;
 
-  bool operator()(shared_iobuf iob, size_t i, Handler f = Handler()) const
+  bool operator()(iobuf & iob, size_t i, Handler f = Handler()) const
   {
-    BOOST_ASSERT(iob);
-    iob->consume( f(iob->begin(), iob->end(), i) );
+    TRACE() << "stream handler entry: " << iob << ", new input = " << i;
+    size_t k( f(iob.begin(), iob.end(), i) );
+    iob.consume(k);
+    if (i)
+      while (k && !iob.empty())
+      {
+        k = f(iob.begin(), iob.end(), std::min(i, iob.size()));
+        iob.consume(k);
+      }
+    TRACE() << "stream handler exit: " << iob;
     return i;
   }
 };
@@ -200,9 +206,8 @@ struct slurp
 {
   typedef bool result_type;
 
-  bool operator() (shared_iobuf iob, std::size_t i, Handler f = Handler()) const
+  bool operator() (iobuf & iob, std::size_t i, Handler f = Handler()) const
   {
-    BOOST_ASSERT(iob);
     if (!i) f(iob);
     return i;
   }
@@ -217,17 +222,16 @@ struct tracer
     TRACE() << "accepted (and ignored) a new connection";
   }
 
-  bool operator() (shared_iobuf iob, std::size_t i) const
+  bool operator() (iobuf & iob, std::size_t i) const
   {
-    BOOST_ASSERT(iob);
-    size_t const size( iob->size() );
+    size_t const size( iob.size() );
     BOOST_ASSERT(i <= size);
     if (size)
     {
       size_t const drop( static_cast<std::size_t>(rand()) % size );
-      iob->consume(drop);
+      iob.consume(drop);
     }
-    TRACE() << "iobuf handler: " << *iob;
+    TRACE() << "iobuf handler: " << iob;
     return i;
   }
 
@@ -235,18 +239,16 @@ struct tracer
   {
     BOOST_ASSERT(begin <= end);
     size_t const size( static_cast<std::size_t>(end - begin) );
-    TRACE() << "range handler: read " << i << ", giving range size " << size;
     BOOST_ASSERT(i <= size);
     if (size)   i = static_cast<std::size_t>(rand()) % size;
     else        BOOST_ASSERT(!i);
-    TRACE() << "range handler: drop " << i << " from range size " << size;
+    TRACE() << "range handler: drop " << i;
     return i;
   }
 
-  void operator() (shared_iobuf const & iob) const
+  void operator() (iobuf const & iob) const
   {
-    BOOST_ASSERT(iob);
-    TRACE() << "slurped buffer: " << *iob;
+    TRACE() << "slurped buffer: " << iob;
   }
 };
 
