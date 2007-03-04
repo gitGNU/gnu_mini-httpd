@@ -598,7 +598,7 @@ void http::daemon::log_access()
 
 // ----- Standard Responses ---------------------------------------------------
 
-void http::daemon::protocol_error(string const & message)
+void http::daemon::protocol_error(std::string const & message)
 {
   HINFO() "protocol error: closing connection";
 
@@ -663,7 +663,7 @@ void http::daemon::file_not_found()
   go_to_write_mode();
 }
 
-void http::daemon::moved_permanently(string const & path)
+void http::daemon::moved_permanently(std::string const & path)
 {
   HTRACE() "Requested page "
     << request.url.path << " has moved to '"

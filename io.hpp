@@ -13,6 +13,11 @@
 #ifndef MINI_HTTPD_IO_HPP_INCLUDED
 #define MINI_HTTPD_IO_HPP_INCLUDED
 
+/**
+ *  \file  io.hpp
+ *  \brief High-level I/O driver interface.
+ */
+
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>

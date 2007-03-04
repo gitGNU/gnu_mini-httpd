@@ -178,7 +178,7 @@ bool http::parser::supports_persistent_connection(const Request & request)
     return false;
 }
 
-size_t http::parser::parse_header(string & name, string & data, string const & input) const
+size_t http::parser::parse_header(std::string & name, std::string & data, std::string const & input) const
 {
   name_ptr = &name;
   data_ptr = &data;
@@ -190,7 +190,7 @@ size_t http::parser::parse_header(string & name, string & data, string const & i
     return 0;
 }
 
-size_t http::parser::parse_request_line(Request & request, string const & input) const
+size_t http::parser::parse_request_line(Request & request, std::string const & input) const
 {
   req_ptr = &request;
   url_ptr = &request.url;
@@ -202,7 +202,7 @@ size_t http::parser::parse_request_line(Request & request, string const & input)
     return 0;
 }
 
-size_t http::parser::parse_host_header(Request & request, string const & input) const
+size_t http::parser::parse_host_header(Request & request, std::string const & input) const
 {
   req_ptr = &request;
 
@@ -213,7 +213,7 @@ size_t http::parser::parse_host_header(Request & request, string const & input) 
     return 0;
 }
 
-size_t http::parser::parse_if_modified_since_header(Request & request, string const & input) const
+size_t http::parser::parse_if_modified_since_header(Request & request, std::string const & input) const
 {
   memset(&tm_date, 0, sizeof(tm_date));
 
