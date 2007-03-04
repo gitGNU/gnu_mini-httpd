@@ -109,6 +109,7 @@ public:
   byte_const_ptr  buf_begin()  const    { return &_buf[0]; }
   byte_ptr        buf_end()             { return &_buf[_buf.size()]; }
   byte_const_ptr  buf_end()    const    { return &_buf[_buf.size()]; }
+  size_t          capacity()   const    { return _buf.size(); }
   size_t          front_gap()  const    { return begin() - buf_begin(); }
   size_t          back_space() const    { return buf_end() - end(); }
 
@@ -148,6 +149,30 @@ public:
     std::memmove(&new_buf[0], begin(), len);
     _buf.swap(new_buf);
     reset(buf_begin(), buf_begin() + len);
+  }
+
+  // \todo remove ASAP
+  friend inline std::ostream & operator<< (std::ostream &, input_buffer const &);
+
+  size_t flush()                // return free space
+  {
+    size_t const len( size() );
+    size_t space( back_space() );
+    if (front_gap() > std::max(len, space))
+    {
+      TRACE() << "force gap flushing: " << *this;
+      flush_gap();
+      space = back_space();
+    }
+    else if (space * 2u <= std::min(len, min_buf_size))
+    {
+      size_t const cap( std::max(min_buf_size, capacity() * 2u) );
+      TRACE() << "reallocate to " << cap << " bytes: " << *this;
+      realloc(cap);
+      space = back_space();
+    }
+    BOOST_ASSERT(space);
+    return space;
   }
 };
 
@@ -271,14 +296,8 @@ struct io_driver
   static void start_read(ctx_ptr ctx)
   {
     ctx->outbuf.reset();
-    size_t space( ctx->inbuf.back_space() );
-    if (!space)
-    {
-      if (!ctx->inbuf.flush_gap())
-        ctx->inbuf.realloc(std::max(min_buf_size, ctx->inbuf.size() * 2u));
-      space = ctx->inbuf.back_space();
-      BOOST_ASSERT(space);
-    }
+    size_t const space( ctx->inbuf.flush() );
+    BOOST_ASSERT(space);
     using boost::asio::placeholders::bytes_transferred;
     ctx->insock->async_read_some
       ( boost::asio::buffer(ctx->inbuf.end(), space)
@@ -366,9 +385,8 @@ struct tracer
     if (size)
     {
       i = !i ? size : static_cast<std::size_t>(rand()) % size;
-      outbuf.append(boost::asio::buffer(begin, i));
+      outbuf.append(begin, begin + i);
     }
-    else        BOOST_ASSERT(!i);
     return i;
   }
 };
@@ -391,14 +409,15 @@ int cpp_main(int argc, char ** argv)
 
   // Setup the system.
 
+  srand(time(0));
+  ios::sync_with_stdio(false);
+
 #if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
 #  ifndef LOG_PERROR
 #    define LOG_PERROR 0
 #  endif
   openlog(PACKAGE_NAME, LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
 #endif
-  srand(time(0));
-  ios::sync_with_stdio(false);
   init_logging();
   the_io_service.reset(new io_service);
   signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
