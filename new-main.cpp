@@ -23,12 +23,16 @@
 #include <boost/log/log_impl.hpp>
 #include <boost/log/functions.hpp>
 
+static char const PACKAGE_NAME[]    = "micro-httpd";
+static char const PACKAGE_VERSION[] = "2007-02-19";
+
 // ----- Logging --------------------------------------------------------------
 
 BOOST_DECLARE_LOG_DEBUG(logger)
-BOOST_DEFINE_LOG(logger, "httpd.new-main")
+BOOST_DEFINE_LOG(logger, PACKAGE_NAME)
 #define TRACE() BOOST_LOGL(logger, dbg)
 #define INFO()  BOOST_LOGL(logger, info)
+#define ERROR()  BOOST_LOGL(logger, err)
 
 static void write_to_cerr(std::string const & prefix, std::string const & msg)
 {
@@ -198,10 +202,10 @@ typedef boost::shared_ptr<io_vector>            shared_vector;
 typedef boost::shared_ptr<input_buffer>         shared_input_buffer;
 typedef boost::shared_ptr<output_buffer>        shared_output_buffer;
 
-template <class Handler>        // void (shared_socket &)
-inline void tcp_driver( tcp_acceptor & acc
-                      , Handler        f = Handler()
-                      , shared_socket  s = shared_socket()
+template <class Handler>
+inline void tcp_driver( tcp_acceptor &  acc
+                      , Handler         f = Handler()
+                      , shared_socket   s = shared_socket()
                       )
 {
   if (s) f.start(s);
@@ -210,115 +214,100 @@ inline void tcp_driver( tcp_acceptor & acc
 }
 
 template <class Handler>        // bool (input_buffer &, size_t, output_buffer &)
-class io_driver : public Handler
+struct io_driver
 {
-  shared_socket         _insock, _outsock;
-  shared_input_buffer   _inbuf;
-  shared_output_buffer  _outbuf;
-
-public:
-  io_driver() { }
-
-  typedef void result_type;
-
-  void start(shared_socket const sin) { start(sin, sin); }
-
-  void start(shared_socket const & sin, shared_socket const & sout)
+  struct context : private boost::noncopyable
   {
-    TRACE() << "initialize io_driver";
-    BOOST_ASSERT(sin && sout);
-    _insock = sin;
-    _outsock = sout;
-    _inbuf.reset(new input_buffer(min_buf_size));
-    _outbuf.reset(new output_buffer);
-    start_read();
+    shared_socket       insock, outsock;
+    input_buffer        inbuf;
+    output_buffer       outbuf;
+    Handler             f;
+  };
+
+  typedef boost::shared_ptr<context> ctx_ptr;
+
+  static void start( shared_socket const & sin
+                   , shared_socket const & sout = shared_socket()
+                   )
+  {
+    BOOST_ASSERT(sin);
+    ctx_ptr ctx(new context);
+    ctx->insock  = sin;
+    ctx->outsock = sout ? sout : sin;
+    start_read(ctx);
   }
 
-  void stop() { *this = io_driver(); }
-
-  void start_read()
+  static void start_read(ctx_ptr ctx)
   {
-    size_t space( _inbuf->back_space() );
+    ctx->outbuf.reset();
+    size_t space( ctx->inbuf.back_space() );
     if (!space)
     {
-      if (!_inbuf->flush_gap())
-        _inbuf->realloc(std::max(min_buf_size, _inbuf->size() * 2u));
-      space = _inbuf->back_space();
+      if (!ctx->inbuf.flush_gap())
+        ctx->inbuf.realloc(std::max(min_buf_size, ctx->inbuf.size() * 2u));
+      space = ctx->inbuf.back_space();
       BOOST_ASSERT(space);
     }
-    TRACE() << "start reading for " << space << " bytes";
     using boost::asio::placeholders::bytes_transferred;
-    _insock->async_read_some
-      ( boost::asio::buffer(_inbuf->end(), space)
-      , boost::bind( &io_driver::new_input, *this, bytes_transferred )
+    ctx->insock->async_read_some
+      ( boost::asio::buffer(ctx->inbuf.end(), space)
+      , boost::bind( &io_driver::new_input, ctx, bytes_transferred )
       );
   }
 
-  void new_input(std::size_t i)
+  static void new_input(ctx_ptr ctx, std::size_t i)
   {
-    TRACE() << "process " << i << " new input bytes";
-    _outbuf->reset();
-    _inbuf->append(i);
-    bool const more_input( Handler::operator()(*_inbuf, i, *_outbuf) && i );
-    scatter_vector const & outbuf( _outbuf->commit() );
+    ctx->inbuf.append(i);
+    bool const more_input( ctx->f(ctx->inbuf, i, ctx->outbuf) && i );
+    scatter_vector const & outbuf( ctx->outbuf.commit() );
     if (more_input)
     {
-      if (outbuf.empty()) start_read();
-      else                start_write(outbuf);
+      if (outbuf.empty())
+        start_read(ctx);
+      else
+        boost::asio::async_write
+          ( *ctx->outsock
+          , outbuf
+          , boost::bind( &io_driver::start_read, ctx )
+          );
     }
     else
     {
-      if (outbuf.empty()) stop();
-      else                last_write(outbuf);
+      if (!outbuf.empty())
+        boost::asio::async_write
+          ( *ctx->outsock
+          , outbuf
+          , boost::bind( &io_driver::stop, ctx )
+          );
     }
   }
 
-  void start_write(scatter_vector const & buf)
+  static void stop(ctx_ptr ctx)
   {
-    TRACE() << "start writing " << buf.size() << " iovecs";
-    boost::asio::async_write(*_outsock, buf, boost::bind(&io_driver::start_read, *this));
-  }
-
-  void last_write(scatter_vector const & buf)
-  {
-    _insock.reset();
-    TRACE() << "flush " << buf.size() << " iovecs";
-    boost::asio::async_write(*_outsock, buf, boost::bind(&io_driver::stop, *this));
+    ctx.reset();
   }
 };
 
-// template <class Handler>        // size_t (byte_ptr, byte_ptr, size_t)
-// struct stream_driver
-// {
-//   typedef bool result_type;
-//
-//   bool operator()(input_buffer & inbuf, size_t i, Handler f = Handler()) const
-//   {
-//     TRACE() << "stream handler entry: " << inbuf << ", new input = " << i;
-//     size_t k( f(inbuf.begin(), inbuf.end(), i) );
-//     inbuf.consume(k);
-//     if (i)
-//       while (k && !inbuf.empty())
-//       {
-//         k = f(inbuf.begin(), inbuf.end(), std::min(i, inbuf.size()));
-//         inbuf.consume(k);
-//       }
-//     TRACE() << "stream handler exit: " << inbuf;
-//     return i;
-//   }
-// };
-//
-// template <class Handler>        // void (shared_input_buffer &)
-// struct slurp
-// {
-//   typedef bool result_type;
-//
-//   bool operator() (input_buffer & inbuf, std::size_t i, Handler f = Handler()) const
-//   {
-//     if (!i) f(inbuf);
-//     return i;
-//   }
-// };
+template <class Handler>        // size_t (byte_ptr, byte_ptr, size_t, output_buffer &)
+struct stream_driver : public Handler
+{
+  typedef bool result_type;
+
+  bool operator()(input_buffer & inbuf, size_t i, output_buffer & outbuf)
+  {
+    TRACE() << "stream handler entry: " << inbuf << ", new input = " << i;
+    size_t k( Handler::operator()(inbuf.begin(), inbuf.end(), i, outbuf) );
+    inbuf.consume(k);
+    if (i)
+      while (k && !inbuf.empty())
+      {
+        k = Handler::operator()(inbuf.begin(), inbuf.end(), std::min(i, inbuf.size()), outbuf);
+        inbuf.consume(k);
+      }
+    TRACE() << "stream handler exit: " << inbuf << ", " << outbuf;
+    return i;
+  }
+};
 
 // ----- handlers -------------------------------------------------------------
 
@@ -338,24 +327,24 @@ struct tracer
     return i;
   }
 
-  std::size_t operator() (byte_const_ptr begin, byte_const_ptr end, std::size_t i) const
+  std::size_t operator() (byte_const_ptr begin, byte_const_ptr end, std::size_t i, output_buffer & outbuf) const
   {
     BOOST_ASSERT(begin <= end);
     size_t const size( static_cast<std::size_t>(end - begin) );
     BOOST_ASSERT(i <= size);
-    if (size)   i = static_cast<std::size_t>(rand()) % size;
+    if (size)
+    {
+      i = !i ? size : static_cast<std::size_t>(rand()) % size;
+      outbuf.append(boost::asio::buffer(begin, i));
+    }
     else        BOOST_ASSERT(!i);
-    TRACE() << "range handler: drop " << i;
     return i;
-  }
-
-  void operator() (input_buffer const & inbuf) const
-  {
-    TRACE() << "slurped buffer: " << inbuf;
   }
 };
 
 // ----- test program ---------------------------------------------------------
+
+#include <boost/program_options.hpp>
 
 static boost::scoped_ptr<io_service> the_io_service;
 
@@ -381,29 +370,60 @@ int cpp_main(int argc, char ** argv)
   signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGPIPE, SIG_IGN);
 
-  // Start the server.
+  // Parse the command line.
 
-  INFO() << "new-mini-httpd 2007-03-04 starting up";
+  namespace po = boost::program_options;
 
-//   tcp_acceptor port2526(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
-//   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
+  po::options_description meta_opts("Administrative Options");
+  meta_opts.add_options()
+    ( "help,h",      "produce help message and exit" )
+    ( "version,v",   "show program version and exit" )
+    ;
 
-  tcp_acceptor port2527(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2527));
-  tcp_driver< io_driver<tracer> >(port2527);
+  size_t n_threads;
+  po::options_description httpd_opts("Daemon Configuration");
+  httpd_opts.add_options()
+    ( "threads,j", po::value<size_t>(&n_threads)->default_value(1u), "recommended value: number of CPUs" )
+    ( "no-detach,D"                                                , "do not detach from controlling tty" )
+    ;
 
-//   tcp_acceptor port2528(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2528));
-//   tcp_driver< io_driver< slurp<tracer> > >(port2528);
+  po::options_description opts
+    ( string(PACKAGE_NAME) + " " + PACKAGE_VERSION + " Commandline Interface" )
+    ;
+  opts.add(meta_opts).add(httpd_opts);
 
-  boost::thread t1(boost::bind(&io_service::run, the_io_service.get()));
-  boost::thread t2(boost::bind(&io_service::run, the_io_service.get()));
-  boost::thread t3(boost::bind(&io_service::run, the_io_service.get()));
+  po::variables_map vm;
+  po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
+  po::notify(vm);
+
+  if (vm.count("help"))     { cout << opts << endl;             return 0; }
+  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;  return 0; }
+  if (n_threads == 0u)      { ERROR() << "invalid option: -j0"; return 1; }
+
+  // Configure the listeners.
+
+  tcp_acceptor port2525(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
+  tcp_driver< io_driver<tracer> >(port2525);
+
+  tcp_acceptor port2526(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
+  tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
+
+  // Run the server.
+
+  typedef boost::thread                 thread;
+  typedef boost::shared_ptr<thread>     thread_ptr;
+  typedef vector<thread_ptr>            thread_pool;
+
+  INFO() << PACKAGE_NAME << " " << PACKAGE_VERSION << " running " << n_threads << " threads";
+
+  thread_pool pool;
+  for (thread_ptr p; --n_threads; pool.push_back(p))
+    p.reset(new thread(boost::bind(&io_service::run, the_io_service.get())));
   the_io_service->run();
 
-  INFO() << "new-mini-httpd 2007-03-04 shutting down";
+  INFO() << "shutting down";
 
-  // Shut down gracefully.
-
-  t1.join(); t2.join(); t3.join();
+  while(!pool.empty()) { pool.back()->join(); pool.pop_back(); }
   the_io_service.reset();
 
   return 0;
