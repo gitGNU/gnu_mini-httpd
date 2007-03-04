@@ -15,6 +15,7 @@ exe mini-httpd
 exe new-main
     : new-main.cpp
     : <use>/boost
+      <library>/boost/program_options//boost_program_options
       <library>/boost/thread//boost_thread
       <library>/boost/system//boost_system
       <library>/boost/test//boost_prg_exec_monitor
