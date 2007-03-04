@@ -55,6 +55,7 @@ struct tracer
 static char const PACKAGE_NAME[]    = "micro-httpd";
 static char const PACKAGE_VERSION[] = "2007-02-19";
 
+typedef boost::asio::io_service io_service;
 static boost::scoped_ptr<io_service> the_io_service;
 
 static void start_service()
@@ -120,12 +121,14 @@ int cpp_main(int argc, char ** argv)
          << " running " << n_threads << " threads "
          << (detach ? "as daemon" : "on current tty");
 
-  // Configure the listeners.
+  // Configure TCP listeners.
 
-  tcp_acceptor port2525(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2525));
+  using namespace boost::asio::ip;
+
+  tcp::acceptor port2525(*the_io_service, tcp::endpoint(tcp::v6(), 2525));
   tcp_driver< io_driver<tracer> >(port2525);
 
-  tcp_acceptor port2526(*the_io_service, tcp_endpoint(boost::asio::ip::tcp::v4(), 2526));
+  tcp::acceptor port2526(*the_io_service, tcp::endpoint(tcp::v6(), 2526));
   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
 
   // Run the server.
