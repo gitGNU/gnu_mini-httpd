@@ -144,7 +144,7 @@ class output_buffer : private boost::noncopyable
     ptrdiff_t const      fix;
 
     fix_base(output_buffer & iob) : end( byte_const_ptr(0) + iob._buf.size() )
-                                 , fix( &iob._buf[0] - byte_const_ptr(0) )
+                                  , fix( &iob._buf[0] - byte_const_ptr(0) )
     {
     }
 
@@ -158,17 +158,17 @@ class output_buffer : private boost::noncopyable
   };
 
 public:
-  void append(scatter_buffer const & iov) { _iovec.push_back(iov); }
+  void push_back(scatter_buffer const & iov) { _iovec.push_back(iov); }
 
   template <class Iter>
-  void append(Iter b, Iter e)
+  void push_back(Iter b, Iter e)
   {
     size_t const old_len( _buf.size() );
     _buf.insert(_buf.end(), b, e);
     size_t const new_len( _buf.size() );
     BOOST_ASSERT(old_len <= new_len);
     if (old_len != new_len)
-      append(scatter_buffer(byte_const_ptr(0) + old_len, new_len - old_len));
+      push_back(scatter_buffer(byte_const_ptr(0) + old_len, new_len - old_len));
   }
 
   scatter_vector const & commit()

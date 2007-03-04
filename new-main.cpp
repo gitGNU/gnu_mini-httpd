@@ -26,7 +26,7 @@ struct tracer
     if (size)
     {
       size_t const drop( !i ? size : static_cast<std::size_t>(rand()) % size );
-      outbuf.append(boost::asio::buffer(inbuf.begin(), drop));
+      outbuf.push_back(boost::asio::buffer(inbuf.begin(), drop));
       inbuf.consume(drop);
     }
     TRACE() << "input_buffer handler: " << inbuf << "; outbuf " << outbuf;
@@ -41,7 +41,7 @@ struct tracer
     if (size)
     {
       i = !i ? size : static_cast<std::size_t>(rand()) % size;
-      outbuf.append(begin, begin + i);
+      outbuf.push_back(begin, begin + i);
     }
     return i;
   }
@@ -57,6 +57,12 @@ static char const PACKAGE_VERSION[] = "2007-02-19";
 
 static boost::scoped_ptr<io_service> the_io_service;
 
+static void start_service()
+{
+  TRACE() << "enter i/o service thread pool";
+  the_io_service->run();
+}
+
 static void stop_service()
 {
   TRACE() << "received signal";
@@ -66,18 +72,8 @@ static void stop_service()
 int cpp_main(int argc, char ** argv)
 {
   using namespace std;
-
-  // Setup the system.
-
   srand(time(0));
   ios::sync_with_stdio(false);
-  init_logging(PACKAGE_NAME);
-  the_io_service.reset(new io_service);
-  signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGPIPE, SIG_IGN);
 
   // Parse the command line.
 
@@ -105,10 +101,24 @@ int cpp_main(int argc, char ** argv)
   po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
   po::notify(vm);
 
-  if (vm.count("help"))     { cout << opts << endl;                  return 0; }
-  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;       return 0; }
-  if (n_threads == 0u)      { cout << "invalid option: -j0" << endl; return 1; }
+  if (vm.count("help"))     { cout << opts << endl;                    return 0; }
+  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;         return 0; }
+  if (n_threads == 0u)      { cout << "no threads configured" << endl; return 1; }
   bool const detach( !vm.count("no-detach") );
+
+  // Setup the system.
+
+  init_logging(PACKAGE_NAME);
+  the_io_service.reset(new io_service);
+  signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGPIPE, SIG_IGN);
+
+  INFO() << "version " << PACKAGE_VERSION
+         << " running " << n_threads << " threads "
+         << (detach ? "as daemon" : "on current tty");
 
   // Configure the listeners.
 
@@ -120,14 +130,11 @@ int cpp_main(int argc, char ** argv)
 
   // Run the server.
 
-  INFO() << "version " << PACKAGE_VERSION
-         << " running " << n_threads << " threads "
-         << (detach ? "as daemon" : "using current tty");
-
   boost::thread_group pool;
-  while(--n_threads)
-    pool.create_thread( boost::bind(&io_service::run, the_io_service.get()) );
-  the_io_service->run();
+  while(--n_threads) pool.create_thread( &start_service );
+  start_service();
+
+  // Terminate gracefully.
 
   INFO() << "shutting down";
 
