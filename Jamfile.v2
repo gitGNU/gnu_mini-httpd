@@ -13,7 +13,7 @@ exe mini-httpd
     ;
 
 exe new-main
-    : new-main.cpp
+    : new-main.cpp logging.cpp
     : <use>/boost
       <library>/boost/program_options//boost_program_options
       <library>/boost/thread//boost_thread
