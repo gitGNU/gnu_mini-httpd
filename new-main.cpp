@@ -22,27 +22,58 @@
 #include <boost/test/prg_exec_monitor.hpp>
 #include <boost/log/log_impl.hpp>
 #include <boost/log/functions.hpp>
+#include <boost/log/extra/functions_ts.hpp>
+#if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
+#  include <syslog.h>
+#endif
 
 static char const PACKAGE_NAME[]    = "micro-httpd";
 static char const PACKAGE_VERSION[] = "2007-02-19";
 
 // ----- Logging --------------------------------------------------------------
 
-BOOST_DECLARE_LOG_DEBUG(logger)
-BOOST_DEFINE_LOG(logger, PACKAGE_NAME)
-#define TRACE() BOOST_LOGL(logger, dbg)
-#define INFO()  BOOST_LOGL(logger, info)
-#define ERROR()  BOOST_LOGL(logger, err)
+BOOST_DECLARE_LOG(logger_info)
+BOOST_DEFINE_LOG(logger_info,  "info")
+#define INFO()  BOOST_LOGL(logger_info, info)
 
-static void write_to_cerr(std::string const & prefix, std::string const & msg)
+BOOST_DECLARE_LOG_DEBUG(logger_debug)
+BOOST_DEFINE_LOG(logger_debug, "debug")
+#define TRACE() BOOST_LOGL(logger_debug, dbg)
+
+static void line_writer(std::string const & /* prefix */, std::string const & msg)
 {
-  std::cerr << '[' << prefix << "] " << msg << std::endl;
+#if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
+  syslog(LOG_INFO, "%s", msg.c_str());
+#else
+  std::cout << msg << std::endl;
+#endif
 }
+
+#ifdef BOOST_HAS_PTHREADS
+static void add_thread_id(std::string const & prefix, std::string & msg)
+{
+  using namespace std;
+  char tid[64];
+  int len( snprintf(tid, sizeof(tid), "[tid %lx] ", pthread_self()) );
+  BOOST_ASSERT(static_cast<size_t>(len) < sizeof(tid) );
+  msg.insert(msg.begin(), tid, tid + len);
+}
+#endif
 
 static void init_logging()
 {
   using namespace boost::logging;
-  manipulate_logs("*").add_appender(&write_to_cerr);
+  manipulate_logs("*")
+    .add_appender( line_writer )
+#if !defined(_POSIX_VERSION) || (_POSIX_VERSION < 200100)
+    .add_modifier( prepend_time("$yyyy-$MM-$ddT$hh:$mm:$ss ") )
+#endif
+    ;
+#ifdef BOOST_HAS_PTHREADS
+  manipulate_logs("debug")
+    .add_modifier( add_thread_id )
+#endif
+    ;
   flush_log_cache();
 }
 
@@ -360,6 +391,12 @@ int cpp_main(int argc, char ** argv)
 
   // Setup the system.
 
+#if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
+#  ifndef LOG_PERROR
+#    define LOG_PERROR 0
+#  endif
+  openlog(PACKAGE_NAME, LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
+#endif
   srand(time(0));
   ios::sync_with_stdio(false);
   init_logging();
@@ -383,12 +420,12 @@ int cpp_main(int argc, char ** argv)
   size_t n_threads;
   po::options_description httpd_opts("Daemon Configuration");
   httpd_opts.add_options()
-    ( "threads,j", po::value<size_t>(&n_threads)->default_value(1u), "recommended value: number of CPUs" )
-    ( "no-detach,D"                                                , "do not detach from controlling tty" )
+    ( "threads,j" , po::value<size_t>(&n_threads)->default_value(1u), "recommended value: number of CPUs"  )
+    ( "no-detach,D",                                                  "do not run in the background" )
     ;
 
   po::options_description opts
-    ( string(PACKAGE_NAME) + " " + PACKAGE_VERSION + " Commandline Interface" )
+    ( string("Commandline Interface ") + PACKAGE_NAME + " " + PACKAGE_VERSION)
     ;
   opts.add(meta_opts).add(httpd_opts);
 
@@ -396,9 +433,10 @@ int cpp_main(int argc, char ** argv)
   po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
   po::notify(vm);
 
-  if (vm.count("help"))     { cout << opts << endl;             return 0; }
-  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;  return 0; }
-  if (n_threads == 0u)      { ERROR() << "invalid option: -j0"; return 1; }
+  if (vm.count("help"))     { cout << opts << endl;                  return 0; }
+  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;       return 0; }
+  if (n_threads == 0u)      { cout << "invalid option: -j0" << endl; return 1; }
+  bool const detach( !vm.count("no-detach") );
 
   // Configure the listeners.
 
@@ -410,20 +448,18 @@ int cpp_main(int argc, char ** argv)
 
   // Run the server.
 
-  typedef boost::thread                 thread;
-  typedef boost::shared_ptr<thread>     thread_ptr;
-  typedef vector<thread_ptr>            thread_pool;
+  INFO() << "version " << PACKAGE_VERSION
+         << " running " << n_threads << " threads "
+         << (detach ? "as daemon" : "using current tty");
 
-  INFO() << PACKAGE_NAME << " " << PACKAGE_VERSION << " running " << n_threads << " threads";
-
-  thread_pool pool;
-  for (thread_ptr p; --n_threads; pool.push_back(p))
-    p.reset(new thread(boost::bind(&io_service::run, the_io_service.get())));
+  boost::thread_group pool;
+  while(--n_threads)
+    pool.create_thread( boost::bind(&io_service::run, the_io_service.get()) );
   the_io_service->run();
 
   INFO() << "shutting down";
 
-  while(!pool.empty()) { pool.back()->join(); pool.pop_back(); }
+  pool.join_all();
   the_io_service.reset();
 
   return 0;
