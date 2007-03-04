@@ -78,15 +78,18 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/range.hpp>
+#include <boost/assert.hpp>
 #include <vector>
-#include <cstdlib>              // std::size_t, std::ptrdiff_t
 #include <cstring>              // std::memmove()
+#include <cstdlib>              // std::size_t, std::ptrdiff_t
 #include "logging.hpp"
+
+// ----- Core Types -----------------------------------------------------------
 
 using std::size_t;
 using std::ptrdiff_t;
 
-/// \brief Magic lower limit for I/O buffer sizes.
+/// \brief Magic constant lower limit for I/O buffer sizes.
 static size_t const min_buf_size( 1024u );
 
 /// \brief Bytes may be signed or unsigned, we don't know.
@@ -104,20 +107,20 @@ typedef std::allocator<byte>                    byte_allocator;
 /**
  *  \brief A re-sizable buffer suitable for system I/O.
  *
- *  The original ISO standard did not guarantee that \c std::vector would use
- *  continous memory internally, but this point was revised in a technical
- *  report later.
+ *  The original ISO standard did not guarantee that \c std::vector
+ *  would use continous memory internally, but this point was revised in
+ *  a technical report later.
  */
 typedef std::vector<byte, byte_allocator>       io_vector;
 
 /**
  *  \brief A range is a pair of iterators.
  *
- *  Ranges are cheap to copy, they do not own the memory they refer to. At some
- *  point future, it might be nice to change \c byte_range to the system's
- *  native \c iovec type, so that it can be used for scatter I/O without
- *  copying, but as of now the Boost.Asio library wouldn't be able to take
- *  advantage of this fact anyway.
+ *  Ranges are cheap to copy, they do not own the memory they refer to.
+ *  At some point future, it might be nice to change \c byte_range to
+ *  the system's native \c iovec type, so that it can be used for
+ *  scatter I/O without copying, but as of now the Boost.Asio library
+ *  wouldn't be able to take advantage of this fact anyway.
  */
 typedef boost::iterator_range<byte_ptr>         byte_range;
 
@@ -139,6 +142,8 @@ typedef boost::asio::const_buffer               scatter_buffer;
  */
 typedef std::vector<scatter_buffer>             scatter_vector;
 
+// ----- Input ----------------------------------------------------------------
+
 /**
  *  \brief A dynamically re-sizable stream buffer for input.
  */
@@ -150,85 +155,29 @@ class input_buffer : public byte_range
   input_buffer & operator= (input_buffer const &);
 
 public:
-  input_buffer(size_t cap = 0u) : _buf(cap)    { reset(); }
+  explicit input_buffer(size_t cap = 0u);
 
-  byte_ptr        buf_begin()           { return &_buf[0]; }
-  byte_const_ptr  buf_begin()  const    { return &_buf[0]; }
-  byte_ptr        buf_end()             { return &_buf[_buf.size()]; }
-  byte_const_ptr  buf_end()    const    { return &_buf[_buf.size()]; }
-  size_t          capacity()   const    { return _buf.size(); }
-  size_t          front_gap()  const    { return begin() - buf_begin(); }
-  size_t          back_space() const    { return buf_end() - end(); }
+  byte_ptr        buf_begin();
+  byte_const_ptr  buf_begin()   const;
+  byte_ptr        buf_end();
+  byte_const_ptr  buf_end()     const;
 
-  void reset()
-  {
-    byte_range::operator= (byte_range(buf_begin(), buf_begin()));
-  }
+  size_t capacity()   const;
+  size_t front_gap()  const;
+  size_t back_space() const;
 
-  void reset(byte_ptr b, byte_ptr e)
-  {
-    BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
-    if (b == e) reset();
-    else        byte_range::operator= (byte_range(b, e));
-  }
+  void   append(size_t i);
+  void   consume(size_t i);
 
-  void consume(size_t i) { reset(begin() + i, end()); }
-  void append(size_t i)  { reset(begin(), end() + i); }
+  void   reset();
+  void   reset(byte_ptr b, byte_ptr e);
+  size_t flush();
 
-  size_t flush_gap()
-  {
-    size_t const gap( front_gap() );
-    if (gap)
-    {
-      byte_ptr const base( buf_begin() );
-      size_t const len( size() );
-      std::memmove(base, begin(), len);
-      reset(base, base + len);
-    }
-    return gap;
-  }
-
-  void realloc(size_t n)
-  {
-    size_t const len( size() );
-    BOOST_ASSERT(len < n);
-    io_vector new_buf(n);
-    std::memmove(&new_buf[0], begin(), len);
-    _buf.swap(new_buf);
-    reset(buf_begin(), buf_begin() + len);
-  }
-
-  // \todo remove ASAP
-  friend inline std::ostream & operator<< (std::ostream &, input_buffer const &);
-
-  size_t flush()                // return free space
-  {
-    size_t const len( size() );
-    size_t space( back_space() );
-    if (front_gap() > std::max(len, space))
-    {
-      TRACE() << "force gap flushing: " << *this;
-      flush_gap();
-      space = back_space();
-    }
-    else if (space * 2u <= std::min(len, min_buf_size))
-    {
-      size_t const cap( std::max(min_buf_size, capacity() * 2u) );
-      TRACE() << "reallocate to " << cap << " bytes: " << *this;
-      realloc(cap);
-      space = back_space();
-    }
-    BOOST_ASSERT(space);
-    return space;
-  }
+  size_t flush_gap();
+  void   realloc(size_t n);
 };
 
-inline std::ostream & operator<< (std::ostream & os, input_buffer const & b)
-{
-  return os << "gap = "     << b.front_gap()
-            << ", size = "  << b.size()
-            << ", space = " << b.back_space();
-}
+#include "io-input-buffer.hpp"
 
 // ----- Output ---------------------------------------------------------------
 
@@ -240,57 +189,22 @@ class output_buffer : private boost::noncopyable
   scatter_vector        _iovec;
   io_vector             _buf;
 
-  struct fix_base
-  {
-    byte_const_ptr const end;
-    ptrdiff_t const      fix;
-
-    fix_base(output_buffer & iob) : end( byte_const_ptr(0) + iob._buf.size() )
-                                  , fix( &iob._buf[0] - byte_const_ptr(0) )
-    {
-    }
-
-    void operator() (boost::asio::const_buffer & iov) const
-    {
-      byte_const_ptr const  b( boost::asio::buffer_cast<byte_const_ptr>(iov) );
-      size_t const          len( boost::asio::buffer_size(iov) );
-      if (b + len <= end)
-        iov = boost::asio::const_buffer(b + fix, len);
-    }
-  };
+  struct fix_base;
+  friend std::ostream & operator<< (std::ostream &, output_buffer const &);
 
 public:
-  void push_back(scatter_buffer const & iov) { _iovec.push_back(iov); }
+  output_buffer() { }
 
-  template <class Iter>
-  void push_back(Iter b, Iter e)
-  {
-    size_t const old_len( _buf.size() );
-    _buf.insert(_buf.end(), b, e);
-    size_t const new_len( _buf.size() );
-    BOOST_ASSERT(old_len <= new_len);
-    if (old_len != new_len)
-      push_back(scatter_buffer(byte_const_ptr(0) + old_len, new_len - old_len));
-  }
+  void reset();
 
-  scatter_vector const & commit()
-  {
-    std::for_each(_iovec.begin(), _iovec.end(), fix_base(*this));
-    return _iovec;
-  }
+  scatter_vector const & commit();
 
-  void reset()
-  {
-    _iovec.clear();
-    _buf.clear();
-  }
+  void push_back(scatter_buffer const & iov);
 
-  friend inline std::ostream & operator<< (std::ostream & os, output_buffer const & b)
-  {
-    return os << "iovecs = "     << b._iovec.size()
-              << ", buffered = "   << b._buf.size();
-  }
+  template <class Iter> void push_back(Iter b, Iter e);
 };
+
+#include "io-output-buffer.hpp"
 
 // ----- I/O Driver -----------------------------------------------------------
 
