@@ -1,0 +1,40 @@
+fmod BUFFER is
+  including NAT .
+
+  var GAP LEN SPC : Nat .
+  var I : NzNat .
+
+  sort Iobuf .
+
+  op buf : Nat Nat Nat -> Iobuf [ctor] .
+  eq buf(I, 0, SPC) = buf(0, 0, SPC + I) .
+
+  var IOB : Iobuf .
+
+  ops gap size space capacity : Iobuf -> Nat .
+  eq gap(buf(GAP, LEN, SPC))    = GAP .
+  eq size(buf(GAP, LEN, SPC))   = LEN .
+  eq space(buf(GAP, LEN, SPC))  = SPC .
+  eq capacity(IOB) = gap(IOB) + size(IOB) + space(IOB) .
+
+  op append : Iobuf NzNat -> Iobuf .
+  eq  append(buf(GAP, LEN, SPC), I)
+    = buf(GAP, LEN + I, sd(SPC, I))
+    .
+
+  op consume : Iobuf NzNat -> Iobuf .
+  eq  consume(buf(GAP, LEN, SPC), I)
+    = buf(GAP + I, sd(LEN, I), SPC)
+    .
+
+  op flushGap : Iobuf -> Iobuf .
+  eq  flushGap(buf(GAP, LEN, SPC))
+    = buf(0, LEN, SPC + GAP)
+    .
+
+  op realloc  : Iobuf NzNat -> Iobuf .
+  ceq realloc(buf(GAP, LEN, SPC), I)
+    = buf(0, LEN, sd(LEN, I))   if I > LEN
+    .
+
+endfm
