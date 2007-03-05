@@ -21,10 +21,10 @@
  *  access logs that, these days, have to look like the ones Apache writes, and
  *  one for administrative messages about the daemon itself. John Torjo has
  *  proposed his <a href="http://www.torjo.com/">logging library</a> to
- *  boost.org, but unfortunately couldn't get consent to have it accepted. For
- *  the time being, mini-httpd relies on his code for both tasks, because the
- *  library offers a lot of ready-to-go functionality, including support for
- *  rotating log file, message timestamping, etc.
+ *  boost.org, but unfortunately couldn't reach consensus to have it accepted.
+ *  For the time being, mini-httpd relies on his code for both tasks, because
+ *  the library offers a lot of ready-to-go functionality, including support
+ *  for rotating log file, message timestamping, etc.
  *
  *  On systems that appear to conform to POSIX.1-2001, the administrative log
  *  stream is written to \c syslog(3). All other systems log these messages
