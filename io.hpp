@@ -171,8 +171,8 @@ typedef boost::asio::const_buffer               io_vector;
  *
  *  Using a \c scatter_vector, it is possible to chain non-continuous memory
  *  chunks together and write them (or read into them) using a single system
- *  call. This approach is advantageous for applications that compute a write
- *  buffer re-using parts of the input buffer.
+ *  call. This approach is advantageous for applications that construct a write
+ *  buffer from parts of the input buffer and parts from somewhere else.
  */
 typedef std::vector<io_vector>                  scatter_vector;
 
