@@ -60,7 +60,7 @@ inline scatter_vector const & output_buffer::commit()
 /**
  *  \brief todo
  */
-inline void output_buffer::push_back(scatter_buffer const & iov)
+inline void output_buffer::push_back(io_vector const & iov)
 {
   _iovec.push_back(iov);
 }
@@ -76,7 +76,7 @@ inline void output_buffer::push_back(Iter b, Iter e)
   size_t const new_len( _buf.size() );
   BOOST_ASSERT(old_len <= new_len);
   if (old_len != new_len)
-    push_back(scatter_buffer(byte_const_ptr(0) + old_len, new_len - old_len));
+    push_back(io_vector(byte_const_ptr(0) + old_len, new_len - old_len));
 }
 
 /**

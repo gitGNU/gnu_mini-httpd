@@ -89,67 +89,101 @@
 using std::size_t;
 using std::ptrdiff_t;
 
-/// \brief Magic constant lower limit for I/O buffer sizes.
-static size_t const min_buf_size( 1024u );
-
-/// \brief Bytes may be signed or unsigned, we don't know.
-typedef char                                    byte;
-
-/// \brief The standard iterator for continous memory.
-typedef byte *                                  byte_ptr;
-
-/// \brief The standard iterator for continous, immutable memory.
-typedef byte const *                            byte_const_ptr;
-
-/// \brief The standard allocator for I/O buffers.
-typedef std::allocator<byte>                    byte_allocator;
-
 /**
- *  \brief A re-sizable buffer suitable for system I/O.
+ *  \brief Bytes may be signed or unsigned, we don't know.
  *
- *  The original ISO standard did not guarantee that \c std::vector
- *  would use continous memory internally, but this point was revised in
- *  a technical report later.
+ *  All I/O deals with octets; none of the functions depend on this type to be
+ *  signed or unsigned. Neither is it important whether that octet represents a
+ *  character encoded in latin-1 or utf-8. These matters are firmly the problem
+ *  of the upper layers. For purposes of I/O code, the only thing that matters
+ *  is <code>sizeof(byte_t) == 1</code>.
  */
-typedef std::vector<byte, byte_allocator>       io_vector;
+typedef char                                    byte_t;
 
 /**
- *  \brief A range is a pair of iterators.
+ *  \brief Standard iterator over continuous memory.
+ */
+typedef byte_t *                                byte_ptr;
+
+/**
+ *  \brief Standard iterator for immutable continous memory.
+ */
+typedef byte_t const *                          byte_const_ptr;
+
+/**
+ *  \brief Byte ranges are tuples of \c [begin,end) iterators.
  *
- *  Ranges are cheap to copy, they do not own the memory they refer to.
- *  At some point future, it might be nice to change \c byte_range to
- *  the system's native \c iovec type, so that it can be used for
- *  scatter I/O without copying, but as of now the Boost.Asio library
- *  wouldn't be able to take advantage of this fact anyway.
+ *  A \c byte_range does not own the memory it references, these objects are
+ *  cheap to copy. The object is implicitly convertible to \c bool: true
+ *  signifies that the range is non-empty, false the opposite. The \c
+ *  byte_range class also offers a full STL-container-like interface into the
+ *  memory, using raw pointers as iterators.
+ *
+ *  \todo It would be nice if \c byte_range would have the same memory layout
+ *        as the native I/O vector type. See also \c io_vector.
  */
 typedef boost::iterator_range<byte_ptr>         byte_range;
 
 /**
- *  \brief The native scatter I/O vector type.
- *
- *  \todo Well, this is not really the native type. Boost.Asio does nave a
- *        typedef for the native type, but it considers it an implementation
- *        detail, so apparently users are forced to have their buffers copied
- *        to adapt them to the real type before they are written. It doesn't
- *        make any sense. This subject needs further investigation. Asking on
- *        the mailing list made no difference so far.
+ *  \brief Standard allocator for I/O buffers.
  */
-typedef boost::asio::const_buffer               scatter_buffer;
+typedef std::allocator<byte_t>                  byte_allocator;
 
 /**
- *  \brief A native vector of scatter I/O vectors.
- *  \todo  Some day, maybe.
+ *  \brief A re-sizable buffer suitable for system I/O.
+ *
+ *  A \c byte_buffer does own the memory it represents, copying such an object
+ *  is an expensive operation.
+ *
+ *  \note The original ISO C++ standard did not require \c std::vector to use
+ *        continuous memory. This point was later revised in a Technical Report
+ *        Unfortunately, a URL to that document is hard to find.
  */
-typedef std::vector<scatter_buffer>             scatter_vector;
+typedef std::vector<byte_t, byte_allocator>     byte_buffer;
 
-// ----- Input ----------------------------------------------------------------
+/**
+ *  \brief A byte range type suitable for scatter I/O.
+ *
+ *  This type is essentially a \c byte_range without the STL-like interface. It
+ *  does have the nice property, however, that arrays of this type can be used
+ *  for I/O operations that involve non-continuous memory. The Unix man pages
+ *  \c readv(2) and \c writev(2) provide further details.
+ *
+ *  \todo This is not really the native type. Boost.Asio does have a typedef
+ *        for the native io_vector type, but it considers that a private
+ *        implementation detail. Which is unfortunate, because without that
+ *        type it is not possible to create a native scatter I/O array. Which
+ *        means that the scatter array we pass for reading or writing has to
+ *        be copied internally before it can be used. This subject needs
+ *        further investigation.
+ */
+typedef boost::asio::const_buffer               io_vector;
+
+/**
+ *  \brief A dynamically re-sizable scatter I/O array.
+ *
+ *  Scatter I/O adds a layer of indirection to the way buffers are represented:
+ *
+ *  <pre>
+ *    io_vector(0x00f00ba7, 24) -> "this is the first line\n"
+ *    io_vector(0x00ba7f00, 21) -> "I am the second line\n"
+ *    ...</pre>
+ *
+ *  Using a \c scatter_vector, it is possible to chain non-continuous memory
+ *  chunks together and write them (or read into them) using a single system
+ *  call. This approach is advantageous for applications that compute a write
+ *  buffer re-using parts of the input buffer.
+ */
+typedef std::vector<io_vector>                  scatter_vector;
 
 /**
  *  \brief A dynamically re-sizable stream buffer for input.
  */
 class input_buffer : public byte_range
 {
-  io_vector _buf;
+  byte_buffer _buf;
+
+  static size_t const min_buf_size;
 
   input_buffer(input_buffer const &);
   input_buffer & operator= (input_buffer const &);
@@ -179,15 +213,13 @@ public:
 
 #include "io-input-buffer.hpp"
 
-// ----- Output ---------------------------------------------------------------
-
 /**
  *  \brief A scatter I/O vector for output.
  */
 class output_buffer : private boost::noncopyable
 {
   scatter_vector        _iovec;
-  io_vector             _buf;
+  byte_buffer           _buf;
 
   struct fix_base;
   friend std::ostream & operator<< (std::ostream &, output_buffer const &);
@@ -199,7 +231,7 @@ public:
 
   scatter_vector const & commit();
 
-  void push_back(scatter_buffer const & iov);
+  void push_back(io_vector const & iov);
 
   template <class Iter> void push_back(Iter b, Iter e);
 };
@@ -208,8 +240,20 @@ public:
 
 // ----- I/O Driver -----------------------------------------------------------
 
-typedef boost::asio::ip::tcp::socket            tcp_socket;
-typedef boost::shared_ptr<tcp_socket>           shared_socket;
+/**
+ *  \brief todo
+ */
+typedef boost::asio::ip::tcp::socket    tcp_socket;
+
+/**
+ *  \brief todo
+ */
+typedef boost::shared_ptr<tcp_socket>   shared_socket;
+
+/**
+ *  \brief todo
+ */
+typedef boost::asio::ip::tcp::acceptor  tcp_acceptor;
 
 /**
  *  \brief Iterate a given callback function over the input stream.
@@ -217,72 +261,19 @@ typedef boost::shared_ptr<tcp_socket>           shared_socket;
 template <class Handler>        // bool (input_buffer &, size_t, output_buffer &)
 struct io_driver
 {
-  struct context : private boost::noncopyable
-  {
-    shared_socket       insock, outsock;
-    input_buffer        inbuf;
-    output_buffer       outbuf;
-    Handler             f;
-  };
-
+  struct context;
   typedef boost::shared_ptr<context> ctx_ptr;
 
   static void start( shared_socket const & sin
                    , shared_socket const & sout = shared_socket()
-                   )
-  {
-    BOOST_ASSERT(sin);
-    ctx_ptr ctx(new context);
-    ctx->insock  = sin;
-    ctx->outsock = sout ? sout : sin;
-    start_read(ctx);
-  }
+                   );
 
-  static void start_read(ctx_ptr ctx)
-  {
-    ctx->outbuf.reset();
-    size_t const space( ctx->inbuf.flush() );
-    BOOST_ASSERT(space);
-    using boost::asio::placeholders::bytes_transferred;
-    ctx->insock->async_read_some
-      ( boost::asio::buffer(ctx->inbuf.end(), space)
-      , boost::bind( &io_driver::new_input, ctx, bytes_transferred )
-      );
-  }
-
-  static void new_input(ctx_ptr ctx, std::size_t i)
-  {
-    ctx->inbuf.append(i);
-    bool const more_input( ctx->f(ctx->inbuf, i, ctx->outbuf) && i );
-    scatter_vector const & outbuf( ctx->outbuf.commit() );
-    if (more_input)
-    {
-      if (outbuf.empty())
-        start_read(ctx);
-      else
-        boost::asio::async_write
-          ( *ctx->outsock
-          , outbuf
-          , boost::bind( &io_driver::start_read, ctx )
-          );
-    }
-    else
-    {
-      if (!outbuf.empty())
-        boost::asio::async_write
-          ( *ctx->outsock
-          , outbuf
-          , boost::bind( &io_driver::stop, ctx )
-          );
-    }
-  }
-
-  static void stop(ctx_ptr ctx)
-  {
-    ctx.reset();
-  }
+  static void start_read(ctx_ptr ctx);
+  static void new_input(ctx_ptr ctx, std::size_t i);
+  static void stop(ctx_ptr ctx);
 };
 
+#include "io-driver.hpp"
 
 /**
  *  \brief Iterate a tokenizer function over the input stream.
@@ -307,8 +298,6 @@ struct stream_driver : public Handler
     return i;
   }
 };
-
-typedef boost::asio::ip::tcp::acceptor tcp_acceptor;
 
 /**
  *  \brief Accept TCP connections using a callback function.

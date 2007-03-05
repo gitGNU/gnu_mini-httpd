@@ -18,6 +18,11 @@
 #endif
 
 /**
+ *  \brief Magic constant lower limit for I/O buffer sizes.
+ */
+size_t const input_buffer::min_buf_size( 1024u );
+
+/**
  *  \brief Debug-display an input_buffer's state.
  */
 inline std::ostream & operator<< (std::ostream & os, input_buffer const & b)
@@ -148,7 +153,7 @@ inline void input_buffer::realloc(size_t n)
 {
   size_t const len( size() );
   BOOST_ASSERT(len < n);
-  io_vector new_buf(n);
+  byte_buffer new_buf(n);
   std::memmove(&new_buf[0], begin(), len);
   _buf.swap(new_buf);
   reset(buf_begin(), buf_begin() + len);
