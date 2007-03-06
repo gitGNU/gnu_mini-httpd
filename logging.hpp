@@ -59,6 +59,6 @@ extern void init_logging(char const * my_name);
  *  Defining the pre-processor symbol \c NDEBUG disables this log stream
  *  altogether.
  */
-#define TRACE() BOOST_LOGL(httpd_logger_debug, dbg)
+#define TRACE() BOOST_LOGL(httpd_logger_debug, dbg) << __func__ << ": "
 
 #endif // MINI_HTTPD_LOGGING_HPP_INCLUDED
