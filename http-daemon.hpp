@@ -88,8 +88,9 @@ namespace http
   private:
     // the state of this class
 
-    Request       _request;
-    bool          _use_persistent_connection;
+    Request                             _request;
+    bool                                _use_persistent_connection;
+    boost::shared_ptr<char const>       _payload;
 
     // state machine
 

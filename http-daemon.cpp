@@ -13,7 +13,11 @@
 #include "http-daemon.hpp"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/lambda/bind.hpp>
 #include <sanity/system-error.hpp>
+#include <sys/mman.h>           // mmap(), POSIX.1-2001
+#include <unistd.h>             // close(2)
+
 
 #ifdef _GNU_SOURCE
 #  include <getopt.h>           // getopt_long(3)
@@ -40,6 +44,7 @@ http::daemon::~daemon()
 http::daemon::state_t http::daemon::reset()
 {
   TRACE() << "reset state for new request";
+  _payload.reset();
   _request = Request();
   _request.start_up_time = time(0);
   return READ_REQUEST_LINE;
@@ -80,7 +85,7 @@ http::daemon::state_fun_t const http::daemon::state_handlers[TERMINATE] =
 
 http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output_buffer & obuf)
 {
-  TRACE() << ibuf.size() << " byte input buffer";
+  TRACE_VAR2(ibuf, obuf);
 
   for (char const * p = ibuf.begin(); p != ibuf.end(); ++p)
   {
@@ -113,7 +118,7 @@ http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output
 
 http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, output_buffer & obuf)
 {
-  TRACE() << ibuf.size() << " byte input_buffer";
+  TRACE_VAR2(ibuf, obuf);
 
   // An empty line terminates the request header.
 
@@ -191,7 +196,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
 
 http::daemon::state_t http::daemon::get_request_body(input_buffer & ibuf, output_buffer & obuf)
 {
-  TRACE() << "no body";
+  TRACE_VAR2(ibuf, obuf);
   return respond(ibuf, obuf);
 }
 
@@ -231,9 +236,41 @@ inline string to_rfcdate(time_t t)
   return buffer;
 }
 
+struct mmaped_buffer : public boost::shared_ptr<char const>
+{
+  mmaped_buffer(char const * path, size_t len)
+  {
+    TRACE_VAR2(path, len);
+    BOOST_ASSERT(path); BOOST_ASSERT(path[0]); BOOST_ASSERT(len);
+    int fd( ::open(path, O_RDONLY) );
+    if (fd < 0) throw system_error(std::string("cannot open ") + path);
+    void const * p( ::mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0) );
+    if (p != MAP_FAILED)
+    {
+      BOOST_ASSERT(p);
+      reset( reinterpret_cast<char const *>(p)
+           , boost::bind(&mmaped_buffer::destruct, fd, len, _1)
+           );
+    }
+    else
+    {
+      ::close(fd);
+      throw system_error(std::string("cannot mmap() file ") + path);
+    }
+  }
+
+  static void destruct(int fd, size_t len, void const * p)
+  {
+    TRACE_VAR3(fd, len, p);
+    BOOST_ASSERT(fd >= 0); BOOST_ASSERT(len); BOOST_ASSERT(p);
+    ::munmap(const_cast<void *>(p), len);
+    ::close(fd);
+  }
+};
+
 http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer & obuf)
 {
-  TRACE() << ibuf.size() << " byte input_buffer";
+  TRACE_VAR2(ibuf, obuf);
 
   struct stat         file_stat;
 
@@ -313,7 +350,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
     if (*_request.url.path.rbegin() == '/')
     {
       filename += config->default_page;
-      goto stat_again;    // What does Nikolas Wirth know?
+      goto stat_again;
     }
     else
     {
@@ -366,13 +403,20 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   buf << "\r\n";
   _request.status_code = 200;
   _request.object_size = file_stat.st_size;
+  string const & iob( buf.str() );
+  obuf.push_back(iob.begin(), iob.end());
 
-  /// \todo write payload now
+  // Load payload and write it.
+
+  _payload = mmaped_buffer( filename.c_str(), file_stat.st_size );
+  BOOST_ASSERT(_payload);
+  obuf.push_back(io_vector(_payload.get(), file_stat.st_size));
 
   log_access();
 
   return TERMINATE;
 }
+
 
 // ----- Logging --------------------------------------------------------------
 
@@ -500,15 +544,14 @@ http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf)
   _request.status_code = 404;
   _request.object_size = 0;
   _use_persistent_connection = false;
+  string const & iob( buf.str() );
+  obuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
 http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std::string const & path)
 {
-  TRACE() << "Requested page "
-    << _request.url.path << " has moved to '"
-    << path << "': going into FLUSH_BUFFER state"
-    ;
+  INFO() << "Requested page " << _request.url.path << " has moved to '" << path << "'";
 
   ostringstream buf;
   buf << "HTTP/1.1 301 Moved Permanently\r\n";
@@ -538,12 +581,14 @@ http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std:
   _request.status_code = 301;
   _request.object_size = 0;
   _use_persistent_connection = false;
+  string const & iob( buf.str() );
+  obuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
 http::daemon::state_t http::daemon::not_modified(output_buffer & obuf)
 {
-  TRACE() << "requested page not modified: going into FLUSH_BUFFER state";
+  TRACE() << "requested page not modified";
 
   ostringstream buf;
   buf << "HTTP/1.1 304 Not Modified\r\n";
@@ -564,6 +609,8 @@ http::daemon::state_t http::daemon::not_modified(output_buffer & obuf)
   }
   buf << "\r\n";
   _request.status_code = 304;
+  string const & iob( buf.str() );
+  obuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
