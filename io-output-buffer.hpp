@@ -18,7 +18,7 @@
 #endif
 
 /**
- *  \internal Iterate a given callback function over the input stream.
+ *  \internal Commit the buffer address.
  */
 struct output_buffer::fix_base
 {
