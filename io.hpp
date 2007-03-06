@@ -81,7 +81,7 @@
 #include <boost/assert.hpp>
 #include <vector>
 #include <cstring>              // std::memmove()
-#include <cstdlib>              // std::size_t, std::ptrdiff_t
+#include <cstddef>              // std::size_t, std::ptrdiff_t, offsetof()
 #include "logging.hpp"
 
 // ----- Core Types -----------------------------------------------------------
