@@ -86,13 +86,12 @@ namespace http
     bool operator() (input_buffer &, size_t, output_buffer &);
 
   private:
+    // the state of this class
+
     Request       _request;
     bool          _use_persistent_connection;
 
-    // The class is a state machine. Depending on the contents of the
-    // state variable, the appropriate handler will be called via a
-    // lookup table. Each state handler may return true (go on) or false
-    // (re-schedule). Errors are reported via exceptions.
+    // state machine
 
     enum state_t
       { READ_REQUEST_LINE
@@ -107,8 +106,6 @@ namespace http
     static state_fun_t const state_handlers[TERMINATE];
 
     state_t reset();
-
-    // mini-httpd state machine
 
     state_t get_request_line(input_buffer &, output_buffer &);
     state_t get_request_header(input_buffer &, output_buffer &);
