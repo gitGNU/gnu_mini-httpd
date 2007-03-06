@@ -12,7 +12,9 @@
 
 #include "logging.hpp"
 
-#include <boost/thread/thread.hpp>
+#ifndef BOOST_DISABLE_THREADS
+#  include <boost/thread/thread.hpp>
+#endif
 #include <boost/log/log_impl.hpp>
 #include <boost/log/functions.hpp>
 #include <boost/log/extra/functions_ts.hpp>
