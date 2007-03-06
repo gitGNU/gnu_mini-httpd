@@ -178,48 +178,37 @@ bool http::parser::supports_persistent_connection(const Request & request)
     return false;
 }
 
-size_t http::parser::parse_header(std::string & name, std::string & data, std::string const & input) const
+size_t http::parser::parse_header(std::string & name, std::string & data, char const * b, char const * e) const
 {
   name_ptr = &name;
   data_ptr = &data;
 
-  parse_info_t info = parse(input.data(), input.data() + input.size(), Header);
-  if (info.hit)
-    return info.length;
-  else
-    return 0;
+  parse_info_t info = parse(b, e, Header);
+  return info.hit ? info.length : 0u;
 }
 
-size_t http::parser::parse_request_line(Request & request, std::string const & input) const
+size_t http::parser::parse_request_line(Request & request, char const * b, char const * e) const
 {
   req_ptr = &request;
   url_ptr = &request.url;
-
-  parse_info_t info = parse(input.data(), input.data() + input.size(), Request_Line);
-  if (info.hit)
-    return info.length;
-  else
-    return 0;
+  parse_info_t info = parse(b, e, Request_Line);
+  return info.hit ? info.length : 0u;
 }
 
-size_t http::parser::parse_host_header(Request & request, std::string const & input) const
+size_t http::parser::parse_host_header(Request & request, char const * b, char const * e) const
 {
   req_ptr = &request;
 
-  parse_info_t info = parse(input.data(), input.data() + input.size(), Host_Header);
-  if (info.hit)
-    return info.length;
-  else
-    return 0;
+  parse_info_t info = parse(b, e, Host_Header);
+  return info.hit ? info.length : 0u;
 }
 
-size_t http::parser::parse_if_modified_since_header(Request & request, std::string const & input) const
+size_t http::parser::parse_if_modified_since_header(Request & request, char const * b, char const * e) const
 {
   memset(&tm_date, 0, sizeof(tm_date));
 
-  parse_info_t info = parse(input.data(), input.data() + input.size(), If_Modified_Since_Header);
-  if (!info.hit)
-    return 0;
+  parse_info_t info = parse(b, e, If_Modified_Since_Header);
+  if (!info.hit) return 0u;
 
   // Make sure the tm structure contains no nonsense.
 

@@ -251,16 +251,16 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 
     // Parse an HTTP request line.
 
-    size_t parse_request_line(Request &, std::string const & input) const;
+    size_t parse_request_line(Request &, char const *, char const *) const;
 
     // Split an HTTP header into the header's name and data part.
 
-    size_t parse_header(std::string& name, std::string& data, std::string const & input) const;
+    size_t parse_header(std::string& name, std::string& data, char const *, char const *) const;
 
     // Parse various headers.
 
-    size_t parse_host_header(Request &, std::string const & input) const;
-    size_t parse_if_modified_since_header(Request &, std::string const & input) const;
+    size_t parse_host_header(Request &, char const *, char const *) const;
+    size_t parse_if_modified_since_header(Request &, char const *, char const *) const;
 
   private:
     typedef char                                    value_t;
