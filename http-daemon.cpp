@@ -13,125 +13,57 @@
 #include "http-daemon.hpp"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
-#include <ioxx/shared-handler.hpp>
 #include <sanity/system-error.hpp>
-#include <sys/socket.h>         // POSIX.1-2001: shutdown(2)
 
 #ifdef _GNU_SOURCE
 #  include <getopt.h>           // getopt_long(3)
 #endif
 
-// Abstract access to our logger.
-#define TRACE()         BOOST_LOGL(::http::logging::debug, dbg)
-#define INFO()          BOOST_LOGL(::http::logging::misc,  info)
-#define ERROR()         BOOST_LOGL(::http::logging::misc,  err)
-
-// Continue with literal string or operator<<().
-#define SOCKET_TRACE(s) TRACE() << "socket " << s << ": "
-#define SOCKET_INFO(s)  INFO()  << "socket " << s << ": "
-#define SOCKET_ERROR(s) ERROR() << "socket " << s << ": "
-
-// Continue with literal string or operator<<().
-#define HTRACE() SOCKET_TRACE(daemon::_sockfd)
-#define HINFO()  SOCKET_INFO(daemon::_sockfd)
-#define HERROR() SOCKET_ERROR(daemon::_sockfd)
-
 using namespace std;
 
 // ----- Construction/Destruction ---------------------------------------------
 
-http::daemon::daemon(ioxx::socket s) : _sockfd(s)
+http::daemon::daemon()
 {
-  I(s);
-  HTRACE() "accepted connection";
-  _buf_array.resize(config->max_line_length);
-  _inbuf = ioxx::stream_buffer<char>(&_buf_array[0], &_buf_array[_buf_array.size()]);
-  reset();
+  TRACE() << "accepting new connection";
+  _state = reset();
 }
 
 http::daemon::~daemon()
 {
-  HTRACE() "closing connection";
+  TRACE() << "closing connection";
 }
 
-
-// (Re-)initialize internals before reading a new request over a persistent
-// connection.
-
-void http::daemon::reset()
+/**
+ *  \brief (Re-)initialize internals (for use in persistent connections).
+ */
+http::daemon::state_t http::daemon::reset()
 {
-  state = READ_REQUEST_LINE;
-  _filefd.reset();
-  request = Request();
-  request.start_up_time = time(0);
-  go_to_read_mode();
+  TRACE() << "reset state for new request";
+  _request = Request();
+  _request.start_up_time = time(0);
+  return READ_REQUEST_LINE;
 }
 
-// ----- i/o code -------------------------------------------------------------
+// ----- State Machine Driver -------------------------------------------------
 
-void http::daemon::acceptor::operator()(ioxx::socket const & s, ioxx::probe & p) const
+/**
+ *  \todo protocol_error("Aborting because of excessively long header lines.\r\n");
+ */
+bool http::daemon::operator() (input_buffer & ibuf, size_t i, output_buffer & obuf)
 {
-  I(s);
-  ioxx::add_shared_handler( p, s, ioxx::Readable
-                          , boost::shared_ptr<daemon>(new daemon(s))
-                          );
-}
-
-void http::daemon::fd_is_readable()
-{
-  if (!_inbuf.full())
-  {
-    if (!read(_sockfd, _inbuf))
+  if (i)
+    try
     {
-      if (state != READ_REQUEST_LINE || _inbuf.empty() == false)
-        HINFO() "connection terminated by peer ";
-      terminate();
+      BOOST_ASSERT(_state < TERMINATE);
+      _state = (this->*state_handlers[_state])(ibuf, obuf);
+      return _state != TERMINATE;
     }
-  }
-  else
-    protocol_error("Aborting because of excessively long header lines.\r\n");
-
-  call_state_handler();
-}
-
-void http::daemon::fd_is_writable()
-{
-  if (state != TERMINATE && !write_buffer.empty())
-  {
-    const char * p = _sockfd.write(write_buffer.data(), write_buffer.data() + write_buffer.size());
-    I(write_buffer.data() <= p);
-    write_buffer.erase(0, p - write_buffer.data());
-  }
-  call_state_handler();
-}
-
-ioxx::event http::daemon::operator() (ioxx::socket s, ioxx::event ev, ioxx::probe &)
-{
-  I(s == _sockfd);
-  if (ioxx::is_error(ev))      return ioxx::Error;
-  try
-  {
-    if (ioxx::is_readable(ev))   fd_is_readable();
-    if (ioxx::is_writable(ev))   fd_is_writable();
-  }
-  catch(system_error const & e)
-  {
-    HINFO() << e.what();
-    terminate();
-  }
-  catch(exception const & e)
-  {
-    HERROR() "run-time error: " << e.what();
-    terminate();
-  }
-  catch(...)
-  {
-    HERROR() "unspecified run-time error";
-    terminate();
-  }
-
-  HTRACE() "requesting evmask " << _evmask;
-  return _evmask;
+    catch(system_error const & e)       { INFO()  << e.what(); }
+    catch(std::runtime_error const & e) { INFO() << "run-time error: " << e.what(); }
+    catch(std::exception const & e)     { INFO() << "program error: " << e.what(); }
+    catch(...)                          { INFO() << "unspecified error condition"; }
+  return false;
 }
 
 // ----- HTTP state machine ---------------------------------------------------
@@ -139,193 +71,128 @@ ioxx::event http::daemon::operator() (ioxx::socket s, ioxx::event ev, ioxx::prob
 /**
  *  State handler configuration.
  */
-
-http::daemon::state_fun_t const http::daemon::state_handlers[] =
+http::daemon::state_fun_t const http::daemon::state_handlers[TERMINATE] =
   { &http::daemon::get_request_line
   , &http::daemon::get_request_header
   , &http::daemon::get_request_body
-  , &http::daemon::setup_reply
-  , &http::daemon::copy_file
-  , &http::daemon::flush_buffer
-  , &http::daemon::terminate
+  , &http::daemon::respond
   };
 
-/// \todo get rid of the string copy
-
-bool http::daemon::get_request_line()
+http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output_buffer & obuf)
 {
-  for (char const * p = _inbuf.data().begin(); p != _inbuf.data().end(); ++p)
+  TRACE() << ibuf.size() << " byte input buffer";
+
+  for (char const * p = ibuf.begin(); p != ibuf.end(); ++p)
   {
-    if (p[0] == '\r' && p + 1 != _inbuf.data().end() && p[1] == '\n')
+    if (p[0] == '\r' && p + 1 != ibuf.end() && p[1] == '\n')
     {
       ++p;
-      string const read_buffer(_inbuf.data().begin(), p + 1 - _inbuf.data().begin());
-      size_t len = http_parser.parse_request_line(request, read_buffer);
+      size_t const len( http_parser.parse_request_line(_request, ibuf.begin(), p + 1) );
+      BOOST_ASSERT(!len || len == static_cast<size_t>(p + 1 - ibuf.begin()));
       if (len > 0)
       {
-        HTRACE() "Read request line"
-        << ": method = "        << request.method
-        << ", http version = "  << request.major_version << '.' << request.minor_version
-        << ", host = "          << request.url.host
-        << ", port = "          << request.url.port
-        << ", path = '"         << request.url.path << "'"
-        << ", query = '"        << request.url.query << "'"
-        ;
-        I(len == read_buffer.size());
-        ioxx::reset_begin(_inbuf.data(), _inbuf.data().begin() + len);
-        state = READ_REQUEST_HEADER;
-        return true;
+        TRACE() << "Read request line"
+          << ": method = "        << _request.method
+          << ", http version = "  << _request.major_version << '.' << _request.minor_version
+          << ", host = "          << _request.url.host
+          << ", port = "          << _request.url.port
+          << ", path = '"         << _request.url.path << "'"
+          << ", query = '"        << _request.url.query << "'"
+          ;
+        ibuf.consume(len);
+        return get_request_header(ibuf, obuf);
       }
       else
       {
-        protocol_error("The HTTP request line you sent was syntactically incorrect.\r\n");
-        break;
+        return protocol_error(obuf, "The HTTP request line you sent was syntactically incorrect.\r\n");
       }
     }
   }
-  return false;
+  return READ_REQUEST_LINE;
 }
 
-/// \todo The parsers need to be re-rewritten. We have one unnecessary
-/// copy operation just because the bloody string interface is
-/// hard-coded.
-
-bool http::daemon::get_request_header()
+http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, output_buffer & obuf)
 {
-  // An empty line will terminate the request header.
+  TRACE() << ibuf.size() << " byte input_buffer";
 
-  if (_inbuf.data().size() >= 2 && _inbuf.data()[0] == '\r' && _inbuf.data()[1] == '\n')
+  // An empty line terminates the request header.
+
+  if (ibuf.size() >= 2 && ibuf[0] == '\r' && ibuf[1] == '\n')
   {
-    ioxx::reset_begin(_inbuf.data(), _inbuf.data().begin() + 2);
-    HTRACE() "have complete header: going into READ_REQUEST_BODY state.";
-    state = READ_REQUEST_BODY;
-    return true;
+    ibuf.consume(2);
+    TRACE() << "have complete header: going into READ_REQUEST_BODY state.";
+    return get_request_body(ibuf, obuf);
   }
 
   // If we do have a complete header line in the read buffer,
   // process it. If not, we need more I/O before we can proceed.
 
-  char const * p = parser::find_next_line(_inbuf.data().begin(), _inbuf.data().end());
-  if (p != _inbuf.data().end())
+  char * p( parser::find_next_line(ibuf.begin(), ibuf.end()) );
+  TRACE() << "found line of " << (p - ibuf.begin()) << " bytes";
+  if (p != ibuf.end())
   {
-    size_t const llen = p - _inbuf.data().begin();
-    string const read_buffer(_inbuf.data().begin(), llen);
-    ioxx::reset_begin(_inbuf.data(), _inbuf.data().begin() + llen);
     string name, data;
-    size_t len = http_parser.parse_header(name, data, read_buffer);
+    size_t len( http_parser.parse_header(name, data, ibuf.begin(), p) );
+    TRACE() << "parser consumed " << len << " bytes";
+    BOOST_ASSERT(!len || ibuf.begin() + len == p);
+    ibuf.reset(p, ibuf.end());
     if (len > 0)
     {
       if (strcasecmp("Host", name.c_str()) == 0)
       {
-        if (http_parser.parse_host_header(request, data) == 0)
-        {
-          protocol_error("Malformed <tt>Host</tt> header.\r\n");
-          return false;
-        }
+        if (!http_parser.parse_host_header(_request, data.data(), data.data() + data.size()))
+          return protocol_error(obuf, "Malformed <tt>Host</tt> header.\r\n");
         else
-          HTRACE() "Read Host header"
-            << ": host = " << request.host
-            << "; port = " << request.port
+          TRACE() << "Read Host header"
+            << ": host = " << _request.host
+            << "; port = " << _request.port
             ;
       }
       else if (strcasecmp("If-Modified-Since", name.c_str()) == 0)
       {
-        if (http_parser.parse_if_modified_since_header(request, data) == 0)
-          HINFO() "Ignoring malformed If-Modified-Since header '" << data << "'";
+        if (!http_parser.parse_if_modified_since_header(_request, data.data(), data.data() + data.size()))
+          INFO() << "Ignoring malformed If-Modified-Since header '" << data << "'";
         else
-          HTRACE() "Read If-Modified-Since header: timestamp = " << *request.if_modified_since;
+          TRACE() << "Read If-Modified-Since header: timestamp = " << *_request.if_modified_since;
       }
       else if (strcasecmp("Connection", name.c_str()) == 0)
       {
-        HTRACE() "Read Connection header: data = '" << data << "'";
-        request.connection = data;
+        TRACE() << "Read Connection header: data = '" << data << "'";
+        _request.connection = data;
       }
       else if (strcasecmp("Keep-Alive", name.c_str()) == 0)
       {
-        HTRACE() "Read Keep-Alive header: data = '" << data << "'";
-        request.keep_alive = data;
+        TRACE() << "Read Keep-Alive header: data = '" << data << "'";
+        _request.keep_alive = data;
       }
       else if (strcasecmp("User-Agent", name.c_str()) == 0)
       {
-        HTRACE() "Read User-Agent header: data = '" << data << "'";
-        request.user_agent = data;
+        TRACE() << "Read User-Agent header: data = '" << data << "'";
+        _request.user_agent = data;
       }
       else if (strcasecmp("Referer", name.c_str()) == 0)
       {
-        HTRACE() "Read Referer header: data = '" << data << "'";
-        request.referer = data;
+        TRACE() << "Read Referer header: data = '" << data << "'";
+        _request.referer = data;
       }
       else
-        HTRACE() "Ignoring unknown header: '" << name << "' = '" << data << "'";
+        TRACE() << "Ignoring unknown header: '" << name << "' = '" << data << "'";
 
-      I(len == llen);
-      return true;
+      return get_request_header(ibuf, obuf);
     }
     else
-    {
-      protocol_error("Your HTTP request is syntactically incorrect.\r\n");
-      return false;
-    }
+      return protocol_error(obuf, "Your HTTP request is syntactically incorrect.\r\n");
   }
 
-  return false;
+  return READ_REQUEST_HEADER;
 }
 
-bool http::daemon::get_request_body()
-{
-  // We ain't reading any bodies yet.
+/// \todo support request bodies
 
-  HTRACE() "No request body; going into SETUP_REPLY state.";
-  state = SETUP_REPLY;
-  return true;
-}
-
-/**
- *  In COPY_FILE state, all we do is fill up the write_buffer with
- *  data when it's empty, and if the file is through, we'll go into
- *  any of the FLUSH_BUFFER states -- depending on whether we support
- *  persistent connections or not -- to go on.
- */
-bool http::daemon::copy_file()
+http::daemon::state_t http::daemon::get_request_body(input_buffer & ibuf, output_buffer & obuf)
 {
-  if (write_buffer.empty())
-  {
-    char  buf[4096];
-    const char * const p = _filefd.read(buf, buf + sizeof(buf));
-    if (p)     write_buffer.assign(buf, p - buf);
-    else
-    {
-      HTRACE() "file copy complete: going into FLUSH_BUFFER state";
-      state = FLUSH_BUFFER;
-      _filefd.reset();
-    }
-    return true;
-  }
-  return false;
-}
-
-/**
- *  In FLUSH_BUFFER state, ...
- */
-bool http::daemon::flush_buffer()
-{
-  if (write_buffer.empty())
-  {
-    log_access();
-    if (use_persistent_connection)
-    {
-      HTRACE() "restarting persistent connection";
-      reset();
-      return true;
-    }
-    else
-    {
-      state = TERMINATE;
-      if (::shutdown(_sockfd->fd, SHUT_RDWR) == -1)
-        terminate();
-    }
-  }
-  return false;
+  TRACE() << "no body";
+  return respond(ibuf, obuf);
 }
 
 /**
@@ -364,66 +231,65 @@ inline string to_rfcdate(time_t t)
   return buffer;
 }
 
-bool http::daemon::setup_reply()
+http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer & obuf)
 {
-  struct ::stat         file_stat;
+  TRACE() << ibuf.size() << " byte input_buffer";
+
+  struct stat         file_stat;
 
   // Now that we have the whole request, we can get to work. Let's
   // start by testing whether we understand the request at all.
 
-  if (request.method != "GET" && request.method != "HEAD")
+  if (_request.method != "GET" && _request.method != "HEAD")
   {
-    protocol_error(string("<p>This server does not support an HTTP request called <tt>")
-                  + escape_html_specials(request.method) + "</tt>.</p>\r\n");
-    return false;
+    return protocol_error(obuf, string("<p>This server does not support an HTTP request called <tt>")
+                         + escape_html_specials(_request.method) + "</tt>.</p>\r\n");
   }
 
   // Make sure we have a hostname, and make sure it's in lowercase.
 
-  if (request.host.empty())
+  if (_request.host.empty())
   {
-    if (request.host.empty())
+    if (_request.host.empty())
     {
       if (!config->default_hostname.empty() &&
-         (request.major_version == 0 || (request.major_version == 1 && request.minor_version == 0))
+         (_request.major_version == 0 || (_request.major_version == 1 && _request.minor_version == 0))
          )
-        request.host = config->default_hostname;
+        _request.host = config->default_hostname;
       else
       {
-        protocol_error("<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
-        return false;
+        return protocol_error(obuf, "<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
       }
     }
     else
-      request.host = request.url.host;
+      _request.host = _request.url.host;
   }
-  for (string::iterator i = request.host.begin(); i != request.host.end(); ++i)
+  for (string::iterator i = _request.host.begin(); i != _request.host.end(); ++i)
     *i = tolower(*i);
 
   // Make sure we have a port number.
 
-  if (!request.port && request.url.port)
-      request.port = request.url.port;
+  if (!_request.port && _request.url.port)
+      _request.port = _request.url.port;
 
   // Construct the actual file name associated with the hostname and
   // URL, then check whether we can send that file.
 
-  document_root = config->document_root + "/" + request.host;
-  filename = document_root + urldecode(request.url.path);
+  document_root = config->document_root + "/" + _request.host;
+  filename = document_root + urldecode(_request.url.path);
 
   if (!is_path_in_hierarchy(document_root.c_str(), filename.c_str()))
   {
     if (errno != ENOENT)
     {
-      HINFO() "peer requested URL "
-        << "'http://" << request.host
-        << ':' << (request.port ? request.port : 80u)
-        << request.url.path
+      INFO() << "peer requested URL "
+        << "'http://" << _request.host
+        << ':' << (_request.port ? _request.port : 80u)
+        << _request.url.path
         << "' ('" << filename << "'), which fails the hierarchy check"
         ;
     }
-    file_not_found();
-    return false;
+    return file_not_found(obuf);
   }
 
  stat_again:
@@ -431,54 +297,51 @@ bool http::daemon::setup_reply()
   {
     if (errno != ENOENT)
     {
-      HINFO() "peer requested URL "
-        << "'http://" << request.host
-        << ':' << (!request.port ? 80 : request.port)
-        << request.url.path
+      INFO() << "peer requested URL "
+        << "'http://" << _request.host
+        << ':' << (!_request.port ? 80 : _request.port)
+        << _request.url.path
         << "' ('" << filename << "'), which fails stat(2): "
         << ::strerror(errno)
         ;
     }
-    file_not_found();
-    return false;
+    return file_not_found(obuf);
   }
 
   if (S_ISDIR(file_stat.st_mode))
   {
-    if (*request.url.path.rbegin() == '/')
+    if (*_request.url.path.rbegin() == '/')
     {
       filename += config->default_page;
       goto stat_again;    // What does Nikolas Wirth know?
     }
     else
     {
-      moved_permanently(request.url.path + "/");
-      return false;
+      return moved_permanently(obuf, _request.url.path + "/");
     }
   }
 
   // Decide whether to use a persistent connection.
 
-  use_persistent_connection = parser::supports_persistent_connection(request);
+  _use_persistent_connection = parser::supports_persistent_connection(_request);
 
   // Check whether the If-Modified-Since header applies.
 
-  if (request.if_modified_since)
+  if (_request.if_modified_since)
   {
-    if (file_stat.st_mtime <= *request.if_modified_since)
+    if (file_stat.st_mtime <= *_request.if_modified_since)
     {
-      HTRACE() << "Requested file ('" << filename << "')"
+      TRACE() << "Requested file ('" << filename << "')"
                << " has mtime '" << file_stat.st_mtime
-               << " and if-modified-since was " << *request.if_modified_since
+               << " and if-modified-since was " << *_request.if_modified_since
                << ": Not modified."
         ;
-      not_modified();
-      return false;
+      return not_modified(obuf);
     }
     else
-      HTRACE() << "Requested file ('" << filename << "')"
+      TRACE() << "Requested file ('" << filename << "')"
                << " has mtime '" << file_stat.st_mtime
-               << " and if-modified-since was " << *request.if_modified_since
+               << " and if-modified-since was " << *_request.if_modified_since
                << ": Modified."
         ;
   }
@@ -493,43 +356,22 @@ bool http::daemon::setup_reply()
       << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
       << "Content-Length: " << file_stat.st_size << "\r\n"
       << "Last-Modified: " << to_rfcdate(file_stat.st_mtime) << "\r\n";
-  if (!request.connection.empty())
+  if (!_request.connection.empty())
   {
-    if (use_persistent_connection)
-    {
-      buf << "Connection: keep-alive\r\n"
-          << "Keep-Alive: timeout=" << config->network_read_timeout << ", max=100\r\n";
-    }
+    if (_use_persistent_connection)
+      buf << "Connection: keep-alive\r\n";
     else
-    {
       buf << "Connection: close\r\n";
-    }
   }
   buf << "\r\n";
-  write_buffer        = buf.str();
-  request.status_code = 200;
-  request.object_size = file_stat.st_size;
+  _request.status_code = 200;
+  _request.object_size = file_stat.st_size;
 
-  if (request.method == "HEAD")
-  {
-    state = FLUSH_BUFFER;
-    HTRACE() "answering HEAD: going into FLUSH_BUFFER state";
-  }
-  else // must be GET
-  {
-    _filefd = ioxx::data_socket(ioxx::posix_socket( ::open(filename.c_str(), O_RDONLY, 0) ));
-    if (!_filefd)
-    {
-      HERROR() "Cannot open requested file " << filename << ": " << ::strerror(errno);
-      file_not_found();
-      return false;
-    }
-    state = COPY_FILE;
-    HTRACE() "answering GET: going into COPY_FILE state";
-  }
+  /// \todo write payload now
 
-  go_to_write_mode();
-  return false;
+  log_access();
+
+  return TERMINATE;
 }
 
 // ----- Logging --------------------------------------------------------------
@@ -550,28 +392,28 @@ inline string to_logdate(time_t t)
 
 void http::daemon::log_access()
 {
-  if (!request.status_code)
+  if (!_request.status_code)
   {
-    HERROR() "Can't write access log entry because there is no status code.";
+    INFO() << "Can't write access log entry because there is no status code.";
     return;
   }
 
   string logfile( config->logfile_directory + "/" );
-  if (request.host.empty())     logfile += "no-hostname";
-  else                          logfile += request.host + "-access";
+  if (_request.host.empty())     logfile += "no-hostname";
+  else                           logfile += _request.host + "-access";
 
   // Convert the object size now, so that we can write a string.
   // That's necessary, because in some cases we write "-" rather
   // than a number.
 
   char object_size[32];
-  if (!request.object_size)
+  if (!_request.object_size)
     strcpy(object_size, "-");
   else
   {
-    int len = snprintf(object_size, sizeof(object_size), "%u", *request.object_size);
+    int len = snprintf(object_size, sizeof(object_size), "%u", *_request.object_size);
     if (len < 0 || len > static_cast<int>(sizeof(object_size)))
-      HERROR() "internal error: snprintf() exceeded buffer size while formatting log entry";
+      INFO() << "internal error: snprintf() exceeded buffer size while formatting log entry";
   }
   // Open it and write the entry.
 
@@ -579,28 +421,28 @@ void http::daemon::log_access()
   if (!os.is_open())
     throw system_error((string("Can't open logfile '") + logfile + "'"));
 
-  escape_quotes(request.url.path);
-  escape_quotes(request.referer);
-  escape_quotes(request.user_agent);
+  escape_quotes(_request.url.path);
+  escape_quotes(_request.referer);
+  escape_quotes(_request.user_agent);
 
   // "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %s \"%s\" \"%s\"\n"
-  os << "TODO" << " - - [" << to_logdate(request.start_up_time) << "]"
-     << " \"" << request.method
-     << " "  << request.url.path
-     << " HTTP/" << request.major_version
-     << "." << request.minor_version << "\""
-     << " " << *request.status_code
+  os << "TODO" << " - - [" << to_logdate(_request.start_up_time) << "]"
+     << " \"" << _request.method
+     << " "  << _request.url.path
+     << " HTTP/" << _request.major_version
+     << "." << _request.minor_version << "\""
+     << " " << *_request.status_code
      << " " << object_size
-     << " \"" << request.referer << "\""
-     << " \"" << request.user_agent << "\""
+     << " \"" << _request.referer << "\""
+     << " \"" << _request.user_agent << "\""
      << endl;
 }
 
 // ----- Standard Responses ---------------------------------------------------
 
-void http::daemon::protocol_error(std::string const & message)
+http::daemon::state_t http::daemon::protocol_error(output_buffer & obuf, std::string const & message)
 {
-  HINFO() "protocol error: closing connection";
+  INFO() << "protocol error: " << message;
 
   ostringstream buf;
   buf << "HTTP/1.1 400 Bad Request\r\n";
@@ -608,7 +450,7 @@ void http::daemon::protocol_error(std::string const & message)
     buf << "Server: " << config->server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
-  if (!request.connection.empty())
+  if (!_request.connection.empty())
     buf << "Connection: close\r\n";
   buf << "\r\n"
       << "<html>\r\n"
@@ -623,17 +465,17 @@ void http::daemon::protocol_error(std::string const & message)
       << "</blockquote>\r\n"
       << "</body>\r\n"
       << "</html>\r\n";
-  write_buffer = buf.str();
-  request.status_code = 400;
-  request.object_size = 0;
-  use_persistent_connection = false;
-  state = FLUSH_BUFFER;
-  go_to_write_mode();
+  _request.status_code = 400;
+  _request.object_size = 0;
+  _use_persistent_connection = false;
+  string const & iob( buf.str() );
+  obuf.push_back(iob.begin(), iob.end());
+  return TERMINATE;
 }
 
-void http::daemon::file_not_found()
+http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf)
 {
-  HINFO() "URL '" << request.url.path << "' not found";
+  INFO() << "URL '" << _request.url.path << "' not found";
 
   ostringstream buf;
   buf << "HTTP/1.1 404 Not Found\r\n";
@@ -641,7 +483,7 @@ void http::daemon::file_not_found()
     buf << "Server: " << config->server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
-  if (!request.connection.empty())
+  if (!_request.connection.empty())
     buf << "Connection: close\r\n";
   buf << "\r\n"
       << "<html>\r\n"
@@ -651,22 +493,20 @@ void http::daemon::file_not_found()
       << "<body>\r\n"
       << "<h1>Page Not Found</h1>\r\n"
       << "<p>The requested page <tt>"
-      << escape_html_specials(request.url.path)
+      << escape_html_specials(_request.url.path)
       << "</tt> does not exist on this server.</p>\r\n"
       << "</body>\r\n"
       << "</html>\r\n";
-  write_buffer = buf.str();
-  request.status_code = 404;
-  request.object_size = 0;
-  use_persistent_connection = false;
-  state = FLUSH_BUFFER;
-  go_to_write_mode();
+  _request.status_code = 404;
+  _request.object_size = 0;
+  _use_persistent_connection = false;
+  return TERMINATE;
 }
 
-void http::daemon::moved_permanently(std::string const & path)
+http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std::string const & path)
 {
-  HTRACE() "Requested page "
-    << request.url.path << " has moved to '"
+  TRACE() << "Requested page "
+    << _request.url.path << " has moved to '"
     << path << "': going into FLUSH_BUFFER state"
     ;
 
@@ -676,11 +516,11 @@ void http::daemon::moved_permanently(std::string const & path)
     buf << "Server: " << config->server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n"
-      << "Location: http://" << request.host;
-  if (request.port && request.port != 80)
-    buf << ":" << request.port;
+      << "Location: http://" << _request.host;
+  if (_request.port && _request.port != 80)
+    buf << ":" << _request.port;
   buf << path << "\r\n";
-  if (!request.connection.empty())
+  if (!_request.connection.empty())
     buf << "Connection: close\r\n";
   buf << "\r\n"
       << "<html>\r\n"
@@ -689,32 +529,30 @@ void http::daemon::moved_permanently(std::string const & path)
       << "</head>\r\n"
       << "<body>\r\n"
       << "<h1>Document Has Moved</h1>\r\n"
-      << "<p>The document has moved <a href=\"http://" << request.host;
-  if (request.port && request.port != 80)
-    buf << ":" << request.port;
+      << "<p>The document has moved <a href=\"http://" << _request.host;
+  if (_request.port && _request.port != 80)
+    buf << ":" << _request.port;
   buf << path << "\">here</a>.\r\n"
       << "</body>\r\n"
       << "</html>\r\n";
-  write_buffer        = buf.str();
-  request.status_code = 301;
-  request.object_size = 0;
-  use_persistent_connection = false;
-  state = FLUSH_BUFFER;
-  go_to_write_mode();
+  _request.status_code = 301;
+  _request.object_size = 0;
+  _use_persistent_connection = false;
+  return TERMINATE;
 }
 
-void http::daemon::not_modified()
+http::daemon::state_t http::daemon::not_modified(output_buffer & obuf)
 {
-  HTRACE() "requested page not modified: going into FLUSH_BUFFER state";
+  TRACE() << "requested page not modified: going into FLUSH_BUFFER state";
 
   ostringstream buf;
   buf << "HTTP/1.1 304 Not Modified\r\n";
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n";
-  if (!request.connection.empty())
+  if (!_request.connection.empty())
   {
-    if (use_persistent_connection)
+    if (_use_persistent_connection)
     {
       buf << "Connection: keep-alive\r\n"
           << "Keep-Alive: timeout=" << config->network_read_timeout << ", max=100\r\n";
@@ -725,22 +563,10 @@ void http::daemon::not_modified()
     }
   }
   buf << "\r\n";
-  write_buffer = buf.str();
-  request.status_code = 304;
-  state = FLUSH_BUFFER;
-  go_to_write_mode();
+  _request.status_code = 304;
+  return TERMINATE;
 }
 
-
-// ----- Boost.Log ------------------------------------------------------------
-
-#include <boost/log/log.hpp>
-namespace http { namespace logging
-{
-  BOOST_DEFINE_LOG(access, "httpd.access")
-  BOOST_DEFINE_LOG(misc,   "httpd.misc")
-  BOOST_DEFINE_LOG(debug,  "httpd.debug")
-}}
 
 // ----- Configuration --------------------------------------------------------
 

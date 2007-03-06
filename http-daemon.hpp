@@ -15,20 +15,11 @@
 
 #include <vector>
 #include <map>
-#include <boost/log/log.hpp>
-#include <ioxx/stream-buffer.hpp>
-#include <ioxx/probe.hpp>
 #include "http.hpp"
+#include "io.hpp"
 
 namespace http
 {
-  namespace logging
-  {
-    BOOST_DECLARE_LOG(access)
-    BOOST_DECLARE_LOG(misc)
-    BOOST_DECLARE_LOG_DEBUG(debug)
-  }
-
   class configuration : private boost::noncopyable
   {
   public:
@@ -89,82 +80,49 @@ namespace http
   class daemon : private boost::noncopyable
   {
   public:
-    struct acceptor
-    {
-      void operator()(ioxx::socket const & s, ioxx::probe & p) const;
-    };
-
-    daemon(ioxx::socket s);
+    daemon();
     ~daemon();
-    ioxx::event operator() (ioxx::socket s, ioxx::event ev, ioxx::probe &);
+
+    bool operator() (input_buffer &, size_t, output_buffer &);
 
   private:
-    ioxx::data_socket                     _sockfd, _filefd;
-    std::vector<char>                     _buf_array;
-    ioxx::stream_buffer<char>             _inbuf;
+    Request       _request;
+    bool          _use_persistent_connection;
 
-    void reset();
-    void fd_is_readable();
-    void fd_is_writable();
-
-    ioxx::event    _evmask;
-    void go_to_read_mode()        { _evmask = ioxx::Readable; }
-    void go_to_write_mode()       { _evmask = ioxx::Writable; }
-
-    // The whole class is implemented as a state machine. Depending on
-    // the contents of the state variable, the appropriate state
-    // handler will be called via a lookup table. Each state handler
-    // may return true (go on) or false (re-schedule). Errors are
-    // reported via exceptions.
+    // The class is a state machine. Depending on the contents of the
+    // state variable, the appropriate handler will be called via a
+    // lookup table. Each state handler may return true (go on) or false
+    // (re-schedule). Errors are reported via exceptions.
 
     enum state_t
-      {
-        READ_REQUEST_LINE,
-        READ_REQUEST_HEADER,
-        READ_REQUEST_BODY,
-        SETUP_REPLY,
-        COPY_FILE,
-        FLUSH_BUFFER,
-        TERMINATE
+      { READ_REQUEST_LINE
+      , READ_REQUEST_HEADER
+      , READ_REQUEST_BODY
+      , RESPOND
+      , TERMINATE
       };
-    state_t state;
+    state_t _state;
 
-    typedef bool (daemon::*state_fun_t)();
-    static state_fun_t const state_handlers[];
+    typedef state_t (daemon::*state_fun_t)(input_buffer &, output_buffer &);
+    static state_fun_t const state_handlers[TERMINATE];
 
-    bool get_request_line();
-    bool get_request_header();
-    bool get_request_body();
-    bool setup_reply();
-    bool copy_file();
-    bool flush_buffer();
-    bool terminate()              { _evmask = ioxx::Error; return false; }
+    state_t reset();
 
-    void call_state_handler()
-    {
-      while((this->*state_handlers[state])())
-        ;
-    }
+    // mini-httpd state machine
 
-  private:
-    // standard replies
+    state_t get_request_line(input_buffer &, output_buffer &);
+    state_t get_request_header(input_buffer &, output_buffer &);
+    state_t get_request_body(input_buffer &, output_buffer &);
+    state_t respond(input_buffer &, output_buffer &);
 
-    void protocol_error(const std::string& message);
-    void moved_permanently(const std::string& path);
-    void file_not_found();
-    void not_modified();
+    // standard responses
 
-    // write an access log entry
+    state_t protocol_error(output_buffer &, const std::string& message);
+    state_t moved_permanently(output_buffer &, const std::string& path);
+    state_t file_not_found(output_buffer &);
+    state_t not_modified(output_buffer &);
 
     void log_access();
-
-    /// \todo get rid of the separate buffer
-    std::string                   write_buffer;
-
-    // the HTTP request
-
-    Request       request;
-    bool          use_persistent_connection;
 
     // file information for the request
 

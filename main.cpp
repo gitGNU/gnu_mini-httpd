@@ -10,60 +10,50 @@
  * provided the copyright notice and this notice are preserved.
  */
 
+#include "http-daemon.hpp"
+
+#include <boost/test/prg_exec_monitor.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <stdexcept>
 #include <csignal>
 #include <ctime>                // must have tzset(3)
 #include <iostream>
-#include <boost/log/log_impl.hpp>
-#include <boost/log/functions.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include "sanity/system-error.hpp"
-#include "ioxx/tcp-acceptor.hpp"
-#include "ioxx/logging.hpp"
-#include "http-daemon.hpp"
 
-using namespace std;
-using namespace ioxx;
+static char const PACKAGE_NAME[]    = "mini-httpd";
+static char const PACKAGE_VERSION[] = "2007-02-19";
 
-namespace
+typedef boost::asio::io_service io_service;
+static boost::scoped_ptr<io_service> the_io_service;
+
+static void start_service()
 {
-  void write_to_cerr(std::string const &, std::string const & msg)
-  {
-    cerr << msg << endl;
-  }
-
-  void init_logging()
-  {
-    using namespace boost::logging;
-    manipulate_logs("*")
-      .add_modifier(&prepend_prefix)
-      .add_appender(&write_to_cerr);
-    flush_log_cache();
-  }
-
-  volatile sig_atomic_t got_terminate_sig = false;
-
-  void set_sig_term(int)
-  {
-    got_terminate_sig = true;
-  }
+  TRACE() << "enter i/o service thread pool";
+  the_io_service->run();
 }
 
-int main(int argc, char** argv)
+static void stop_service()
+{
+  TRACE() << "received signal";
+  the_io_service->stop();
+}
+
+int cpp_main(int argc, char** argv)
 try
 {
+  using namespace std;
   using namespace http;
 
+  // Set up the system.
+
   ios::sync_with_stdio(false);
-  init_logging();
-
-  // Initialize the global variables telling us our time zone.
-
+  srand(time(0));
   tzset();
+  init_logging(PACKAGE_NAME);
 
   // Create our configuration and place it in the global pointer.
 
@@ -72,17 +62,18 @@ try
 
   // Install signal handler.
 
-  signal(SIGTERM, (sighandler_t)&set_sig_term);
-  signal(SIGINT, (sighandler_t)&set_sig_term);
-  signal(SIGHUP, (sighandler_t)&set_sig_term);
-  signal(SIGQUIT, (sighandler_t)&set_sig_term);
+  the_io_service.reset(new io_service);
+  signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGPIPE, SIG_IGN);
 
   // Start-up scheduler and listener.
 
-  boost::scoped_ptr<probe> probe( make_probe_poll() );
-  if (!probe) throw system_error("no probe implementation");
-  socket listen_port( add_tcp_service<http::daemon>(*probe, config->http_port) );
+  using namespace boost::asio::ip;
+  tcp::acceptor mini_httpd(*the_io_service, tcp::endpoint(tcp::v6(), config->http_port));
+  tcp_driver< io_driver<http::daemon> >(mini_httpd);
 
   // Change root to our sandbox.
 
@@ -124,22 +115,23 @@ try
 
   // Log some helpful information.
 
-  BOOST_LOGL(::http::logging::misc, info)
-    << "mini-httpd 2007-02-27 starting up"
-    << ": listen port = "  << config->http_port
-    << ", user id = "      << ::getuid()
-    << ", group id = "     << ::getgid()
-    << ", chroot = "       << config->chroot_directory
-    << ", hostname = "     << config->default_hostname
+  INFO() << "mini-httpd 2007-02-27 starting up"
+         << ": listen port = "  << config->http_port
+         << ", user id = "      << ::getuid()
+         << ", group id = "     << ::getgid()
+         << ", chroot = "       << config->chroot_directory
+         << ", hostname = "     << config->default_hostname
     ;
 
   // Run ...
 
-  while(!got_terminate_sig && probe->active())  probe->run_once();
+  start_service();
 
-  // Exit gracefully.
+  // Terminate gracefully.
 
-  BOOST_LOGL(::http::logging::misc, info) << "mini-httpd shutting down";
+  INFO() << "mini-httpd shutting down";
+  the_io_service.reset();
+
   return 0;
 }
 catch(http::configuration::no_error)
