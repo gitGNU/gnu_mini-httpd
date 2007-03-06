@@ -20,7 +20,7 @@
 /**
  *  \brief Magic constant lower limit for I/O buffer sizes.
  */
-size_t const input_buffer::min_buf_size( 1024u );
+inline size_t input_buffer::min_buf_size() { return 1024u; }
 
 /**
  *  \brief Debug-display an input_buffer's state.
@@ -172,9 +172,9 @@ inline size_t input_buffer::flush()
     flush_gap();
     space = back_space();
   }
-  else if (space * 2u <= std::min(len, min_buf_size))
+  else if (space * 2u <= std::min(len, min_buf_size()))
   {
-    size_t const cap( std::max(min_buf_size, capacity() * 2u) );
+    size_t const cap( std::max(min_buf_size(), capacity() * 2u) );
     TRACE() << "reallocate to " << cap << " bytes: " << *this;
     realloc(cap);
     space = back_space();

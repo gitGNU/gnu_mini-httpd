@@ -183,10 +183,10 @@ class input_buffer : public byte_range
 {
   byte_buffer _buf;
 
-  static size_t const min_buf_size;
-
   input_buffer(input_buffer const &);
   input_buffer & operator= (input_buffer const &);
+
+  static size_t min_buf_size();
 
 public:
   explicit input_buffer(size_t cap = 0u);
