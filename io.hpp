@@ -220,12 +220,13 @@ class output_buffer : private boost::noncopyable
 {
   scatter_vector        _iovec;
   byte_buffer           _buf;
+  byte_const_ptr        _base;
 
   struct fix_base;
   friend std::ostream & operator<< (std::ostream &, output_buffer const &);
 
 public:
-  output_buffer() { }
+  output_buffer();
 
   bool empty() const;
   void reset();

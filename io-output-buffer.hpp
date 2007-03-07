@@ -22,22 +22,32 @@
  */
 struct output_buffer::fix_base
 {
+  byte_const_ptr const begin;
   byte_const_ptr const end;
   ptrdiff_t const      fix;
 
-  fix_base(output_buffer & iob) : end( byte_const_ptr(0) + iob._buf.size() )
-                                , fix( &iob._buf[0] - byte_const_ptr(0) )
+  fix_base(output_buffer & iob) : begin( iob._base )
+                                , end( begin + iob._buf.size() )
+                                , fix( &iob._buf[0] - begin )
   {
+    iob._base = &iob._buf[0];
   }
 
   void operator() (boost::asio::const_buffer & iov) const
   {
     byte_const_ptr const  b( boost::asio::buffer_cast<byte_const_ptr>(iov) );
     size_t const          len( boost::asio::buffer_size(iov) );
-    if (b + len <= end)
+    if (begin <= b && b + len <= end)
       iov = boost::asio::const_buffer(b + fix, len);
   }
 };
+
+/**
+ *  \brief todo
+ */
+inline output_buffer::output_buffer() : _base(0)
+{
+}
 
 /**
  *  \brief todo
@@ -85,7 +95,7 @@ inline void output_buffer::push_back(Iter b, Iter e)
   size_t const new_len( _buf.size() );
   BOOST_ASSERT(old_len <= new_len);
   if (old_len != new_len)
-    push_back(io_vector(byte_const_ptr(0) + old_len, new_len - old_len));
+    push_back(io_vector(_base + old_len, new_len - old_len));
 }
 
 /**
