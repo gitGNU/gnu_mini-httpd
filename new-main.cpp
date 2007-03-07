@@ -15,6 +15,80 @@
 #include <csignal>
 #include "io.hpp"
 
+// ----- I/O Socket -----------------------------------------------------------
+
+class io_stream : private boost::noncopyable
+{
+public:
+  tcp_socket    _sock;
+  input_buffer  _inbuf;
+  output_buffer _outbuf;
+
+  bool          _more_input;
+  bool          _reading;
+  bool          _writing;
+  bool          _terminated;
+
+  io_stream(boost::asio::io_service & ios)
+    : _sock(ios), _more_input(false), _reading(false), _writing(false), _terminated(false)
+  {
+  }
+
+  virtual ~io_stream()          { }
+  virtual void initialize()     { start_reading(); }
+
+  virtual void terminate()
+  {
+    if (_terminated) return;
+    _sock.io_service().post(boost::bind(&::operator delete, this));
+    _more_input = false;
+    _terminated = true;
+  }
+
+  virtual bool flush_input_buffer()
+  {
+    if (_writing) return false;
+    _inbuf.flush();
+    BOOST_ASSERT(_inbuf.back_space());
+    return true;
+  }
+
+  virtual void start_reading()
+  {
+    BOOST_ASSERT(_more_input);
+    if (_reading) return;
+    size_t const space( _inbuf.back_space() );
+    if (!space)
+      if (!flush_input_buffer())
+        return;
+    using boost::asio::placeholders::bytes_transferred;
+    _sock.async_read_some
+      ( boost::asio::buffer(_inbuf.end(), space)
+      , boost::bind( &io_stream::handle_read, this, bytes_transferred )
+      );
+    _reading = true;
+  }
+
+  virtual void handle_read(size_t i)
+  {
+    TRACE_VAR1(i);
+    _more_input = (i != 0u);
+    _reading = false;
+    _inbuf.append(i);
+    // consume_input();
+    start_writing();
+    start_reading();
+  }
+
+  virtual void start_writing()
+  {
+    if (_writing) return;
+  }
+
+};
+
+
+
 // ----- I/O Handlers ---------------------------------------------------------
 
 struct tracer
@@ -130,6 +204,8 @@ int cpp_main(int argc, char ** argv)
 
   tcp::acceptor port2526(*the_io_service, tcp::endpoint(tcp::v6(), 2526));
   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
+
+  io_stream s( *the_io_service );
 
   // Run the server.
 
