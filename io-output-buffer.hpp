@@ -42,16 +42,25 @@ struct output_buffer::fix_base
 /**
  *  \brief todo
  */
-inline void output_buffer::reset()
+inline bool output_buffer::empty() const
 {
-  _iovec.clear();
-  _buf.clear();
+  BOOST_ASSERT( !_iovec.empty() || _buf.empty() );
+  return _iovec.empty();
 }
 
 /**
  *  \brief todo
  */
-inline scatter_vector const & output_buffer::commit()
+inline void output_buffer::reset()
+{
+  _iovec.resize(0u);
+  _buf.resize(0u);
+}
+
+/**
+ *  \brief todo
+ */
+inline scatter_vector & output_buffer::commit()
 {
   std::for_each(_iovec.begin(), _iovec.end(), fix_base(*this));
   return _iovec;

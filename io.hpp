@@ -227,13 +227,14 @@ class output_buffer : private boost::noncopyable
 public:
   output_buffer() { }
 
+  bool empty() const;
   void reset();
-
-  scatter_vector const & commit();
-
   void push_back(io_vector const & iov);
 
-  template <class Iter> void push_back(Iter b, Iter e);
+  template <class Iter>
+  void push_back(Iter b, Iter e);
+
+  scatter_vector & commit();
 };
 
 #include "io-output-buffer.hpp"
