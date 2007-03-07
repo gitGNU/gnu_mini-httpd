@@ -17,7 +17,6 @@ exe mini-httpd
       core
     : <use>/boost
       <library>/boost/test//boost_prg_exec_monitor
-      <library>/boost/thread//boost_thread
       <library>/boost/system//boost_system
     : <threading>single
     ;
