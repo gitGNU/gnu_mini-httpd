@@ -115,12 +115,17 @@ try
 
   // Log some helpful information.
 
-  INFO() << "mini-httpd 2007-02-27 starting up"
-         << ": listen port = "  << config->http_port
-         << ", user id = "      << ::getuid()
-         << ", group id = "     << ::getgid()
-         << ", chroot = "       << config->chroot_directory
-         << ", hostname = "     << config->default_hostname
+  INFO()
+    << "mini-httpd 2007-02-27 starting up"
+    << ": tcp port = "  << config->http_port
+    << ", user id = "   << ::getuid()
+    << ", group id = "  << ::getgid()
+    << ", chroot = "    << config->chroot_directory
+    << ", hostname = "  << config->default_hostname
+    << ", log dir = "   << ( config->logfile_directory.empty()
+                           ? "disabled"
+                           : config->logfile_directory.c_str()
+                           )
     ;
 
   // Run ...

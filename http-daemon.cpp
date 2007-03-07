@@ -13,7 +13,6 @@
 #include "http-daemon.hpp"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/lambda/bind.hpp>
 #include <sanity/system-error.hpp>
 #include <sys/mman.h>           // mmap(), POSIX.1-2001
 #include <unistd.h>             // close(2)
@@ -30,7 +29,7 @@ using namespace std;
 http::daemon::daemon()
 {
   TRACE() << "accepting new connection";
-  _state = reset();
+  reset();
 }
 
 http::daemon::~daemon()
@@ -41,13 +40,14 @@ http::daemon::~daemon()
 /**
  *  \brief (Re-)initialize internals (for use in persistent connections).
  */
-http::daemon::state_t http::daemon::reset()
+void http::daemon::reset()
 {
-  TRACE() << "reset state for new request";
-  _payload.reset();
+  if (!_payload.empty())
+    TRACE() << _payload.size() << " responses queued";
+  _use_persistent_connection = false;
   _request = Request();
   _request.start_up_time = time(0);
-  return READ_REQUEST_LINE;
+  _state = READ_REQUEST_LINE;
 }
 
 // ----- State Machine Driver -------------------------------------------------
@@ -60,6 +60,11 @@ bool http::daemon::operator() (input_buffer & ibuf, size_t i, output_buffer & ob
   if (i)
     try
     {
+      if (!_payload.empty() && obuf.empty())
+      {
+        TRACE() << "flush " << _payload.size() << " shared buffers";
+        _payload.resize(0u);
+      }
       BOOST_ASSERT(_state < TERMINATE);
       _state = (this->*state_handlers[_state])(ibuf, obuf);
       return _state != TERMINATE;
@@ -201,6 +206,21 @@ http::daemon::state_t http::daemon::get_request_body(input_buffer & ibuf, output
 }
 
 /**
+ *  \brief to be written
+ */
+http::daemon::state_t http::daemon::restart(input_buffer & ibuf, output_buffer & obuf)
+{
+  TRACE() << (_use_persistent_connection ? "keep alive" : "shut down");
+  if (_use_persistent_connection)
+  {
+    reset();
+    return get_request_line(ibuf, obuf);
+  }
+  else
+    return TERMINATE;
+}
+
+/**
  * This routine will normalize the path of our document root and of the
  * file that our client is trying to access. Then it will check,
  * whether that file is _in_ the document root. As a nice side effect,
@@ -236,20 +256,21 @@ inline string to_rfcdate(time_t t)
   return buffer;
 }
 
-struct mmaped_buffer : public boost::shared_ptr<char const>
+struct mmapped_buffer : public boost::shared_ptr<char const>
 {
-  mmaped_buffer(char const * path, size_t len)
+  mmapped_buffer(char const * path, size_t len)
   {
     TRACE_VAR2(path, len);
     BOOST_ASSERT(path); BOOST_ASSERT(path[0]); BOOST_ASSERT(len);
     int fd( ::open(path, O_RDONLY) );
     if (fd < 0) throw system_error(std::string("cannot open ") + path);
+#if 0
     void const * p( ::mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0) );
     if (p != MAP_FAILED)
     {
       BOOST_ASSERT(p);
       reset( reinterpret_cast<char const *>(p)
-           , boost::bind(&mmaped_buffer::destruct, fd, len, _1)
+           , boost::bind(&mmapped_buffer::destruct, fd, len, _1)
            );
     }
     else
@@ -257,6 +278,23 @@ struct mmaped_buffer : public boost::shared_ptr<char const>
       ::close(fd);
       throw system_error(std::string("cannot mmap() file ") + path);
     }
+#else
+    char * p( reinterpret_cast<char *>(malloc(len)) );
+    if (p)
+    {
+      BOOST_ASSERT(p);
+      reset( p, boost::bind(&::free, _1) );       /// \todo descriptor may leak here
+      ssize_t const rc( ::read(fd, p, len) );
+      ::close(fd);
+      if (rc <= 0 || static_cast<size_t>(rc) != len)
+        throw system_error(std::string("failed to read file file ") + path);
+    }
+    else
+    {
+      ::close(fd);
+      throw system_error("out of memory");
+    }
+#endif
   }
 
   static void destruct(int fd, size_t len, void const * p)
@@ -326,7 +364,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
         << "' ('" << filename << "'), which fails the hierarchy check"
         ;
     }
-    return file_not_found(obuf);
+    return file_not_found(obuf, filename);
   }
 
  stat_again:
@@ -342,7 +380,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
         << ::strerror(errno)
         ;
     }
-    return file_not_found(obuf);
+    return file_not_found(obuf, filename);
   }
 
   if (S_ISDIR(file_stat.st_mode))
@@ -369,11 +407,11 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
     if (file_stat.st_mtime <= *_request.if_modified_since)
     {
       TRACE() << "Requested file ('" << filename << "')"
-               << " has mtime '" << file_stat.st_mtime
-               << " and if-modified-since was " << *_request.if_modified_since
-               << ": Not modified."
-        ;
-      return not_modified(obuf);
+              << " has mtime '" << file_stat.st_mtime
+              << " and if-modified-since was " << *_request.if_modified_since
+              << ": Not modified.";
+      not_modified(obuf);
+      return restart(ibuf, obuf);
     }
     else
       TRACE() << "Requested file ('" << filename << "')"
@@ -393,13 +431,8 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
       << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
       << "Content-Length: " << file_stat.st_size << "\r\n"
       << "Last-Modified: " << to_rfcdate(file_stat.st_mtime) << "\r\n";
-  if (!_request.connection.empty())
-  {
-    if (_use_persistent_connection)
-      buf << "Connection: keep-alive\r\n";
-    else
-      buf << "Connection: close\r\n";
-  }
+  if (_use_persistent_connection)  buf << "Connection: keep-alive\r\n";
+  else                             buf << "Connection: close\r\n";
   buf << "\r\n";
   _request.status_code = 200;
   _request.object_size = file_stat.st_size;
@@ -408,21 +441,23 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
   // Load payload and write it.
 
-  _payload = mmaped_buffer( filename.c_str(), file_stat.st_size );
-  BOOST_ASSERT(_payload);
-  obuf.push_back(io_vector(_payload.get(), file_stat.st_size));
+  mmapped_buffer payload( filename.c_str(), file_stat.st_size );
+  BOOST_ASSERT(payload);
+  obuf.push_back(io_vector(payload.get(), file_stat.st_size));
+  _payload.push_back(payload);
 
   log_access();
 
-  return TERMINATE;
+  return restart(ibuf, obuf);
 }
 
 
 // ----- Logging --------------------------------------------------------------
 
-inline void escape_quotes(string & input)
+inline string & escape_quotes(string & input)
 {
   boost::algorithm::replace_all(input, "\"", "\\\"");
+  return input;
 }
 
 inline string to_logdate(time_t t)
@@ -434,52 +469,37 @@ inline string to_logdate(time_t t)
   return buffer;
 }
 
+/// \todo Don't re-open the file every time an access is written. A message
+///       queue is called for.
+
 void http::daemon::log_access()
 {
-  if (!_request.status_code)
-  {
-    INFO() << "Can't write access log entry because there is no status code.";
-    return;
-  }
+  BOOST_ASSERT(_request.status_code);
+
+  if (config->logfile_directory.empty()) return;
 
   string logfile( config->logfile_directory + "/" );
-  if (_request.host.empty())     logfile += "no-hostname";
-  else                           logfile += _request.host + "-access";
+  logfile += _request.host.empty() ? "no-hostname" : _request.host + "-access";
 
-  // Convert the object size now, so that we can write a string.
-  // That's necessary, because in some cases we write "-" rather
-  // than a number.
-
-  char object_size[32];
-  if (!_request.object_size)
-    strcpy(object_size, "-");
-  else
-  {
-    int len = snprintf(object_size, sizeof(object_size), "%u", *_request.object_size);
-    if (len < 0 || len > static_cast<int>(sizeof(object_size)))
-      INFO() << "internal error: snprintf() exceeded buffer size while formatting log entry";
-  }
-  // Open it and write the entry.
-
-  ofstream os(logfile.c_str(), ios_base::out); // no ios_base::trunc
+  ofstream os(logfile.c_str(), ios_base::out | ios_base::app);
   if (!os.is_open())
     throw system_error((string("Can't open logfile '") + logfile + "'"));
 
-  escape_quotes(_request.url.path);
-  escape_quotes(_request.referer);
-  escape_quotes(_request.user_agent);
-
   // "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %s \"%s\" \"%s\"\n"
-  os << "TODO" << " - - [" << to_logdate(_request.start_up_time) << "]"
-     << " \"" << _request.method
-     << " "  << _request.url.path
-     << " HTTP/" << _request.major_version
-     << "." << _request.minor_version << "\""
-     << " " << *_request.status_code
-     << " " << object_size
-     << " \"" << _request.referer << "\""
-     << " \"" << _request.user_agent << "\""
-     << endl;
+  os   << "peer-name-here" << " - - [" << to_logdate(_request.start_up_time) << "]"
+       << " \"" << _request.method
+       << " "  << escape_quotes(_request.url.path)
+       << " HTTP/" << _request.major_version
+       << "." << _request.minor_version << "\""
+       << " " << *_request.status_code
+       << " ";
+  if (_request.object_size)
+    os << *_request.object_size;
+  else
+    os << "-";
+  os   << " \"" << escape_quotes(_request.referer) << "\""
+       << " \"" << escape_quotes(_request.user_agent) << "\""
+       << endl;
 }
 
 // ----- Standard Responses ---------------------------------------------------
@@ -517,9 +537,9 @@ http::daemon::state_t http::daemon::protocol_error(output_buffer & obuf, std::st
   return TERMINATE;
 }
 
-http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf)
+http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf, std::string const & path)
 {
-  INFO() << "URL '" << _request.url.path << "' not found";
+  INFO() << "not found: URL '" << _request.url.path << "', path '" << path << "'";
 
   ostringstream buf;
   buf << "HTTP/1.1 404 Not Found\r\n";
@@ -586,7 +606,7 @@ http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std:
   return TERMINATE;
 }
 
-http::daemon::state_t http::daemon::not_modified(output_buffer & obuf)
+void http::daemon::not_modified(output_buffer & obuf)
 {
   TRACE() << "requested page not modified";
 
@@ -595,23 +615,12 @@ http::daemon::state_t http::daemon::not_modified(output_buffer & obuf)
   if (!config->server_string.empty())
     buf << "Server: " << config->server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n";
-  if (!_request.connection.empty())
-  {
-    if (_use_persistent_connection)
-    {
-      buf << "Connection: keep-alive\r\n"
-          << "Keep-Alive: timeout=" << config->network_read_timeout << ", max=100\r\n";
-    }
-    else
-    {
-      buf << "Connection: close\r\n";
-    }
-  }
+  if (_use_persistent_connection)  buf << "Connection: keep-alive\r\n";
+  else                             buf << "Connection: close\r\n";
   buf << "\r\n";
   _request.status_code = 304;
   string const & iob( buf.str() );
   obuf.push_back(iob.begin(), iob.end());
-  return TERMINATE;
 }
 
 
@@ -737,8 +746,6 @@ http::configuration::configuration(int argc, char** argv)
     if (default_page.empty())
       throw invalid_argument("Setting an empty --default-page is not allowed.");
     if (document_root.empty())
-      throw invalid_argument("Setting an empty --document-root is not allowed.");
-    if (logfile_directory.empty())
       throw invalid_argument("Setting an empty --document-root is not allowed.");
   }
 

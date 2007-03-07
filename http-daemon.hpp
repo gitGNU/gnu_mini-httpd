@@ -88,9 +88,11 @@ namespace http
   private:
     // the state of this class
 
-    Request                             _request;
-    bool                                _use_persistent_connection;
-    boost::shared_ptr<char const>       _payload;
+    Request                                     _request;
+    bool                                        _use_persistent_connection;
+
+    typedef boost::shared_ptr<char const>       shared_buffer;
+    std::vector<shared_buffer>                  _payload;
 
     // state machine
 
@@ -106,19 +108,20 @@ namespace http
     typedef state_t (daemon::*state_fun_t)(input_buffer &, output_buffer &);
     static state_fun_t const state_handlers[TERMINATE];
 
-    state_t reset();
+    void reset();
 
     state_t get_request_line(input_buffer &, output_buffer &);
     state_t get_request_header(input_buffer &, output_buffer &);
     state_t get_request_body(input_buffer &, output_buffer &);
     state_t respond(input_buffer &, output_buffer &);
+    state_t restart(input_buffer & ibuf, output_buffer & obuf);
 
     // standard responses
 
     state_t protocol_error(output_buffer &, const std::string& message);
     state_t moved_permanently(output_buffer &, const std::string& path);
-    state_t file_not_found(output_buffer &);
-    state_t not_modified(output_buffer &);
+    state_t file_not_found(output_buffer &, std::string const &);
+    void    not_modified(output_buffer &);
 
     void log_access();
 
