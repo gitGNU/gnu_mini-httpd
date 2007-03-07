@@ -229,7 +229,7 @@ public:
   output_buffer();
 
   bool empty() const;
-  void reset();
+  void flush();
   void push_back(io_vector const & iov);
 
   template <class Iter>

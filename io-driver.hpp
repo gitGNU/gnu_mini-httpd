@@ -50,7 +50,7 @@ inline void io_driver<Handler>::start( shared_socket const & sin
 template <class Handler>
 inline void io_driver<Handler>::start_read(ctx_ptr ctx)
 {
-  ctx->outbuf.reset();
+  ctx->outbuf.flush();
   size_t const space( ctx->inbuf.flush() );
   BOOST_ASSERT(space);
   using boost::asio::placeholders::bytes_transferred;

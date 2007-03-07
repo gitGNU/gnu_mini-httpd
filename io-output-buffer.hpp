@@ -61,7 +61,7 @@ inline bool output_buffer::empty() const
 /**
  *  \brief todo
  */
-inline void output_buffer::reset()
+inline void output_buffer::flush()
 {
   _iovec.resize(0u);
   _buf.resize(0u);
