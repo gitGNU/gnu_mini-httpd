@@ -170,7 +170,7 @@ bool http::parser::supports_persistent_connection(const Request & request)
 {
   if (strcasecmp(request.connection.c_str(), "close") == 0)
     return false;
-  if (strcasecmp(request.connection.c_str(), "keep-alive") == 0 && !request.keep_alive.empty())
+  if (strcasecmp(request.connection.c_str(), "keep-alive") == 0)
     return true;
   if (request.major_version >= 1 && request.minor_version >= 1)
     return true;
