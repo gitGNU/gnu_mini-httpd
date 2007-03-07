@@ -45,12 +45,12 @@ public:
     _terminated = true;
   }
 
-  virtual bool flush_input_buffer()
+  virtual void input_buffer_overflow()
   {
-    if (_writing) return false;
+    if (_writing) return;
     _inbuf.flush();
     BOOST_ASSERT(_inbuf.back_space());
-    return true;
+    start_reading();
   }
 
   virtual void start_reading()
@@ -58,26 +58,38 @@ public:
     BOOST_ASSERT(_more_input);
     if (_reading) return;
     size_t const space( _inbuf.back_space() );
-    if (!space)
-      if (!flush_input_buffer())
-        return;
-    using boost::asio::placeholders::bytes_transferred;
-    _sock.async_read_some
-      ( boost::asio::buffer(_inbuf.end(), space)
-      , boost::bind( &io_stream::handle_read, this, bytes_transferred )
-      );
-    _reading = true;
+    if (!space) input_buffer_overflow();
+    else
+    {
+      using boost::asio::placeholders::bytes_transferred;
+      _sock.async_read_some
+        ( boost::asio::buffer(_inbuf.end(), space)
+        , boost::bind( &io_stream::handle_read, this, bytes_transferred )
+        );
+      _reading = true;
+    }
   }
 
   virtual void handle_read(size_t i)
   {
     TRACE_VAR1(i);
-    _more_input = (i != 0u);
     _reading = false;
+    _more_input = (i != 0u);
     _inbuf.append(i);
-    // consume_input();
-    start_writing();
-    start_reading();
+    if (_writing && _more_input)
+    {
+      start_reading();
+      return;
+    }
+    consume_input();
+    if (!_outbuf.empty())       start_writing();
+    if (_more_input)            start_reading();
+    else
+    {
+      if (_writing)             /**/;
+      else if (_outbuf.empty()) terminate();
+      else                      start_writing();
+    }
   }
 
   virtual void start_writing()
@@ -85,6 +97,25 @@ public:
     if (_writing) return;
   }
 
+  virtual void handle_write(size_t i)
+  {
+    _writing = false;
+    //_outbuf.consume(i);
+    if (_outbuf.empty()) output_buffer_underflow();
+    else                 start_writing();
+  }
+
+  virtual void output_buffer_underflow()
+  {
+    if (_more_input)    start_reading();
+    else                terminate();
+  }
+
+  virtual void consume_input()
+  {
+    _outbuf.push_back(io_vector(_inbuf.begin(), _inbuf.size()));
+    _inbuf.consume(_inbuf.size());
+  }
 };
 
 
