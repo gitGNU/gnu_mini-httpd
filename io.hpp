@@ -229,13 +229,15 @@ public:
   output_buffer();
 
   bool empty() const;
+  void consume(size_t);
+  void append(byte_const_ptr, byte_const_ptr);
+  void append(void const *, size_t);
   void flush();
-  void push_back(io_vector const & iov);
 
   template <class Iter>
   void push_back(Iter b, Iter e);
 
-  scatter_vector & commit();
+  scatter_vector const & commit();
 };
 
 #include "io-output-buffer.hpp"

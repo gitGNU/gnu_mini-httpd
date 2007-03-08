@@ -443,7 +443,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
   mmapped_buffer payload( filename.c_str(), file_stat.st_size );
   BOOST_ASSERT(payload);
-  obuf.push_back(io_vector(payload.get(), file_stat.st_size));
+  obuf.append(payload.get(), file_stat.st_size);
   _payload.push_back(payload);
 
   log_access();

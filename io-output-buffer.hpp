@@ -70,18 +70,29 @@ inline void output_buffer::flush()
 /**
  *  \brief todo
  */
-inline scatter_vector & output_buffer::commit()
+inline scatter_vector const & output_buffer::commit()
 {
-  std::for_each(_iovec.begin(), _iovec.end(), fix_base(*this));
+  if (!_buf.empty())
+    std::for_each(_iovec.begin(), _iovec.end(), fix_base(*this));
   return _iovec;
 }
 
 /**
  *  \brief todo
  */
-inline void output_buffer::push_back(io_vector const & iov)
+inline void output_buffer::append(byte_const_ptr b, byte_const_ptr e)
 {
-  _iovec.push_back(iov);
+  BOOST_ASSERT(b < e);
+  _iovec.push_back(io_vector(b, e - b));
+}
+
+/**
+ *  \brief todo
+ */
+inline void output_buffer::append(void const * base, size_t len)
+{
+  BOOST_ASSERT(len);
+  _iovec.push_back(io_vector(base, len));
 }
 
 /**
@@ -95,7 +106,7 @@ inline void output_buffer::push_back(Iter b, Iter e)
   size_t const new_len( _buf.size() );
   BOOST_ASSERT(old_len <= new_len);
   if (old_len != new_len)
-    push_back(io_vector(_base + old_len, new_len - old_len));
+    append(_base + old_len, new_len - old_len);
 }
 
 /**
