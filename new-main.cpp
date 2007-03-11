@@ -27,93 +27,100 @@ public:
   bool          _more_input;
   bool          _reading;
   bool          _writing;
-  bool          _terminated;
 
   io_stream(boost::asio::io_service & ios)
-    : _sock(ios), _more_input(false), _reading(false), _writing(false), _terminated(false)
+    : _sock(ios), _more_input(false), _reading(false), _writing(false)
   {
   }
 
   virtual ~io_stream()          { }
-  virtual void initialize()     { start_reading(); }
+  virtual void initialize()     { _more_input = true; run(); }
+
+  void run()
+  {
+    TRACE_VAR3(_more_input, _reading, _writing);
+    TRACE_VAR2(_inbuf, _outbuf);
+    if (_more_input)
+    {
+      if (!_writing)                                            consume_input();
+      if (!_writing && !_outbuf.empty())                        start_writing();
+      if (!_reading && !_writing && !_inbuf.back_space())       _inbuf.flush();
+      if (!_reading && _inbuf.back_space())                     start_reading();
+    }
+    else
+    {
+      BOOST_ASSERT(!_reading);
+      if (!_writing)
+      {
+        if (!_outbuf.empty())   start_writing();
+        else                    terminate();
+      }
+    }
+  }
 
   virtual void terminate()
   {
-    if (_terminated) return;
-    _sock.io_service().post(boost::bind(&::operator delete, this));
-    _more_input = false;
-    _terminated = true;
-  }
-
-  virtual void input_buffer_overflow()
-  {
-    if (_writing) return;
-    _inbuf.flush();
-    BOOST_ASSERT(_inbuf.back_space());
-    start_reading();
+    TRACE_VAR2(_inbuf, _outbuf);
+    BOOST_ASSERT(!_more_input);
+    BOOST_ASSERT(!_reading);
+    BOOST_ASSERT(!_writing);
+    delete this;
   }
 
   virtual void start_reading()
   {
+    TRACE_VAR1(_inbuf);
     BOOST_ASSERT(_more_input);
-    if (_reading) return;
+    BOOST_ASSERT(!_reading);
     size_t const space( _inbuf.back_space() );
-    if (!space) input_buffer_overflow();
-    else
-    {
-      using boost::asio::placeholders::bytes_transferred;
-      _sock.async_read_some
-        ( boost::asio::buffer(_inbuf.end(), space)
-        , boost::bind( &io_stream::handle_read, this, bytes_transferred )
-        );
-      _reading = true;
-    }
+    BOOST_ASSERT(space);
+    using boost::asio::placeholders::bytes_transferred;
+    _sock.async_read_some
+      ( boost::asio::buffer(_inbuf.end(), space)
+      , boost::bind( &io_stream::handle_read, this, bytes_transferred )
+      );
+    _reading = true;
   }
 
   virtual void handle_read(size_t i)
   {
-    TRACE_VAR1(i);
+    TRACE_VAR2(i, _inbuf);
+    BOOST_ASSERT(_more_input);
+    BOOST_ASSERT(_reading);
     _reading = false;
     _more_input = (i != 0u);
     _inbuf.append(i);
-    if (_writing && _more_input)
-    {
-      start_reading();
-      return;
-    }
-    consume_input();
-    if (!_outbuf.empty())       start_writing();
-    if (_more_input)            start_reading();
-    else
-    {
-      if (_writing)             /**/;
-      else if (_outbuf.empty()) terminate();
-      else                      start_writing();
-    }
+    run();
   }
 
   virtual void start_writing()
   {
-    if (_writing) return;
+    TRACE_VAR1(_outbuf);
+    BOOST_ASSERT(!_writing);
+    scatter_vector const & iov( _outbuf.commit() );
+    BOOST_ASSERT(!iov.empty());
+    using boost::asio::placeholders::bytes_transferred;
+    _sock.async_write_some
+      ( iov
+      , boost::bind( &io_stream::handle_write, this, bytes_transferred )
+      );
+    _writing = true;
   }
 
   virtual void handle_write(size_t i)
   {
+    TRACE_VAR2(i, _outbuf);
+    BOOST_ASSERT(_writing);
+    BOOST_ASSERT(i > 0u);
     _writing = false;
-    //_outbuf.consume(i);
-    if (_outbuf.empty()) output_buffer_underflow();
-    else                 start_writing();
-  }
-
-  virtual void output_buffer_underflow()
-  {
-    if (_more_input)    start_reading();
-    else                terminate();
+    _outbuf.consume(i);
+    if (_outbuf.empty()) _outbuf.flush();
+    run();
   }
 
   virtual void consume_input()
   {
-    _outbuf.push_back(io_vector(_inbuf.begin(), _inbuf.size()));
+    _outbuf.append(_inbuf.begin(), _inbuf.end());
     _inbuf.consume(_inbuf.size());
   }
 };
@@ -131,7 +138,7 @@ struct tracer
     if (size)
     {
       size_t const drop( !i ? size : static_cast<std::size_t>(rand()) % size );
-      outbuf.push_back(boost::asio::buffer(inbuf.begin(), drop));
+      outbuf.append(inbuf.begin(), drop);
       inbuf.consume(drop);
     }
     TRACE() << "input_buffer handler: " << inbuf << "; outbuf " << outbuf;
