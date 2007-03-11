@@ -15,134 +15,6 @@
 #include <csignal>
 #include "io.hpp"
 
-// ----- I/O Socket -----------------------------------------------------------
-
-class io_stream : private boost::noncopyable
-{
-public:
-  tcp_socket    _sock;
-  input_buffer  _inbuf;
-  output_buffer _outbuf;
-
-  bool          _more_input;
-  bool          _reading;
-  bool          _writing;
-
-  io_stream(boost::asio::io_service & ios)
-    : _sock(ios), _more_input(false), _reading(false), _writing(false)
-  {
-  }
-
-  static void accept(tcp_acceptor & acc, io_stream * ios = 0)
-  {
-    if (ios) ios->initialize();
-    ios = new io_stream( acc.io_service() );
-    acc.async_accept(ios->_sock, boost::bind(&io_stream::accept, boost::ref(acc), ios));
-  }
-
-  virtual ~io_stream()          { }
-  virtual void initialize()     { _more_input = true; run(); }
-
-  void run()
-  {
-    TRACE_VAR3(_more_input, _reading, _writing);
-    TRACE_VAR2(_inbuf, _outbuf);
-    if (!_writing)                      consume_input();
-    if (!_writing && !_outbuf.empty())  start_writing();
-    if (_more_input)
-    {
-      if (!_reading && !_writing && !_inbuf.back_space())       _inbuf.flush();
-      if (!_reading && _inbuf.back_space())                     start_reading();
-    }
-    else
-    {
-      BOOST_ASSERT(!_reading);
-      if (!_writing)
-      {
-        BOOST_ASSERT(_outbuf.empty());
-        terminate();
-      }
-    }
-  }
-
-  virtual void terminate()
-  {
-    TRACE_VAR2(_inbuf, _outbuf);
-    BOOST_ASSERT(!_more_input);
-    BOOST_ASSERT(!_reading);
-    BOOST_ASSERT(!_writing);
-    delete this;
-  }
-
-  virtual void start_reading()
-  {
-    TRACE_VAR1(_inbuf);
-    BOOST_ASSERT(_more_input);
-    BOOST_ASSERT(!_reading);
-    size_t const space( _inbuf.back_space() );
-    BOOST_ASSERT(space);
-    using boost::asio::placeholders::bytes_transferred;
-    _sock.async_read_some
-      ( boost::asio::buffer(_inbuf.end(), space)
-      , boost::bind( &io_stream::handle_read, this, bytes_transferred )
-      );
-    _reading = true;
-  }
-
-  virtual void handle_read(size_t i)
-  {
-    TRACE_VAR2(i, _inbuf);
-    BOOST_ASSERT(_more_input);
-    BOOST_ASSERT(_reading);
-    _reading = false;
-    _more_input = (i != 0u);
-    _inbuf.append(i);
-    run();
-  }
-
-  virtual void start_writing()
-  {
-    TRACE_VAR1(_outbuf);
-    BOOST_ASSERT(!_writing);
-    scatter_vector const & iov( _outbuf.commit() );
-    BOOST_ASSERT(!iov.empty());
-    using boost::asio::placeholders::bytes_transferred;
-    boost::asio::async_write // _sock.async_write_some
-      ( _sock
-      , iov
-      , boost::bind( &io_stream::handle_write, this, bytes_transferred )
-      );
-    _writing = true;
-  }
-
-  virtual void handle_write(size_t i)
-  {
-    TRACE_VAR2(i, _outbuf);
-    BOOST_ASSERT(_writing);
-    _writing = false;
-    _outbuf.consume(i);
-    if (_outbuf.empty()) _outbuf.flush();
-    run();
-  }
-
-  virtual void consume_input()
-  {
-    size_t const size( _inbuf.size() );
-    if (size)
-    {
-      size_t const drop( !_more_input ? size : static_cast<std::size_t>(rand()) % size );
-      if (drop)
-      {
-        _outbuf.append(_inbuf.begin(), drop);
-        _inbuf.consume(drop);
-      }
-    }
-    TRACE_VAR2(_inbuf, _outbuf);
-  }
-};
-
-
-
 // ----- I/O Handlers ---------------------------------------------------------
 
 struct tracer
@@ -260,7 +132,7 @@ int cpp_main(int argc, char ** argv)
   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
 
   tcp::acceptor port2527(*the_io_service, tcp::endpoint(tcp::v6(), 2527));
-  io_stream::accept(port2527);
+  io_stream::accept<io_stream>(port2527);
 
   io_stream s( *the_io_service );
 
