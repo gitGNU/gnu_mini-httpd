@@ -1,177 +1,159 @@
-fmod IO-BUFFER is
-  including NAT .
-
-  var GAP LEN SPC : Nat .
-  var I : NzNat .
-
-  sort Iobuf .
-
-  op buf : Nat Nat Nat -> Iobuf [ctor] .
-  eq buf(I, 0, SPC) = buf(0, 0, SPC + I) .
-
-  var IOB : Iobuf .
-
-  ops gap size space capacity : Iobuf -> Nat .
-  eq gap(buf(GAP, LEN, SPC))    = GAP .
-  eq size(buf(GAP, LEN, SPC))   = LEN .
-  eq space(buf(GAP, LEN, SPC))  = SPC .
-  eq capacity(IOB) = gap(IOB) + size(IOB) + space(IOB) .
-
-  op append : Iobuf NzNat -> Iobuf .
-  eq  append(buf(GAP, LEN, SPC), I)
-    = buf(GAP, LEN + I, sd(SPC, I))
-    .
-
-  op consume : Iobuf NzNat -> Iobuf .
-  eq  consume(buf(GAP, LEN, SPC), I)
-    = buf(GAP + I, sd(LEN, I), SPC)
-    .
-
-  op flushGap : Iobuf -> Iobuf .
-  eq  flushGap(buf(GAP, LEN, SPC))
-    = buf(0, LEN, SPC + GAP)
-    .
-
-  op realloc  : Iobuf NzNat -> Iobuf .
-  ceq realloc(buf(GAP, LEN, SPC), I)
-    = buf(0, LEN, sd(LEN, I))   if I > LEN
-    .
-
-endfm
-
-mod MAIN is
+mod IO-STATE is
   protecting CONFIGURATION .
-  protecting IO-BUFFER .
-  protecting STRING .
 
   sort IoState .
-  ops ready active blocked error : -> IoState [ctor] .
+  ops ready blocked error : -> IoState [ctor] .
 
-  op ptr    : NzNat -> Oid [ctor] .
-  op socket : NzNat -> Oid [ctor] .
-
-  var AS1 AS2 : AttributeSet .
-  var SRC SINK BUF : Oid .
-  var IOS : IoState .
-
-  ops Peer IoBuf : -> Cid [ctor] .
   op in  =_ : IoState -> Attribute [ctor] .
   op out =_ : IoState -> Attribute [ctor] .
+endm
 
-  op receive  : Oid Oid -> Msg .
-  op received : Oid Oid -> Msg .
-  op send     : Oid Oid -> Msg .
-  op sent     : Oid Oid -> Msg .
+mod IO-BUFFER is
+  protecting IO-STATE .
+  protecting NAT .
+
+  var BUF : Oid .
+
+  op IoBuf  :       -> Cid [ctor] .
+  op active :       -> IoState [ctor] .
+  op ptr    : NzNat -> Oid [ctor] .
+
+  rl [flushIOBuffer]
+    :  < BUF : IoBuf | in = blocked, out = blocked >
+    => < BUF : IoBuf | in = ready,   out = blocked >
+    .
+endm
+
+mod IO-PEER is
+  protecting IO-STATE .
+  protecting NAT .
+
+  var AS : AttributeSet .
+  var SRC SINK : Oid .
+
+  op Peer     :             -> Cid [ctor] .
+  op socket   : NzNat       -> Oid [ctor] .
+  op send     : Oid         -> Msg .
+  op receive  : Oid         -> Msg .
+  op sent     : Oid IoState -> Msg .
+  op received : Oid IoState -> Msg .
+
+  rl [inputArrived]
+    :  < SRC  : Peer | in = blocked,  AS > receive(SRC)
+    => < SRC  : Peer | in = ready,    AS > receive(SRC)
+    .
+
+  rl [endOfInput]
+    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
+    => < SRC  : Peer | in = error,    AS > received(SRC, error)
+    .
+
+  rl [inputBufferUnderflow]
+    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
+    => < SRC  : Peer | in = blocked,  AS > received(SRC, blocked)
+    .
+
+  rl [inputBufferOverflow]
+    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
+    => < SRC  : Peer | in = ready,    AS > received(SRC, ready)
+    .
+
+  rl [outputWritten]
+    :  < SINK : Peer | out = blocked, AS > send(SINK)
+    => < SINK : Peer | out = ready,   AS > send(SINK)
+    .
+
+  rl [outputBufferUnderflow]
+    :  < SINK : Peer | out = ready,   AS > send(SINK)
+    => < SINK : Peer | out = ready,   AS > sent(SINK, ready)
+    .
+
+  rl [outputBufferOverflow]
+    :  < SINK : Peer | out = ready,   AS > send(SINK)
+    => < SINK : Peer | out = blocked, AS > sent(SINK, blocked)
+    .
+endm
+
+mod IO-DRIVER is
+  protecting IO-PEER .
+  protecting IO-BUFFER .
+
+  var AS : AttributeSet .
+  var SRC SINK BUF : Oid .
 
   op init : -> Configuration .
   eq init = <>
     < socket(5) : Peer  | in = ready >
     < socket(8) : Peer  | out = ready >
     < ptr(34)   : IoBuf | in = ready, out = blocked >
-    proxy(socket(5), socket(8), ptr(34))
+    driver(socket(5), socket(8), ptr(34))
     .
 
-  op proxy : Oid Oid Oid -> Msg [ctor] .
+  op driver : Oid Oid Oid -> Msg [ctor] .
 
   rl [shutdown]
     :  < BUF : IoBuf | in = error, out = blocked >
-       proxy(SRC, SINK, BUF)
+       driver(SRC, SINK, BUF)
     => < BUF : IoBuf | in = error, out = error >
-    .
-
-  rl [flushInputBuffer]
-    :  < BUF  : IoBuf | in = blocked, out = blocked >
-    => < BUF  : IoBuf | in = ready,   out = blocked >
     .
 
   --- input
 
   rl [startRead]
-    :  < BUF : IoBuf | in = ready,   AS2 > proxy(SRC, SINK, BUF)
-    => < BUF : IoBuf | in = active,  AS2 > proxy(SRC, SINK, BUF)
-       receive(SRC, BUF)
-    .
-
-  rl [inputArrived]
-    :  < SRC  : Peer | in = blocked, AS1 > receive(SRC, BUF)
-    => < SRC  : Peer | in = ready,   AS1 > receive(SRC, BUF)
-    .
-
-  rl [endOfInput]
-    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
-    => < SRC : Peer  | in = error,   AS1 > received(SRC, BUF)
-    .
-
-  rl [inputBufferUnderflow]
-    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
-    => < SRC : Peer  | in = blocked, AS1 > received(SRC, BUF)
-    .
-
-  rl [inputBufferOverflow]
-    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
-    => < SRC : Peer  | in = ready,   AS1 > received(SRC, BUF)
+    :  < BUF : IoBuf | in = ready, AS >
+       driver(SRC, SINK, BUF)
+    => < BUF : IoBuf | in = active, AS >
+       driver(SRC, SINK, BUF)
+       receive(SRC)
     .
 
   rl [handleEndOfInput]
-    :  < SRC : Peer  | in = error,   AS1 >
-       < BUF : IoBuf | in = active,  AS2 >
-       received(SRC, BUF)
-    => < SRC : Peer  | in = error,   AS1 >
-       < BUF : IoBuf | in = error,   AS2 >
+    :  < BUF : IoBuf | in = active, AS >
+       driver(SRC, SINK, BUF)
+       received(SRC, error)
+    => < BUF : IoBuf | in = error, AS >
+       driver(SRC, SINK, BUF)
     .
 
   rl [handleInputOverflow]
-    :  < SRC : Peer  | in = ready,   AS1 >
-       < BUF : IoBuf | in = active,  out = blocked >
-       received(SRC, BUF)
-    => < SRC : Peer  | in = ready,   AS1 >
-       < BUF : IoBuf | in = blocked, out = ready >
+    :  < BUF : IoBuf | in = active, out = blocked >
+       driver(SRC, SINK, BUF)
+       received(SRC, ready)
+    => < BUF : IoBuf | in = blocked, out = ready >
+       driver(SRC, SINK, BUF)
     .
 
   rl [handleInputUnderflow]
-    :  < SRC : Peer  | in = blocked, AS1 >
-       < BUF : IoBuf | in = active,  out = blocked >
-       received(SRC, BUF)
-    => < SRC : Peer  | in = ready,   AS1 >
-       < BUF : IoBuf | in = ready,   out = ready >
+    :  < BUF : IoBuf | in = active, out = blocked >
+       driver(SRC, SINK, BUF)
+       received(SRC, blocked)
+    => < BUF : IoBuf | in = ready, out = ready >
+       driver(SRC, SINK, BUF)
     .
 
   --- output
 
   rl [startWrite]
-    :  < BUF  : IoBuf | out = ready,   AS1 > proxy(SRC, SINK, BUF)
-    => < BUF  : IoBuf | out = active,  AS1 > proxy(SRC, SINK, BUF)
-       send(SINK, BUF)
-    .
-
-  rl [outputWritten]
-    :  < SINK : Peer  | out = blocked, AS1 > send(SINK, BUF)
-    => < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
-    .
-
-  rl [outputBufferUnderflow]
-    :  < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
-    => < SINK : Peer  | out = ready,   AS1 > sent(SINK, BUF)
-    .
-
-  rl [outputBufferOverflow]
-    :  < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
-    => < SINK : Peer  | out = blocked, AS1 > sent(SINK, BUF)
+    :  < BUF  : IoBuf | out = ready, AS >
+       driver(SRC, SINK, BUF)
+    => < BUF  : IoBuf | out = active, AS >
+       driver(SRC, SINK, BUF)
+       send(SINK)
     .
 
   rl [handleOutputUnderflow]
-    :  < SINK : Peer  | out = blocked, AS1 >
-       < BUF  : IoBuf | out = active,  AS2 >
-       sent(SINK, BUF)
-    => < SINK : Peer  | out = blocked, AS1 >
-       < BUF  : IoBuf | out = ready,   AS2 >
+    :  < BUF  : IoBuf | out = active, AS >
+       driver(SRC, SINK, BUF)
+       sent(SINK, blocked)
+    => < BUF  : IoBuf | out = ready, AS >
+       driver(SRC, SINK, BUF)
     .
 
   rl [handleOutputOverflow]
-    :  < SINK : Peer  | out = ready,   AS1 >
-       < BUF  : IoBuf | out = active,  AS2 >
-       sent(SINK, BUF)
-    => < SINK : Peer  | out = ready,   AS1 >
-       < BUF  : IoBuf | out = blocked, AS2 >
+    :  < BUF  : IoBuf | out = active, AS >
+       driver(SRC, SINK, BUF)
+       sent(SINK, ready)
+    => < BUF  : IoBuf | out = blocked, AS >
+       driver(SRC, SINK, BUF)
     .
 endm
