@@ -33,6 +33,13 @@ public:
   {
   }
 
+  static void accept(tcp_acceptor & acc, io_stream * ios = 0)
+  {
+    if (ios) ios->initialize();
+    ios = new io_stream( acc.io_service() );
+    acc.async_accept(ios->_sock, boost::bind(&io_stream::accept, boost::ref(acc), ios));
+  }
+
   virtual ~io_stream()          { }
   virtual void initialize()     { _more_input = true; run(); }
 
@@ -40,10 +47,10 @@ public:
   {
     TRACE_VAR3(_more_input, _reading, _writing);
     TRACE_VAR2(_inbuf, _outbuf);
+    if (!_writing)                      consume_input();
+    if (!_writing && !_outbuf.empty())  start_writing();
     if (_more_input)
     {
-      if (!_writing)                                            consume_input();
-      if (!_writing && !_outbuf.empty())                        start_writing();
       if (!_reading && !_writing && !_inbuf.back_space())       _inbuf.flush();
       if (!_reading && _inbuf.back_space())                     start_reading();
     }
@@ -52,8 +59,8 @@ public:
       BOOST_ASSERT(!_reading);
       if (!_writing)
       {
-        if (!_outbuf.empty())   start_writing();
-        else                    terminate();
+        BOOST_ASSERT(_outbuf.empty());
+        terminate();
       }
     }
   }
@@ -100,8 +107,9 @@ public:
     scatter_vector const & iov( _outbuf.commit() );
     BOOST_ASSERT(!iov.empty());
     using boost::asio::placeholders::bytes_transferred;
-    _sock.async_write_some
-      ( iov
+    boost::asio::async_write // _sock.async_write_some
+      ( _sock
+      , iov
       , boost::bind( &io_stream::handle_write, this, bytes_transferred )
       );
     _writing = true;
@@ -111,7 +119,6 @@ public:
   {
     TRACE_VAR2(i, _outbuf);
     BOOST_ASSERT(_writing);
-    BOOST_ASSERT(i > 0u);
     _writing = false;
     _outbuf.consume(i);
     if (_outbuf.empty()) _outbuf.flush();
@@ -120,8 +127,17 @@ public:
 
   virtual void consume_input()
   {
-    _outbuf.append(_inbuf.begin(), _inbuf.end());
-    _inbuf.consume(_inbuf.size());
+    size_t const size( _inbuf.size() );
+    if (size)
+    {
+      size_t const drop( !_more_input ? size : static_cast<std::size_t>(rand()) % size );
+      if (drop)
+      {
+        _outbuf.append(_inbuf.begin(), drop);
+        _inbuf.consume(drop);
+      }
+    }
+    TRACE_VAR2(_inbuf, _outbuf);
   }
 };
 
@@ -242,6 +258,9 @@ int cpp_main(int argc, char ** argv)
 
   tcp::acceptor port2526(*the_io_service, tcp::endpoint(tcp::v6(), 2526));
   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
+
+  tcp::acceptor port2527(*the_io_service, tcp::endpoint(tcp::v6(), 2527));
+  io_stream::accept(port2527);
 
   io_stream s( *the_io_service );
 
