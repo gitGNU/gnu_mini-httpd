@@ -65,181 +65,113 @@ mod MAIN is
 
   op init : -> Configuration .
   eq init = <>
-    < socket(5) : Peer | in = ready >
-    < socket(8) : Peer   | out = ready >
-    < ptr(34)   : IoBuf  | in = ready, out = blocked >
+    < socket(5) : Peer  | in = ready >
+    < socket(8) : Peer  | out = ready >
+    < ptr(34)   : IoBuf | in = ready, out = blocked >
     proxy(socket(5), socket(8), ptr(34))
     .
 
   op proxy : Oid Oid Oid -> Msg [ctor] .
 
+  rl [shutdown]
+    :  < BUF : IoBuf | in = error, out = blocked >
+       proxy(SRC, SINK, BUF)
+    => < BUF : IoBuf | in = error, out = error >
+    .
+
+  rl [flushInputBuffer]
+    :  < BUF  : IoBuf | in = blocked, out = blocked >
+    => < BUF  : IoBuf | in = ready,   out = blocked >
+    .
+
   --- input
 
   rl [startRead]
-    :  < SRC  : Peer | in = ready,  AS1 >
-       < BUF  : IoBuf  | in = ready,  AS2 >
-       proxy(SRC, SINK, BUF)
-    => < SRC  : Peer | in = active, AS1 >
-       < BUF  : IoBuf  | in = active, AS2 >
+    :  < BUF : IoBuf | in = ready,   AS2 > proxy(SRC, SINK, BUF)
+    => < BUF : IoBuf | in = active,  AS2 > proxy(SRC, SINK, BUF)
        receive(SRC, BUF)
-       proxy(SRC, SINK, BUF)
     .
 
-  rl [startAsyncRead]
-    :  < SRC  : Peer | in = blocked, AS1 >
-       < BUF  : IoBuf  | in = ready,   AS2 >
-       proxy(SRC, SINK, BUF)
-    => < SRC  : Peer | in = blocked, AS1 >
-       < BUF  : IoBuf  | in = active,  AS2 >
-       receive(SRC, BUF)
-       proxy(SRC, SINK, BUF)
+  rl [inputArrived]
+    :  < SRC  : Peer | in = blocked, AS1 > receive(SRC, BUF)
+    => < SRC  : Peer | in = ready,   AS1 > receive(SRC, BUF)
     .
 
-  rl [receivePartial]
-    :  < SRC  : Peer   | in = active,  AS1 >
-       < BUF  : IoBuf  | in = active,  AS2 >
-       receive(SRC, BUF)
-    => < SRC  : Peer   | in = blocked, AS1 >
-       < BUF  : IoBuf  | in = ready,   AS2 >
+  rl [endOfInput]
+    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
+    => < SRC : Peer  | in = error,   AS1 > received(SRC, BUF)
+    .
+
+  rl [inputBufferUnderflow]
+    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
+    => < SRC : Peer  | in = blocked, AS1 > received(SRC, BUF)
+    .
+
+  rl [inputBufferOverflow]
+    :  < SRC : Peer  | in = ready,   AS1 > receive(SRC, BUF)
+    => < SRC : Peer  | in = ready,   AS1 > received(SRC, BUF)
+    .
+
+  rl [handleEndOfInput]
+    :  < SRC : Peer  | in = error,   AS1 >
+       < BUF : IoBuf | in = active,  AS2 >
        received(SRC, BUF)
+    => < SRC : Peer  | in = error,   AS1 >
+       < BUF : IoBuf | in = error,   AS2 >
     .
 
-  rl [receiveBuffer]
-    :  < SRC  : Peer   | in = active,  AS1 >
-       < BUF  : IoBuf  | in = active,  AS2 >
-       receive(SRC, BUF)
-    => < SRC  : Peer   | in = ready,   AS1 >
-       < BUF  : IoBuf  | in = blocked, AS2 >
+  rl [handleInputOverflow]
+    :  < SRC : Peer  | in = ready,   AS1 >
+       < BUF : IoBuf | in = active,  out = blocked >
        received(SRC, BUF)
+    => < SRC : Peer  | in = ready,   AS1 >
+       < BUF : IoBuf | in = blocked, out = ready >
     .
 
-  rl [handlePartialRead]
-    :  < BUF  : IoBuf  | in = ready, AS1 >
-       proxy(SRC, SINK, BUF)
+  rl [handleInputUnderflow]
+    :  < SRC : Peer  | in = blocked, AS1 >
+       < BUF : IoBuf | in = active,  out = blocked >
        received(SRC, BUF)
-    => < BUF  : IoBuf  | in = ready, AS1 >
-       proxy(SRC, SINK, BUF)
-    .
-
-  rl [handleFullRead]
-    :  < BUF  : IoBuf  | out = blocked, AS1 >
-       proxy(SRC, SINK, BUF)
-       received(SRC, BUF)
-    => < BUF  : IoBuf  | out = ready,   AS1 >
-       proxy(SRC, SINK, BUF)
+    => < SRC : Peer  | in = ready,   AS1 >
+       < BUF : IoBuf | in = ready,   out = ready >
     .
 
   --- output
 
   rl [startWrite]
-    :  < SINK : Peer   | out = ready,  AS1 >
-       < BUF  : IoBuf  | out = ready,  AS2 >
-       proxy(SRC, SINK, BUF)
-    => < SINK : Peer   | out = active, AS1 >
-       < BUF  : IoBuf  | out = active, AS2 >
-       proxy(SRC, SINK, BUF)
-       send(SRC, BUF)
+    :  < BUF  : IoBuf | out = ready,   AS1 > proxy(SRC, SINK, BUF)
+    => < BUF  : IoBuf | out = active,  AS1 > proxy(SRC, SINK, BUF)
+       send(SINK, BUF)
     .
 
-  rl [startAsyncWrite]
-    :  < SINK : Peer   | out = blocked, AS1 >
-       < BUF  : IoBuf  | out = ready,   AS2 >
-       proxy(SRC, SINK, BUF)
-    => < SINK : Peer   | out = blocked, AS1 >
-       < BUF  : IoBuf  | out = active,  AS2 >
-       proxy(SRC, SINK, BUF)
-       send(SRC, BUF)
+  rl [outputWritten]
+    :  < SINK : Peer  | out = blocked, AS1 > send(SINK, BUF)
+    => < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
     .
 
-  rl [sendPartial]
-    :  < SINK : Peer  | out = active,  AS1 >
+  rl [outputBufferUnderflow]
+    :  < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
+    => < SINK : Peer  | out = ready,   AS1 > sent(SINK, BUF)
+    .
+
+  rl [outputBufferOverflow]
+    :  < SINK : Peer  | out = ready,   AS1 > send(SINK, BUF)
+    => < SINK : Peer  | out = blocked, AS1 > sent(SINK, BUF)
+    .
+
+  rl [handleOutputUnderflow]
+    :  < SINK : Peer  | out = blocked, AS1 >
        < BUF  : IoBuf | out = active,  AS2 >
-       send(SRC, BUF)
+       sent(SINK, BUF)
     => < SINK : Peer  | out = blocked, AS1 >
        < BUF  : IoBuf | out = ready,   AS2 >
-       sent(SRC, BUF)
     .
 
-  rl [sendBuffer]
-    :  < SINK : Peer  | out = active,  AS1 >
+  rl [handleOutputOverflow]
+    :  < SINK : Peer  | out = ready,   AS1 >
        < BUF  : IoBuf | out = active,  AS2 >
-       send(SRC, BUF)
+       sent(SINK, BUF)
     => < SINK : Peer  | out = ready,   AS1 >
        < BUF  : IoBuf | out = blocked, AS2 >
-       sent(SRC, BUF)
     .
-
-  rl [handlePartialWrite]
-    :  < BUF  : IoBuf  | out = ready, AS1 >
-       proxy(SRC, SINK, BUF)
-       sent(SRC, BUF)
-    => < BUF  : IoBuf  | out = ready, AS1 >
-       proxy(SRC, SINK, BUF)
-    .
-
-  rl [handleFullWrite]
-    :  < BUF  : IoBuf  | in = blocked, out = blocked >
-       proxy(SRC, SINK, BUF)
-       sent(SRC, BUF)
-    => < BUF  : IoBuf  | in = ready, out = blocked >
-       proxy(SRC, SINK, BUF)
-    .
-
-***(
-  rl [enqueueOutput]
-    :  proxy(SRC, SINK, BUF)
-       received(SRC, BUF) send(SRC, BUF)
-    => proxy(SRC, SINK, BUF)
-       send(SRC, BUF)
-    .
-
-  rl [consumeOutput]
-    :  proxy(SRC, SINK, BUF)
-       sent(SRC, BUF) send(SRC, BUF)
-    => proxy(SRC, SINK, BUF)
-       send(SRC, BUF)
-    .
-***)
-
-  rl [flushOutput]
-    :  < SRC  : Peer  | in = error, AS1 >
-       < BUF  : IoBuf | in = IOS,   AS2 >
-       received(SRC, BUF)
-       proxy(SRC, SINK, BUF)
-    => < SRC  : Peer  | in = error, AS1 >
-       < BUF  : IoBuf | in = error, AS2 >
-    .
-***(
-  crl [forceOutput]
-    :  < SRC  : Peer  | in =
-       < BUF  : IoBuf | in = error, out = IOS >
-       proxy(SRC, SINK, BUF)
-       sent(SRC, BUF)
-    => < BUF  : IoBuf | in = error, out = blocked >
-    if (IOS =/= blocked)
-    .
-***)
-  rl [shutdown]
-    :  < BUF  : IoBuf | in = error, out = blocked >
-       proxy(SRC, SINK, BUF)
-       sent(SRC, BUF)
-    => < BUF  : IoBuf | in = error, out = error >
-    .
-
-  --- the world changes our i/o state at will
-
-  rl [newInputArrived]
-    :  < SRC  : Peer  | in = blocked, AS1 >
-       receive(SRC, BUF)
-    => < SRC  : Peer  | in = active,  AS1 >
-       receive(SRC, BUF)
-    .
-
-  rl [endOfInput]
-    :  < SRC  : Peer  | in = blocked, AS1 >
-       receive(SRC, BUF)
-    => < SRC  : Peer  | in = error,  AS1 >
-       received(SRC, BUF)
-    .
-
 endm
