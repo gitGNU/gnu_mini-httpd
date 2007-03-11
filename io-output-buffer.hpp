@@ -67,6 +67,7 @@ inline void output_buffer::consume(size_t n)
   {
     BOOST_ASSERT(i != _iovec.end());
     size_t const len( boost::asio::buffer_size(*i) );
+    BOOST_ASSERT(len);
     if (len <= n)
     {
       n -= len;
