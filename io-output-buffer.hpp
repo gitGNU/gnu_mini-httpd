@@ -61,6 +61,32 @@ inline bool output_buffer::empty() const
 /**
  *  \brief todo
  */
+inline void output_buffer::consume(size_t n)
+{
+  for (scatter_vector::iterator i( _iovec.begin() ); n; /**/)
+  {
+    BOOST_ASSERT(i != _iovec.end());
+    size_t const len( boost::asio::buffer_size(*i) );
+    if (len <= n)
+    {
+      n -= len;
+      ++i;
+      if (!n)
+        _iovec.erase(_iovec.begin(), i);
+    }
+    else
+    {
+      byte_const_ptr const b( boost::asio::buffer_cast<byte_const_ptr>(*i) );
+      *i = io_vector(b + n, len - n);
+      _iovec.erase(_iovec.begin(), i);
+      break;
+    }
+  }
+}
+
+/**
+ *  \brief todo
+ */
 inline void output_buffer::flush()
 {
   _iovec.resize(0u);
