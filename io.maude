@@ -31,47 +31,17 @@ mod IO-PEER is
   var AS : AttributeSet .
   var SRC SINK : Oid .
 
-  op Peer     :             -> Cid [ctor] .
   op socket   : NzNat       -> Oid [ctor] .
-  op send     : Oid         -> Msg .
   op receive  : Oid         -> Msg .
-  op sent     : Oid IoState -> Msg .
   op received : Oid IoState -> Msg .
+  op send     : Oid         -> Msg .
+  op sent     : Oid IoState -> Msg .
 
-  rl [inputArrived]
-    :  < SRC  : Peer | in = blocked,  AS > receive(SRC)
-    => < SRC  : Peer | in = ready,    AS > receive(SRC)
-    .
-
-  rl [endOfInput]
-    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
-    => < SRC  : Peer | in = error,    AS > received(SRC, error)
-    .
-
-  rl [inputBufferUnderflow]
-    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
-    => < SRC  : Peer | in = blocked,  AS > received(SRC, blocked)
-    .
-
-  rl [inputBufferOverflow]
-    :  < SRC  : Peer | in = ready,    AS > receive(SRC)
-    => < SRC  : Peer | in = ready,    AS > received(SRC, ready)
-    .
-
-  rl [outputWritten]
-    :  < SINK : Peer | out = blocked, AS > send(SINK)
-    => < SINK : Peer | out = ready,   AS > send(SINK)
-    .
-
-  rl [outputBufferUnderflow]
-    :  < SINK : Peer | out = ready,   AS > send(SINK)
-    => < SINK : Peer | out = ready,   AS > sent(SINK, ready)
-    .
-
-  rl [outputBufferOverflow]
-    :  < SINK : Peer | out = ready,   AS > send(SINK)
-    => < SINK : Peer | out = blocked, AS > sent(SINK, blocked)
-    .
+  rl [endOfInput]      : receive(SRC) => received(SRC, error)   .
+  rl [inputUnderflow]  : receive(SRC) => received(SRC, blocked) .
+  rl [inputOverflow]   : receive(SRC) => received(SRC, ready)   .
+  rl [outputUnderflow] : send(SINK)   => sent(SINK, ready)      .
+  rl [outputOverflow]  : send(SINK)   => sent(SINK, blocked)    .
 endm
 
 mod IO-DRIVER is
@@ -83,9 +53,7 @@ mod IO-DRIVER is
 
   op init : -> Configuration .
   eq init = <>
-    < socket(5) : Peer  | in = ready >
-    < socket(8) : Peer  | out = ready >
-    < ptr(34)   : IoBuf | in = ready, out = blocked >
+    < ptr(34) : IoBuf | in = ready, out = blocked >
     driver(socket(5), socket(8), ptr(34))
     .
 
@@ -100,9 +68,9 @@ mod IO-DRIVER is
   --- input
 
   rl [startRead]
-    :  < BUF : IoBuf | in = ready, AS >
+    :  < BUF : IoBuf | in = ready, out = blocked >
        driver(SRC, SINK, BUF)
-    => < BUF : IoBuf | in = active, AS >
+    => < BUF : IoBuf | in = active, out = blocked >
        driver(SRC, SINK, BUF)
        receive(SRC)
     .
@@ -119,34 +87,30 @@ mod IO-DRIVER is
     :  < BUF : IoBuf | in = active, out = blocked >
        driver(SRC, SINK, BUF)
        received(SRC, ready)
-    => < BUF : IoBuf | in = blocked, out = ready >
+    => < BUF : IoBuf | in = blocked, out = active >
        driver(SRC, SINK, BUF)
+       send(SINK)
     .
 
   rl [handleInputUnderflow]
     :  < BUF : IoBuf | in = active, out = blocked >
        driver(SRC, SINK, BUF)
        received(SRC, blocked)
-    => < BUF : IoBuf | in = ready, out = ready >
+    => < BUF : IoBuf | in = active, out = active >
        driver(SRC, SINK, BUF)
+       receive(SRC)
+       send(SINK)
     .
 
   --- output
-
-  rl [startWrite]
-    :  < BUF  : IoBuf | out = ready, AS >
-       driver(SRC, SINK, BUF)
-    => < BUF  : IoBuf | out = active, AS >
-       driver(SRC, SINK, BUF)
-       send(SINK)
-    .
 
   rl [handleOutputUnderflow]
     :  < BUF  : IoBuf | out = active, AS >
        driver(SRC, SINK, BUF)
        sent(SINK, blocked)
-    => < BUF  : IoBuf | out = ready, AS >
+    => < BUF  : IoBuf | out = active, AS >
        driver(SRC, SINK, BUF)
+       send(SINK)
     .
 
   rl [handleOutputOverflow]
