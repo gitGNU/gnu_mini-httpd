@@ -14,9 +14,11 @@
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sanity/system-error.hpp>
-#include <sys/mman.h>           // mmap(), POSIX.1-2001
 #include <unistd.h>             // close(2)
 
+#if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
+#  include <sys/mman.h>         // mmap(2)
+#endif
 
 #ifdef _GNU_SOURCE
 #  include <getopt.h>           // getopt_long(3)
@@ -264,7 +266,7 @@ struct mmapped_buffer : public boost::shared_ptr<char const>
     BOOST_ASSERT(path); BOOST_ASSERT(path[0]); BOOST_ASSERT(len);
     int fd( ::open(path, O_RDONLY) );
     if (fd < 0) throw system_error(std::string("cannot open ") + path);
-#if 0
+#if 0 && defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
     void const * p( ::mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0) );
     if (p != MAP_FAILED)
     {
@@ -282,7 +284,6 @@ struct mmapped_buffer : public boost::shared_ptr<char const>
     char * p( reinterpret_cast<char *>(malloc(len)) );
     if (p)
     {
-      BOOST_ASSERT(p);
       reset( p, boost::bind(&::free, _1) );       /// \todo descriptor may leak here
       ssize_t const rc( ::read(fd, p, len) );
       ::close(fd);
