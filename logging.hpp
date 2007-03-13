@@ -64,11 +64,12 @@ extern void init_logging(char const * my_name);
 /*
  *  Trace a list of variables conveniently.
  */
-#define TRACE_VAR(v)            #v " = " << v
-#define TRACE_VARL(v)           "; " TRACE_VAR(v)
-#define TRACE_VAR1(v)           TRACE() << TRACE_VAR(v)
-#define TRACE_VAR2(v1,v2)       TRACE_VAR1(v1) << TRACE_VARL(v2)
-#define TRACE_VAR3(v1,v2,v3)    TRACE_VAR2(v1,v2) << TRACE_VARL(v3)
-#define TRACE_VAR4(v1,v2,v3,v4) TRACE_VAR3(v1,v2,v3) << TRACE_VARL(v4)
+#define TRACE_VAR(v)               #v " = " << v
+#define TRACE_VARL(v)              "; " TRACE_VAR(v)
+#define TRACE_VAR1(v)              TRACE() << TRACE_VAR(v)
+#define TRACE_VAR2(v1,v2)          TRACE_VAR1(v1) << TRACE_VARL(v2)
+#define TRACE_VAR3(v1,v2,v3)       TRACE_VAR2(v1,v2) << TRACE_VARL(v3)
+#define TRACE_VAR4(v1,v2,v3,v4)    TRACE_VAR3(v1,v2,v3) << TRACE_VARL(v4)
+#define TRACE_VAR5(v1,v2,v3,v4,v5) TRACE_VAR4(v1,v2,v3,v4) << TRACE_VARL(v5)
 
 #endif // MINI_HTTPD_LOGGING_HPP_INCLUDED
