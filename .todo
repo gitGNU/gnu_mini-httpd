@@ -2,4 +2,10 @@
     <note priority="medium" time="1144456355">
         logs shouldn't be written when we're detached
     </note>
+    <note priority="medium" time="1178322711">
+        new command line options are incompatible
+
+        --log-dir vs. --logfile-directory
+        -d is gone
+    </note>
 </todo>
