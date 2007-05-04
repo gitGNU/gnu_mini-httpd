@@ -25,7 +25,7 @@
 #include "sanity/system-error.hpp"
 
 static char const PACKAGE_NAME[]    = "mini-httpd";
-static char const PACKAGE_VERSION[] = "2007-02-19";
+static char const PACKAGE_VERSION[] = "2007-05-04";
 
 typedef boost::asio::io_service io_service;
 static boost::scoped_ptr<io_service> the_io_service;
@@ -116,7 +116,7 @@ try
   // Log some helpful information.
 
   INFO()
-    << "mini-httpd 2007-02-27 starting up"
+    << PACKAGE_NAME << " " << PACKAGE_VERSION << " starting up"
     << ": tcp port = "  << config->http_port
     << ", user id = "   << ::getuid()
     << ", group id = "  << ::getgid()

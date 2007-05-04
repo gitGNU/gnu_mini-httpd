@@ -53,7 +53,7 @@ struct tracer
 #include <boost/test/prg_exec_monitor.hpp>
 
 static char const PACKAGE_NAME[]    = "micro-httpd";
-static char const PACKAGE_VERSION[] = "2007-02-19";
+static char const PACKAGE_VERSION[] = "2007-05-04";
 
 typedef boost::asio::io_service io_service;
 static boost::scoped_ptr<io_service> the_io_service;
@@ -102,9 +102,9 @@ int cpp_main(int argc, char ** argv)
   po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
   po::notify(vm);
 
-  if (vm.count("help"))     { cout << opts << endl;                    return 0; }
-  if (vm.count("version"))  { cout << PACKAGE_VERSION << endl;         return 0; }
-  if (n_threads == 0u)      { cout << "no threads configured" << endl; return 1; }
+  if (vm.count("help"))     { cout << opts << endl;                                     return 0; }
+  if (vm.count("version"))  { cout << PACKAGE_NAME << " " << PACKAGE_VERSION << endl;   return 0; }
+  if (n_threads == 0u)      { cout << "no threads configured" << endl;                  return 1; }
   bool const detach( !vm.count("no-detach") );
 
   // Setup the system.

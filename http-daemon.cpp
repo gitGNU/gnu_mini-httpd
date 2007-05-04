@@ -700,7 +700,7 @@ http::configuration::configuration(int argc, char** argv)
         fprintf(stderr, USAGE_MSG);
         throw no_error();
       case 'v':
-        printf("mini-httpd version 2007-02-27\n");
+        printf("mini-httpd version 2007-05-04\n");
         throw no_error();
       case 'd':
         debugging = true;
