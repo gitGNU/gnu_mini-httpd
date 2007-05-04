@@ -143,41 +143,15 @@ int cpp_main(int argc, char ** argv)
   signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGPIPE, SIG_IGN);
 
-  INFO()  << "version " << PACKAGE_VERSION
-          << " running " << n_threads << " threads "
-          << (detach ? "as daemon" : "on current tty");
-#define TRACE_CONFIG_VAR(v) BOOST_LOGL(httpd_logger_debug, info) << TRACE_VAR(v)
-  TRACE_CONFIG_VAR(change_root);
-  TRACE_CONFIG_VAR(logdir);
-  TRACE_CONFIG_VAR(server_string);
-  TRACE_CONFIG_VAR(uid);
-  TRACE_CONFIG_VAR(gid);
-  TRACE_CONFIG_VAR(default_hostname);
-  TRACE_CONFIG_VAR(document_root);
-  TRACE_CONFIG_VAR(default_page);
-#undef TRACE_CONFIG_VAR
+  INFO() << "version " << PACKAGE_VERSION
+         << " running " << n_threads << " threads "
+         << (detach ? "as daemon" : "on current tty");
+  INFO() << "access logs are written in '" << logdir << "'";
+  INFO() << "HTTP document root is '" << document_root << "'";
+  INFO() << "Server string used in HTTP responses is '" << server_string << "'";
+  INFO() << "default hostname for pre-HTTP/1.1 requests is '" << default_hostname << "'";
+  INFO() << "directory index page is '" << default_page << "'";
 
-  // Change root to our sandbox.
-
-  if (change_root.empty())      INFO() << "change root disabled";
-  else
-  {
-    INFO() << "change root to " << change_root;
-    if (chdir(change_root.c_str()) == -1 || chroot(".") == -1)
-      throw system_error((string("chroot(\"")) + change_root + "\") failed");
-  }
-#if 0
-  // Drop super user privileges.
-
-  if (geteuid() == 0)
-  {
-    if (config->setgid_group && setgid(*config->setgid_group) == -1)
-      throw system_error("setgid() failed");
-
-    if (config->setuid_user && setuid(*config->setuid_user) == -1)
-      throw system_error("setuid() failed");
-  }
-#endif
   // Configure TCP listeners.
 
   using namespace boost::asio::ip;
@@ -193,6 +167,28 @@ int cpp_main(int argc, char ** argv)
     tcp_driver< io_driver< stream_driver<tracer > > >(*acc);
   }
 
+  // Drop all possible privileges.
+
+  if (change_root.empty())      INFO() << "disabled change root";
+  else
+  {
+    INFO() << "change root to " << change_root;
+    if (chdir(change_root.c_str()) == -1 || chroot(".") == -1)
+      throw system_error((string("chroot(\"")) + change_root + "\") failed");
+  }
+  if (!vm.count("gid"))         INFO() << "disabled change group id";
+  else
+  {
+    INFO() << "change process group id to " << gid;
+    if (setgid(gid) == -1) throw system_error("setgid() failed");
+  }
+  if (!vm.count("uid"))         INFO() << "disabled change user id";
+  else
+  {
+    INFO() << "change process user id to " << uid;
+    if (setuid(uid) == -1) throw system_error("setuid() failed");
+  }
+
   // Detach from terminal.
 
   if (detach)
@@ -200,7 +196,7 @@ int cpp_main(int argc, char ** argv)
     switch (fork())
     {
       case -1:
-        throw system_error("can't fork()");
+        throw system_error("fork() failed");
       case 0:
         setsid();
         close(STDIN_FILENO);
