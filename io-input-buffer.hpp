@@ -166,7 +166,7 @@ inline size_t input_buffer::flush()
 {
   size_t const len( size() );
   size_t space( back_space() );
-  if (front_gap() > std::max(len, space))
+  if (front_gap() > std::min(std::max(len, space), min_buf_size()))
   {
     TRACE() << "force gap flushing: " << *this;
     flush_gap();
