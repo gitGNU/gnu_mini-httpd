@@ -66,7 +66,7 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 
     Version()                               : pair(0u, 0u)              { }
     Version(unsigned int x, unsigned int y) : pair(x,   y)              { }
-    Version(pair p)                         : pair(p)                   { }
+    Version(pair const & p)                 : pair(p)                   { }
 
     unsigned int major() const  { return first; }
     unsigned int minor() const  { return second; }
