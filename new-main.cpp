@@ -131,11 +131,6 @@ int cpp_main(int argc, char ** argv)
   tcp::acceptor port2526(*the_io_service, tcp::endpoint(tcp::v6(), 2526));
   tcp_driver< io_driver< stream_driver< tracer > > >(port2526);
 
-  tcp::acceptor port2527(*the_io_service, tcp::endpoint(tcp::v6(), 2527));
-  io_stream::accept<io_stream>(port2527);
-
-  io_stream s( *the_io_service );
-
   // Run the server.
 
   boost::thread_group pool;
