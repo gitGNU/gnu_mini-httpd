@@ -23,33 +23,18 @@ namespace http
   class configuration : private boost::noncopyable
   {
   public:
-    // Construction and Destruction.
-    configuration(int, char**);
-
-    // Timeouts.
-    unsigned int network_read_timeout;
-    unsigned int network_write_timeout;
-    unsigned int hard_poll_interval_threshold;
-    int          hard_poll_interval;
-
-    // Buffer sizes.
-    unsigned int max_line_length;
+    // Construct default configuration.
+    configuration();
 
     // Paths.
-    std::string  chroot_directory;
-    std::string  logfile_directory;
-    std::string  document_root;
-    std::string  default_page;
+    std::string logfile_root;
+    std::string document_root;
+    std::string default_page;
 
     // Run-time stuff.
-    char const *               default_content_type;
-    std::string                default_hostname;
-    unsigned int               http_port;
-    std::string                server_string;
-    boost::optional<uid_t>     setuid_user;
-    boost::optional<gid_t>     setgid_group;
-    bool                       debugging;
-    bool                       detach;
+    std::string default_content_type;
+    std::string default_hostname;
+    std::string server_string;
 
     // Content-type mapping.
     char const * get_content_type(char const * filename) const;
@@ -71,8 +56,15 @@ namespace http
     map_t content_types;
   };
 
-  extern configuration const * config;
-
+  inline std::ostream & operator<< (std::ostream & os, configuration const & cfg)
+  {
+    return os
+      << "access logging = " << (cfg.logfile_root.empty() ? "disabled" : cfg.logfile_root)
+      << "; htdocs = " << cfg.document_root
+      << "; server id = " << (cfg.server_string.empty() ? "disabled" : cfg.server_string)
+      << "; pre-http/1.1 host = " << (cfg.default_hostname.empty() ? "disabled" : cfg.default_hostname)
+      << "; index page = " << cfg.default_page;
+  }
 
   /**
    *  \brief This is the HTTP protocol driver class.
@@ -85,8 +77,10 @@ namespace http
 
     bool operator() (input_buffer &, size_t, output_buffer &);
 
+    static configuration _config;
+
   private:
-    // the state of this class
+    // transaction state
 
     Request                                     _request;
     bool                                        _use_persistent_connection;

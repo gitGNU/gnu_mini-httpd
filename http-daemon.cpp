@@ -328,10 +328,10 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   {
     if (_request.host.empty())
     {
-      if (!config->default_hostname.empty() &&
+      if (!_config.default_hostname.empty() &&
          (_request.major_version == 0 || (_request.major_version == 1 && _request.minor_version == 0))
          )
-        _request.host = config->default_hostname;
+        _request.host = _config.default_hostname;
       else
       {
         return protocol_error(obuf, "<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
@@ -351,7 +351,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   // Construct the actual file name associated with the hostname and
   // URL, then check whether we can send that file.
 
-  document_root = config->document_root + "/" + _request.host;
+  document_root = _config.document_root + "/" + _request.host;
   filename = document_root + urldecode(_request.url.path);
 
   if (!is_path_in_hierarchy(document_root.c_str(), filename.c_str()))
@@ -388,7 +388,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   {
     if (*_request.url.path.rbegin() == '/')
     {
-      filename += config->default_page;
+      filename += _config.default_page;
       goto stat_again;
     }
     else
@@ -426,10 +426,10 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
   ostringstream buf;
   buf << "HTTP/1.1 200 OK\r\n";
-  if (!config->server_string.empty())
-    buf << "Server: " << config->server_string << "\r\n";
+  if (!_config.server_string.empty())
+    buf << "Server: " << _config.server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
-      << "Content-Type: " << config->get_content_type(filename.c_str()) << "\r\n"
+      << "Content-Type: " << _config.get_content_type(filename.c_str()) << "\r\n"
       << "Content-Length: " << file_stat.st_size << "\r\n"
       << "Last-Modified: " << to_rfcdate(file_stat.st_mtime) << "\r\n";
   if (_use_persistent_connection)  buf << "Connection: keep-alive\r\n";
@@ -477,9 +477,9 @@ void http::daemon::log_access()
 {
   BOOST_ASSERT(_request.status_code);
 
-  if (config->logfile_directory.empty()) return;
+  if (_config.logfile_root.empty()) return;
 
-  string logfile( config->logfile_directory + "/" );
+  string logfile( _config.logfile_root + "/" );
   logfile += _request.host.empty() ? "no-hostname" : _request.host + "-access";
 
   ofstream os(logfile.c_str(), ios_base::out | ios_base::app);
@@ -511,8 +511,8 @@ http::daemon::state_t http::daemon::protocol_error(output_buffer & obuf, std::st
 
   ostringstream buf;
   buf << "HTTP/1.1 400 Bad Request\r\n";
-  if (!config->server_string.empty())
-    buf << "Server: " << config->server_string << "\r\n";
+  if (!_config.server_string.empty())
+    buf << "Server: " << _config.server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
   if (!_request.connection.empty())
@@ -544,8 +544,8 @@ http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf, std::st
 
   ostringstream buf;
   buf << "HTTP/1.1 404 Not Found\r\n";
-  if (!config->server_string.empty())
-    buf << "Server: " << config->server_string << "\r\n";
+  if (!_config.server_string.empty())
+    buf << "Server: " << _config.server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n";
   if (!_request.connection.empty())
@@ -576,8 +576,8 @@ http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std:
 
   ostringstream buf;
   buf << "HTTP/1.1 301 Moved Permanently\r\n";
-  if (!config->server_string.empty())
-    buf << "Server: " << config->server_string << "\r\n";
+  if (!_config.server_string.empty())
+    buf << "Server: " << _config.server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n"
       << "Content-Type: text/html\r\n"
       << "Location: http://" << _request.host;
@@ -613,8 +613,8 @@ void http::daemon::not_modified(output_buffer & obuf)
 
   ostringstream buf;
   buf << "HTTP/1.1 304 Not Modified\r\n";
-  if (!config->server_string.empty())
-    buf << "Server: " << config->server_string << "\r\n";
+  if (!_config.server_string.empty())
+    buf << "Server: " << _config.server_string << "\r\n";
   buf << "Date: " << to_rfcdate(time(0)) << "\r\n";
   if (_use_persistent_connection)  buf << "Connection: keep-alive\r\n";
   else                             buf << "Connection: close\r\n";
@@ -627,129 +627,30 @@ void http::daemon::not_modified(output_buffer & obuf)
 
 // ----- Configuration --------------------------------------------------------
 
-#define kb * 1024
-#define mb * 1024 kb
-#define sec * 1
+//
+// The original getopt()-based parser was:
+//
+//   char const * optstring = "hdp:r:l:s:u:g:DH:";
+//   const option longopts[] =
+//     {
+//       { "help",               no_argument,       0, 'h' },
+//       { "version",            no_argument,       0, 'v' },
+//       { "debug",              no_argument,       0, 'd' },
+//       { "port",               required_argument, 0, 'p' },
+//       { "change-root",        required_argument, 0, 'r' },
+//       { "logfile-directory",  required_argument, 0, 'l' },
+//       { "server-string",      required_argument, 0, 's' },
+//       { "uid",                required_argument, 0, 'u' },
+//       { "gid",                required_argument, 0, 'g' },
+//       { "no-detach",          required_argument, 0, 'D' },
+//       { "default-hostname",   required_argument, 0, 'H' },
+//       { "document-root",      required_argument, 0, 'y' },
+//       { "default-page",       required_argument, 0, 'z' },
+//       { 0, 0, 0, 0 }          // mark end of array
+//     };
 
-#define USAGE_MSG                                                       \
-  "Usage: httpd  [ --version ]\n"                                       \
-  "              [ -h        | --help ]\n"                              \
-  "              [ -d        | --debug ]\n"                             \
-  "              [ -D        | --no-detach ]\n"                         \
-  "              [ -p number | --port               number ]\n"         \
-  "              [ -r path   | --change-root        path   ]\n"         \
-  "              [ -l path   | --logfile-directory  path   ]\n"         \
-  "              [ -s string | --server-string      string ]\n"         \
-  "              [ -u uid    | --uid                uid    ]\n"         \
-  "              [ -g gid    | --gid                gid    ]\n"         \
-  "              [ -H string | --default-hostname   string ]\n"         \
-  "              [ --default-page  filename ]\n"    \
-  "              [ --document-root path ]\n"
-
-http::configuration::configuration(int argc, char** argv)
+http::configuration::configuration() : default_content_type("application/octet-stream")
 {
-  // timeouts
-  network_read_timeout                  = 30 sec;
-  network_write_timeout                 = 30 sec;
-
-  // buffer size
-  max_line_length                       =  4 kb;
-
-  // paths
-  chroot_directory                      = "";
-  logfile_directory                     = "/logs";
-  document_root                         = "/htdocs";
-  default_page                          = "index.html";
-
-  // run-time stuff
-  server_string                         = "mini-httpd";
-  default_hostname                      = "localhost";
-  default_content_type                  = "application/octet-stream";
-  http_port                             = 80;
-
-  debugging                             = false;
-  detach                                = true;
-
-  // Parse the command line.
-
-  char const * optstring = "hdp:r:l:s:u:g:DH:";
-  const option longopts[] =
-    {
-      { "help",               no_argument,       0, 'h' },
-      { "version",            no_argument,       0, 'v' },
-      { "debug",              no_argument,       0, 'd' },
-      { "port",               required_argument, 0, 'p' },
-      { "change-root",        required_argument, 0, 'r' },
-      { "logfile-directory",  required_argument, 0, 'l' },
-      { "server-string",      required_argument, 0, 's' },
-      { "uid",                required_argument, 0, 'u' },
-      { "gid",                required_argument, 0, 'g' },
-      { "no-detach",          required_argument, 0, 'D' },
-      { "default-hostname",   required_argument, 0, 'H' },
-      { "document-root",      required_argument, 0, 'y' },
-      { "default-page",       required_argument, 0, 'z' },
-      { 0, 0, 0, 0 }          // mark end of array
-    };
-  int rc;
-  opterr = 0;
-  while ((rc = getopt_long(argc, argv, optstring, longopts, 0)) != -1)
-  {
-    switch(rc)
-    {
-      case 'h':
-        fprintf(stderr, USAGE_MSG);
-        throw no_error();
-      case 'v':
-        printf("mini-httpd version 2007-05-04\n");
-        throw no_error();
-      case 'd':
-        debugging = true;
-        break;
-      case 'p':
-        http_port = atoi(optarg);
-        if (http_port > 65535)
-          throw runtime_error("The specified port number is out of range!");
-        break;
-      case 'g':
-        setgid_group = atoi(optarg);
-        break;
-      case 'u':
-        setuid_user = atoi(optarg);
-        break;
-      case 'r':
-        chroot_directory = optarg;
-        break;
-      case 'y':
-        document_root = optarg;
-        break;
-      case 'z':
-        default_page = optarg;
-        break;
-      case 'l':
-        logfile_directory = optarg;
-        break;
-      case 's':
-        server_string = optarg;
-        break;
-      case 'D':
-        detach = false;
-        break;
-      case 'H':
-        default_hostname = optarg;
-        break;
-      default:
-        fprintf(stderr, USAGE_MSG);
-        throw runtime_error("Incorrect command line syntax.");
-    }
-
-    // Consistency checks on the configured parameters.
-
-    if (default_page.empty())
-      throw invalid_argument("Setting an empty --default-page is not allowed.");
-    if (document_root.empty())
-      throw invalid_argument("Setting an empty --document-root is not allowed.");
-  }
-
   // Initialize the content type lookup map.
 
   content_types["ai"]      = "application/postscript";
@@ -878,14 +779,14 @@ char const * http::configuration::get_content_type(char const * filename) const
     if (*current == '.')
       last_dot = current;
   if (last_dot == 0)
-    return default_content_type;
+    return default_content_type.c_str();
   else
     ++last_dot;
   map_t::const_iterator i = content_types.find(last_dot);
   if (i != content_types.end())
     return i->second;
   else
-    return default_content_type;
+    return default_content_type.c_str();
 }
 
-http::configuration const * http::config;
+http::configuration http::daemon::_config;

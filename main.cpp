@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2007 Peter Simons <simons@cryp.to>
+ * Copyright (c) 2007 Peter Simons <simons@cryp.to>
  *
  * This software is provided 'as-is', without any express or
  * implied warranty. In no event will the authors be held liable
@@ -10,19 +10,13 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include "http-daemon.hpp"
-
-#include <boost/test/prg_exec_monitor.hpp>
+#include <boost/thread.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <stdexcept>
 #include <csignal>
-#include <ctime>                // must have tzset(3)
-#include <iostream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <boost/program_options.hpp>
+#include <boost/test/prg_exec_monitor.hpp>
 #include "sanity/system-error.hpp"
+#include "http-daemon.hpp"
 
 static char const PACKAGE_NAME[]    = "mini-httpd";
 static char const PACKAGE_VERSION[] = "2007-05-04";
@@ -42,26 +36,68 @@ static void stop_service()
   the_io_service->stop();
 }
 
-int cpp_main(int argc, char** argv)
-try
+int cpp_main(int argc, char ** argv)
 {
   using namespace std;
-  using namespace http;
-
-  // Set up the system.
-
-  ios::sync_with_stdio(false);
   srand(time(0));
-  tzset();
+  ios::sync_with_stdio(false);
+
+  // Parse the command line.
+
+  namespace po = boost::program_options;
+  typedef boost::uint16_t               portnum_t;
+  typedef vector<portnum_t>             portnum_array;
+  typedef portnum_array::iterator       portnum_array_iterator;
+
+  po::options_description meta_opts("Administrative Options");
+  size_t                n_threads;
+  string                change_root;
+  uid_t                 uid;
+  gid_t                 gid;
+  portnum_array         listen_ports;
+  vector<string>        listen_addrs;
+  meta_opts.add_options()
+    ( "help,h",                                                                                  "produce help message and exit" )
+    ( "version,v",                                                                               "show program version and exit" )
+    ( "no-detach,D",                                                                             "don't run in the background" )
+    ( "threads,j" ,        po::value<size_t>(&n_threads)->default_value(2u),                     "recommended value: number of CPUs"  )
+    ( "change-root",       po::value<string>(&change_root),                                      "chroot(2) to this path after startup" )
+    ( "uid",               po::value<uid_t>(&uid),                                               "setgit(2) to this id after startup" )
+    ( "gid",               po::value<gid_t>(&gid),                                               "setgit(2) to this id after startup" )
+    ( "port",              po::value< portnum_array >(&listen_ports),                            "listen on TCP port(s)"  )
+    ( "listen",            po::value< vector<string> >(&listen_addrs),                           "listen on address:port"  )
+    ;
+
+  po::options_description httpd_opts("HTTP Daemon Configuration");
+  http::configuration & cfg( http::daemon::_config );
+  httpd_opts.add_options()
+    ( "document-root",     po::value<string>(&cfg.document_root)->default_value("htdocs"),       "directory containing HTML documents" )
+    ( "log-dir",           po::value<string>(&cfg.logfile_root)->default_value("htlogs"),        "write access logs to this directory" )
+    ( "server-string",     po::value<string>(&cfg.server_string)->default_value(PACKAGE_NAME),   "set value of HTTP's \"Server:\" header" )
+    ( "default-hostname",  po::value<string>(&cfg.default_hostname)->default_value("localhost"), "hostname to use for pre HTTP/1.1")
+    ( "default-page",      po::value<string>(&cfg.default_page)->default_value("index.html"),    "filename of directory index page" )
+    ;
+
+  po::options_description opts
+    ( string("Commandline Interface ") + PACKAGE_NAME + " " + PACKAGE_VERSION)
+    ;
+  opts.add(meta_opts).add(httpd_opts);
+
+  po::variables_map vm;
+  po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
+  po::notify(vm);
+
+  if (vm.count("help"))          { cout << opts << endl;                                     return 0; }
+  if (vm.count("version"))       { cout << PACKAGE_NAME << " " << PACKAGE_VERSION << endl;   return 0; }
+  if (n_threads == 0u)           { cout << "no threads configured" << endl;                  return 1; }
+  if (listen_ports.empty())      { cout << "no listen ports configured" << endl;             return 1; }
+  if (cfg.default_page.empty())  { cout << "invalid argument --default-page=\"\"" << endl;   return 1; }
+  if (cfg.document_root.empty()) { cout << "invalid argument --document-root=\"\"" << endl;  return 1; }
+  bool const detach( !vm.count("no-detach") );
+
+  // Setup the system.
+
   init_logging(PACKAGE_NAME);
-
-  // Create our configuration and place it in the global pointer.
-
-  configuration real_config(argc, argv);
-  config = &real_config;
-
-  // Install signal handler.
-
   the_io_service.reset(new io_service);
   signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
@@ -69,39 +105,56 @@ try
   signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGPIPE, SIG_IGN);
 
-  // Start-up scheduler and listener.
+  INFO() << PACKAGE_NAME << " version " << PACKAGE_VERSION
+         << " running " << n_threads << " threads "
+         << (detach ? "as daemon" : "on current tty")
+         << " using config: " << cfg;
+
+  // Configure TCP listeners.
 
   using namespace boost::asio::ip;
-  tcp::acceptor mini_httpd(*the_io_service, tcp::endpoint(tcp::v6(), config->http_port));
-  tcp_driver< io_driver<http::daemon> >(mini_httpd);
-
-  // Change root to our sandbox.
-
-  if (!config->chroot_directory.empty())
+  typedef boost::shared_ptr<tcp_acceptor> shared_acceptor;
+  typedef vector<shared_acceptor>         acceptor_array;
+  acceptor_array                          acceptors;
+  for (portnum_array_iterator i( listen_ports.begin() ); i != listen_ports.end(); ++i)
   {
-    if (chdir(config->chroot_directory.c_str()) == -1 || chroot(".") == -1)
-      throw system_error((string("Can't change root to '") + config->chroot_directory + "'").c_str());
+    tcp::endpoint const addr(tcp::v6(), *i);
+    INFO() << "listening on address " << addr;
+    shared_acceptor const acc( new tcp_acceptor(*the_io_service, addr) );
+    acceptors.push_back(acc);
+    tcp_driver< io_driver<http::daemon> >(*acc);
   }
 
-  // Drop super user privileges.
+  // Drop all possible privileges.
 
-  if (geteuid() == 0)
+  if (change_root.empty())      INFO() << "disabled change root";
+  else
   {
-    if (config->setgid_group && setgid(*config->setgid_group) == -1)
-      throw system_error("setgid() failed");
-
-    if (config->setuid_user && setuid(*config->setuid_user) == -1)
-      throw system_error("setuid() failed");
+    INFO() << "change root to " << change_root;
+    if (chdir(change_root.c_str()) == -1 || chroot(".") == -1)
+      throw system_error((string("chroot(\"")) + change_root + "\") failed");
+  }
+  if (!vm.count("gid"))         INFO() << "disabled change group id";
+  else
+  {
+    INFO() << "change process group id to " << gid;
+    if (setgid(gid) == -1) throw system_error("setgid() failed");
+  }
+  if (!vm.count("uid"))         INFO() << "disabled change user id";
+  else
+  {
+    INFO() << "change process user id to " << uid;
+    if (setuid(uid) == -1) throw system_error("setuid() failed");
   }
 
   // Detach from terminal.
 
-  if (config->detach)
+  if (detach)
   {
     switch (fork())
     {
       case -1:
-        throw system_error("can't fork()");
+        throw system_error("fork() failed");
       case 0:
         setsid();
         close(STDIN_FILENO);
@@ -113,33 +166,19 @@ try
     }
   }
 
-  // Log some helpful information.
+  // Run the server.
 
-  INFO()
-    << PACKAGE_NAME << " " << PACKAGE_VERSION << " starting up"
-    << ": tcp port = "  << config->http_port
-    << ", user id = "   << ::getuid()
-    << ", group id = "  << ::getgid()
-    << ", chroot = "    << config->chroot_directory
-    << ", hostname = "  << config->default_hostname
-    << ", log dir = "   << ( config->logfile_directory.empty()
-                           ? "disabled"
-                           : config->logfile_directory.c_str()
-                           )
-    ;
-
-  // Run ...
-
+  boost::thread_group pool;
+  while(--n_threads) pool.create_thread( &start_service );
   start_service();
 
   // Terminate gracefully.
 
-  INFO() << "mini-httpd shutting down";
+  INFO() << "shutting down";
+
+  pool.join_all();
+  acceptors.clear();
   the_io_service.reset();
 
-  return 0;
-}
-catch(http::configuration::no_error)
-{
   return 0;
 }

@@ -5,7 +5,7 @@ VARIANT  = debug
 #VARIANT = release
 
 DISTDIR  = $(shell pwd)/dist
-HTTPD    = bin/${TOOLSET}/${VARIANT}/mini-httpd
+HTTPD    = bin/${TOOLSET}/${VARIANT}/threading-multi/mini-httpd
 
 .PHONY: all run clean
 
@@ -13,7 +13,7 @@ all:
 	bjam --without-mpi toolset="${TOOLSET}" variant="${VARIANT}"
 
 run:		all ${DISTDIR}
-	${HTTPD} -d -D -p 8080 -l ${DISTDIR} --document-root ${DISTDIR}
+	${HTTPD} --no-detach --listen=127.1:8888 --port 8080 --log-dir ${DISTDIR} --document-root ${DISTDIR} --default-hostname ""
 
 clean:
 	rm -rf bin
