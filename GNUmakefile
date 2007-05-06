@@ -5,7 +5,8 @@ VARIANT  = debug
 #VARIANT = release
 
 DISTDIR  = $(shell pwd)/dist
-HTTPD    = bin/${TOOLSET}/${VARIANT}/threading-multi/mini-httpd
+#HTTPD    = bin/${TOOLSET}/${VARIANT}/threading-multi/mini-httpd
+HTTPD   = bin/${TOOLSET}/${VARIANT}/micro-httpd
 
 .PHONY: all run clean
 

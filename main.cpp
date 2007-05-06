@@ -10,7 +10,9 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#include <boost/thread.hpp>
+#ifndef BOOST_DISABLE_THREADS
+#  include <boost/thread/thread.hpp>
+#endif
 #include <boost/scoped_ptr.hpp>
 #include <csignal>
 #include <boost/program_options.hpp>
@@ -18,7 +20,11 @@
 #include "sanity/system-error.hpp"
 #include "http-daemon.hpp"
 
+#ifndef BOOST_DISABLE_THREADS
 static char const PACKAGE_NAME[]    = "mini-httpd";
+#else
+static char const PACKAGE_NAME[]    = "micro-httpd";
+#endif
 static char const PACKAGE_VERSION[] = "2007-05-04";
 
 typedef boost::asio::io_service io_service;
@@ -26,7 +32,11 @@ static boost::scoped_ptr<io_service> the_io_service;
 
 static void start_service()
 {
+#ifndef BOOST_DISABLE_THREADS
   TRACE() << "enter i/o service thread pool";
+#else
+  TRACE() << "enter i/o loop";
+#endif
   the_io_service->run();
 }
 
@@ -60,7 +70,9 @@ int cpp_main(int argc, char ** argv)
   // Parse the command line: Generic Process and Daemon Options
   //
   po::options_description meta_opts("Administrative Options");
+#ifndef BOOST_DISABLE_THREADS
   size_t                n_threads;
+#endif
   string                change_root;
   uid_t                 uid;
   gid_t                 gid;
@@ -69,7 +81,9 @@ int cpp_main(int argc, char ** argv)
     ( "help,h",                                                                                 "produce help message and exit" )
     ( "version,v",                                                                              "show program version and exit" )
     ( "no-detach,D",                                                                            "don't run in the background" )
+#ifndef BOOST_DISABLE_THREADS
     ( "threads,j" ,        po::value<size_t>(&n_threads)->default_value(2u),                    "recommended value: number of CPUs"  )
+#endif
     ( "change-root",       po::value<string>(&change_root),                                     "chroot(2) to this path after startup" )
     ( "uid",               po::value<uid_t>(&uid),                                              "setuid(2) to this id after startup" )
     ( "gid",               po::value<gid_t>(&gid),                                              "setgid(2) to this id after startup" )
@@ -104,7 +118,9 @@ int cpp_main(int argc, char ** argv)
   //
   if (vm.count("help"))          { cout << opts << endl;                                     return 0; }
   if (vm.count("version"))       { cout << PACKAGE_NAME << " " << PACKAGE_VERSION << endl;   return 0; }
+#ifndef BOOST_DISABLE_THREADS
   if (n_threads == 0u)           { cout << "no threads configured" << endl;                  return 1; }
+#endif
   if (listen_addrs.empty())      { cout << "no listen addresses configured" << endl;         return 1; }
   if (cfg.default_page.empty())  { cout << "invalid argument --default-page=\"\"" << endl;   return 1; }
   if (cfg.document_root.empty()) { cout << "invalid argument --document-root=\"\"" << endl;  return 1; }
@@ -114,8 +130,10 @@ int cpp_main(int argc, char ** argv)
   //
   init_logging(PACKAGE_NAME);
   the_io_service.reset(new io_service);
-  INFO() << PACKAGE_NAME << " version " << PACKAGE_VERSION
-         << " running " << n_threads << " threads "
+  INFO() << PACKAGE_NAME << " version " << PACKAGE_VERSION << " running "
+#ifndef BOOST_DISABLE_THREADS
+         << n_threads << " threads "
+#endif
          << (detach ? "as daemon" : "on current tty")
          << " using config: " << cfg;
   //
@@ -198,8 +216,10 @@ int cpp_main(int argc, char ** argv)
   //
   // Run the server.
   //
+#ifndef BOOST_DISABLE_THREADS
   boost::thread_group pool;
   while(--n_threads) pool.create_thread( &start_service );
+#endif
   signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
   signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
@@ -209,7 +229,9 @@ int cpp_main(int argc, char ** argv)
   // Terminate gracefully.
   //
   INFO() << "shutting down";
+#ifndef BOOST_DISABLE_THREADS
   pool.join_all();
+#endif
   acceptors.clear();
   the_io_service.reset();
   return 0;
