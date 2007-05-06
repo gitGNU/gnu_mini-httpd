@@ -69,7 +69,6 @@ int cpp_main(int argc, char ** argv)
   //
   // Parse the command line: Generic Process and Daemon Options
   //
-  po::options_description meta_opts("Administrative Options");
 #ifndef BOOST_DISABLE_THREADS
   size_t                n_threads;
 #endif
@@ -77,6 +76,7 @@ int cpp_main(int argc, char ** argv)
   uid_t                 uid;
   gid_t                 gid;
   vector<string>        listen_addrs;
+  po::options_description meta_opts("Administrative Options");
   meta_opts.add_options()
     ( "help,h",                                                                                 "produce help message and exit" )
     ( "version,v",                                                                              "show program version and exit" )
