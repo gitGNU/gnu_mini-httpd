@@ -21,3 +21,6 @@ clean:
 
 ${DISTDIR}:
 	mkdir $@
+
+redate:
+	redate configure.ac main.cpp Doxyfile

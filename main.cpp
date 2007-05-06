@@ -20,12 +20,16 @@
 #include "sanity/system-error.hpp"
 #include "http-daemon.hpp"
 
-#ifndef BOOST_DISABLE_THREADS
+#ifndef PACKAGE_NAME
+#  ifndef BOOST_DISABLE_THREADS
 static char const PACKAGE_NAME[]    = "mini-httpd";
-#else
+#  else
 static char const PACKAGE_NAME[]    = "micro-httpd";
+#  endif
 #endif
-static char const PACKAGE_VERSION[] = "2007-05-04";
+#ifndef PACKAGE_VERSION
+static char const PACKAGE_VERSION[] = "2007-05-07";
+#endif
 
 typedef boost::asio::io_service io_service;
 static boost::scoped_ptr<io_service> the_io_service;

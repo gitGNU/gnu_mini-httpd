@@ -1,10 +1,12 @@
 # build mini-httpd
 
-project
-  : requirements <threading>single:<define>BOOST_DISABLE_THREADS
-                 <threading>single:<define>BOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
-                 <threading>multi:<define>BOOST_SPIRIT_THREADSAFE
-  ;
+# broken:
+#
+# project
+#   : requirements <threading>single:<define>BOOST_DISABLE_THREADS
+#                  <threading>single:<define>BOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
+#                  <threading>multi:<define>BOOST_SPIRIT_THREADSAFE
+#   ;
 
 exe micro-httpd
   : main.cpp logging.cpp http.cpp http-daemon.cpp
