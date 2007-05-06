@@ -13,7 +13,7 @@ all:
 	bjam --without-mpi toolset="${TOOLSET}" variant="${VARIANT}"
 
 run:		all ${DISTDIR}
-	${HTTPD} --no-detach --listen=127.1:8888 --port 8080 --log-dir ${DISTDIR} --document-root ${DISTDIR} --default-hostname ""
+	${HTTPD} --no-detach --listen=127.0.0.1:8888 --log-dir ${DISTDIR} --document-root ${DISTDIR} 8080 ::1:8081
 
 clean:
 	rm -rf bin

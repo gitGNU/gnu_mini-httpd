@@ -39,116 +39,146 @@ static void stop_service()
 int cpp_main(int argc, char ** argv)
 {
   using namespace std;
-  srand(time(0));
-  ios::sync_with_stdio(false);
-
-  // Parse the command line.
-
   namespace po = boost::program_options;
-  typedef boost::uint16_t               portnum_t;
-  typedef vector<portnum_t>             portnum_array;
-  typedef portnum_array::iterator       portnum_array_iterator;
-
+  //
+  // Ignore relevant signals to avoid race conditions.
+  //
+  signal(SIGTERM, SIG_IGN);
+  signal(SIGINT,  SIG_IGN);
+  signal(SIGHUP,  SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
+  //
+  // Seed the random number generator.
+  //
+  srand(time(0));
+  //
+  // stdout/stderr are accessed only through the C++ streams API.
+  //
+  ios::sync_with_stdio(false);
+  //
+  // Parse the command line: Generic Process and Daemon Options
+  //
   po::options_description meta_opts("Administrative Options");
   size_t                n_threads;
   string                change_root;
   uid_t                 uid;
   gid_t                 gid;
-  portnum_array         listen_ports;
   vector<string>        listen_addrs;
   meta_opts.add_options()
-    ( "help,h",                                                                                  "produce help message and exit" )
-    ( "version,v",                                                                               "show program version and exit" )
-    ( "no-detach,D",                                                                             "don't run in the background" )
-    ( "threads,j" ,        po::value<size_t>(&n_threads)->default_value(2u),                     "recommended value: number of CPUs"  )
-    ( "change-root",       po::value<string>(&change_root),                                      "chroot(2) to this path after startup" )
-    ( "uid",               po::value<uid_t>(&uid),                                               "setgit(2) to this id after startup" )
-    ( "gid",               po::value<gid_t>(&gid),                                               "setgit(2) to this id after startup" )
-    ( "port",              po::value< portnum_array >(&listen_ports),                            "listen on TCP port(s)"  )
-    ( "listen",            po::value< vector<string> >(&listen_addrs),                           "listen on address:port"  )
+    ( "help,h",                                                                                 "produce help message and exit" )
+    ( "version,v",                                                                              "show program version and exit" )
+    ( "no-detach,D",                                                                            "don't run in the background" )
+    ( "threads,j" ,        po::value<size_t>(&n_threads)->default_value(2u),                    "recommended value: number of CPUs"  )
+    ( "change-root",       po::value<string>(&change_root),                                     "chroot(2) to this path after startup" )
+    ( "uid",               po::value<uid_t>(&uid),                                              "setuid(2) to this id after startup" )
+    ( "gid",               po::value<gid_t>(&gid),                                              "setgid(2) to this id after startup" )
+    ( "listen",            po::value< vector<string> >(&listen_addrs),                          "listen on address:port"  )
     ;
-
-  po::options_description httpd_opts("HTTP Daemon Configuration");
+  po::positional_options_description pos_opts;
+  pos_opts.add("listen", -1);
+  //
+  // Parse the command line: HTTP Page Delivery and Logging
+  //
   http::configuration & cfg( http::daemon::_config );
+  po::options_description httpd_opts("HTTP Daemon Configuration");
   httpd_opts.add_options()
-    ( "document-root",     po::value<string>(&cfg.document_root)->default_value("htdocs"),       "directory containing HTML documents" )
-    ( "log-dir",           po::value<string>(&cfg.logfile_root)->default_value("htlogs"),        "write access logs to this directory" )
-    ( "server-string",     po::value<string>(&cfg.server_string)->default_value(PACKAGE_NAME),   "set value of HTTP's \"Server:\" header" )
-    ( "default-hostname",  po::value<string>(&cfg.default_hostname)->default_value("localhost"), "hostname to use for pre HTTP/1.1")
-    ( "default-page",      po::value<string>(&cfg.default_page)->default_value("index.html"),    "filename of directory index page" )
+    ( "document-root",     po::value<string>(&cfg.document_root)->default_value("htdocs"),      "directory containing HTML documents" )
+    ( "log-dir",           po::value<string>(&cfg.logfile_root)->default_value("htlogs"),       "write access logs to this directory" )
+    ( "server-string",     po::value<string>(&cfg.server_string)->default_value(PACKAGE_NAME),  "set value of HTTP's \"Server:\" header" )
+    ( "default-hostname",  po::value<string>(&cfg.default_hostname),                            "hostname to use for pre HTTP/1.1")
+    ( "default-page",      po::value<string>(&cfg.default_page)->default_value("index.html"),   "filename of directory index page" )
     ;
-
+  //
+  // Run command line parser. Obvious errors are thrown as exceptions.
+  //
   po::options_description opts
     ( string("Commandline Interface ") + PACKAGE_NAME + " " + PACKAGE_VERSION)
     ;
   opts.add(meta_opts).add(httpd_opts);
-
   po::variables_map vm;
-  po::store(po::command_line_parser(argc, argv).options(opts).run(), vm);
+  po::store(po::command_line_parser(argc, argv).options(opts).positional(pos_opts).run(), vm);
   po::notify(vm);
-
+  //
+  // Sanity checking ...
+  //
   if (vm.count("help"))          { cout << opts << endl;                                     return 0; }
   if (vm.count("version"))       { cout << PACKAGE_NAME << " " << PACKAGE_VERSION << endl;   return 0; }
   if (n_threads == 0u)           { cout << "no threads configured" << endl;                  return 1; }
-  if (listen_ports.empty())      { cout << "no listen ports configured" << endl;             return 1; }
+  if (listen_addrs.empty())      { cout << "no listen addresses configured" << endl;         return 1; }
   if (cfg.default_page.empty())  { cout << "invalid argument --default-page=\"\"" << endl;   return 1; }
   if (cfg.document_root.empty()) { cout << "invalid argument --document-root=\"\"" << endl;  return 1; }
   bool const detach( !vm.count("no-detach") );
-
-  // Setup the system.
-
+  //
+  // Setup the system and log configuration.
+  //
   init_logging(PACKAGE_NAME);
   the_io_service.reset(new io_service);
-  signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
-  signal(SIGPIPE, SIG_IGN);
-
   INFO() << PACKAGE_NAME << " version " << PACKAGE_VERSION
          << " running " << n_threads << " threads "
          << (detach ? "as daemon" : "on current tty")
          << " using config: " << cfg;
-
+  //
   // Configure TCP listeners.
-
+  //
   using namespace boost::asio::ip;
   typedef boost::shared_ptr<tcp_acceptor> shared_acceptor;
   typedef vector<shared_acceptor>         acceptor_array;
   acceptor_array                          acceptors;
-  for (portnum_array_iterator i( listen_ports.begin() ); i != listen_ports.end(); ++i)
+  for (vector<string>::iterator i( listen_addrs.begin() ); i != listen_addrs.end(); ++i)
   {
-    tcp::endpoint const addr(tcp::v6(), *i);
-    INFO() << "listening on address " << addr;
+    tcp::endpoint addr;
+    string::size_type k( i->rfind(':') );
+    switch (k)
+    {
+      case string::npos:
+        TRACE() << "parse TCP port '" << *i << "'";
+        addr = tcp::endpoint(tcp::v6(), atoi(i->c_str()));
+        break;
+
+      case 0u:
+        TRACE() << "parse any host, TCP port '" << *i << "'";
+        addr = tcp::endpoint(tcp::v6(), atoi(i->c_str() + 1u));
+        break;
+
+      default:
+        TRACE() << "parse host '" << i->substr(0, k)
+                << "', port '"    << i->substr(k + 1u)
+                << "'";
+        addr = tcp::endpoint( address::from_string(i->substr(0, k))
+                            , atoi(i->substr(k + 1u).c_str())
+                            );
+    }
+    INFO() << "listen on network address " << addr;
     shared_acceptor const acc( new tcp_acceptor(*the_io_service, addr) );
     acceptors.push_back(acc);
     tcp_driver< io_driver<http::daemon> >(*acc);
   }
-
-  // Drop all possible privileges.
-
-  if (change_root.empty())      INFO() << "disabled change root";
+  //
+  // Drop all privileges.
+  //
+  if (change_root.empty())      TRACE() << "disabled change root";
   else
   {
     INFO() << "change root to " << change_root;
     if (chdir(change_root.c_str()) == -1 || chroot(".") == -1)
       throw system_error((string("chroot(\"")) + change_root + "\") failed");
   }
-  if (!vm.count("gid"))         INFO() << "disabled change group id";
+  if (!vm.count("gid"))         TRACE() << "disabled change group id";
   else
   {
     INFO() << "change process group id to " << gid;
     if (setgid(gid) == -1) throw system_error("setgid() failed");
   }
-  if (!vm.count("uid"))         INFO() << "disabled change user id";
+  if (!vm.count("uid"))         TRACE() << "disabled change user id";
   else
   {
     INFO() << "change process user id to " << uid;
     if (setuid(uid) == -1) throw system_error("setuid() failed");
   }
-
+  //
   // Detach from terminal.
-
+  //
   if (detach)
   {
     switch (fork())
@@ -165,20 +195,22 @@ int cpp_main(int argc, char ** argv)
         return 0;
     }
   }
-
+  //
   // Run the server.
-
+  //
   boost::thread_group pool;
   while(--n_threads) pool.create_thread( &start_service );
+  signal(SIGTERM, reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGINT,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGHUP,  reinterpret_cast<sighandler_t>(&stop_service));
+  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&stop_service));
   start_service();
-
+  //
   // Terminate gracefully.
-
+  //
   INFO() << "shutting down";
-
   pool.join_all();
   acceptors.clear();
   the_io_service.reset();
-
   return 0;
 }
