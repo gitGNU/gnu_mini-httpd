@@ -20,11 +20,8 @@ HTTPD_SOURCES		= main.cpp					\
 			  http-daemon.cpp				\
 			  $(BOOST_LOG_SOURCES)
 
-HTTPD_CPPFLAGS		= -DBOOST_DATE_TIME_DYN_LINK=1			\
-			  -DBOOST_LOG_SOURCE				\
-			  -DBOOST_PYTHON_DYNAMIC_LIB			\
-			  -DBOOST_TEST_DYN_LINK=1			\
-			  -DBOOST_TEST_NO_AUTO_LINK=1			\
+HTTPD_CPPFLAGS		= -DBOOST_TEST_NO_AUTO_LINK=1			\
+			  -DBOOST_THREAD_BUILD_LIB=1
 			  -DDATE_TIME_INLINE				\
 			  -DSANITY_BUILDING_DLL				\
 			  -UPACKAGE_NAME				\
@@ -33,19 +30,18 @@ HTTPD_CPPFLAGS		= -DBOOST_DATE_TIME_DYN_LINK=1			\
 sbin_PROGRAMS		= mini-httpd micro-httpd
 
 mini_httpd_SOURCES	= $(HTTPD_SOURCES)
-mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
-			  -DBOOST_SPIRIT_THREADSAFE			\
-			  -DBOOST_THREAD_BUILD_DLL=1
 mini_httpd_CXXFLAGS	= -pthread
-mini_httpd_LDADD	= -lboost_thread-gcc34-mt-1_35			\
-			  -lboost_system-gcc34-mt-1_35			\
-			  -lboost_program_options-gcc34-mt-1_35		\
-			  -lboost_prg_exec_monitor-gcc34-mt-1_35
+mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
+			  -DBOOST_SPIRIT_THREADSAFE
+mini_httpd_LDADD	= -lboost_thread-gcc34-mt-d-1_35		\
+			  -lboost_system-gcc34-mt-d-1_35		\
+			  -lboost_program_options-gcc34-mt-d-1_35	\
+			  -lboost_prg_exec_monitor-gcc34-mt-d-1_35
 
 micro_httpd_SOURCES	= $(HTTPD_SOURCES)
 micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
 			  -DBOOST_DISABLE_THREADS			\
 			  -DBOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
-micro_httpd_LDADD	= -lboost_system-gcc34-1_35			\
-			  -lboost_program_options-gcc34-1_35		\
-			  -lboost_prg_exec_monitor-gcc34-1_35
+micro_httpd_LDADD	= -lboost_system-gcc34-d-1_35			\
+			  -lboost_program_options-gcc34-d-1_35		\
+			  -lboost_prg_exec_monitor-gcc34-d-1_35
