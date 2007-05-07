@@ -13,9 +13,7 @@
 #ifndef MINI_HTTPD_IO_OUTPUT_BUFFER_HPP_INCLUDED
 #define MINI_HTTPD_IO_OUTPUT_BUFFER_HPP_INCLUDED
 
-#ifndef MINI_HTTPD_IO_HPP_INCLUDED
-#  error "do not include this file directly -- include io.hpp"
-#endif
+#include "io.hpp"
 
 /**
  *  \internal Commit the buffer address.

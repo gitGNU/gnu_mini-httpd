@@ -13,9 +13,9 @@
 #ifndef MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
 #define MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
 
-#ifndef MINI_HTTPD_IO_HPP_INCLUDED
-#  error "do not include this file directly -- include io.hpp"
-#endif
+#include "io.hpp"
+#include <cstring>              // std::memmove()
+#include "logging.hpp"
 
 /**
  *  \brief Magic constant lower limit for I/O buffer sizes.

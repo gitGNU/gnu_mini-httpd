@@ -74,15 +74,12 @@
  *  be called again when more input has been read.
  */
 
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/range.hpp>
-#include <boost/assert.hpp>
 #include <vector>
-#include <cstring>              // std::memmove()
 #include <cstddef>              // std::size_t, std::ptrdiff_t, offsetof()
-#include "logging.hpp"
 
 // ----- Core Types -----------------------------------------------------------
 
@@ -211,8 +208,6 @@ public:
   void   realloc(size_t n);
 };
 
-#include "io-input-buffer.hpp"
-
 /**
  *  \brief A scatter I/O vector for output.
  */
@@ -239,8 +234,6 @@ public:
 
   scatter_vector const & commit();
 };
-
-#include "io-output-buffer.hpp"
 
 // ----- I/O Driver -----------------------------------------------------------
 
@@ -277,8 +270,6 @@ struct io_driver
   static void stop(ctx_ptr ctx);
 };
 
-#include "io-driver.hpp"
-
 /**
  *  \brief Iterate a tokenizer function over the input stream.
  */
@@ -287,20 +278,7 @@ struct stream_driver : public Handler
 {
   typedef bool result_type;
 
-  bool operator()(input_buffer & inbuf, size_t i, output_buffer & outbuf)
-  {
-    TRACE() << "stream handler entry: " << inbuf << ", new input = " << i;
-    size_t k( Handler::operator()(inbuf.begin(), inbuf.end(), i, outbuf) );
-    inbuf.consume(k);
-    if (i)
-      while (k && !inbuf.empty())
-      {
-        k = Handler::operator()(inbuf.begin(), inbuf.end(), std::min(i, inbuf.size()), outbuf);
-        inbuf.consume(k);
-      }
-    TRACE() << "stream handler exit: " << inbuf << ", " << outbuf;
-    return i;
-  }
+  bool operator()(input_buffer & inbuf, size_t i, output_buffer & outbuf);
 };
 
 /**
@@ -310,11 +288,6 @@ template <class Handler>
 inline void tcp_driver( tcp_acceptor &  acc
                       , Handler         f = Handler()
                       , shared_socket   s = shared_socket()
-                      )
-{
-  if (s) f.start(s);
-  s.reset(new tcp_socket( acc.io_service() ));
-  acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), f, s));
-}
+                      );
 
 #endif // MINI_HTTPD_IO_HPP_INCLUDED
