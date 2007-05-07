@@ -19,6 +19,8 @@
 #include <boost/test/prg_exec_monitor.hpp>
 #include "sanity/system-error.hpp"
 #include "http-daemon.hpp"
+#include "io-driver.hpp"
+#include "logging.hpp"
 
 #ifndef PACKAGE_NAME
 #  ifndef BOOST_DISABLE_THREADS
