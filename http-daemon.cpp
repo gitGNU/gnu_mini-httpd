@@ -11,7 +11,10 @@
  */
 
 #include "http-daemon.hpp"
+#include "io-input-buffer.hpp"
+#include "io-output-buffer.hpp"
 #include <fstream>
+#include <boost/bind.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <sanity/system-error.hpp>
 #include <unistd.h>             // close(2)
@@ -95,7 +98,7 @@ http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output
     if (p[0] == '\r' && p + 1 != ibuf.end() && p[1] == '\n')
     {
       ++p;
-      size_t const len( http_parser.parse_request_line(_request, ibuf.begin(), p + 1) );
+      size_t const len( parse_request_line(_request, ibuf.begin(), p + 1) );
       BOOST_ASSERT(!len || len == static_cast<size_t>(p + 1 - ibuf.begin()));
       if (len > 0)
       {
@@ -135,12 +138,12 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
   // If we do have a complete header line in the read buffer,
   // process it. If not, we need more I/O before we can proceed.
 
-  char * p( parser::find_next_line(ibuf.begin(), ibuf.end()) );
+  char * p( find_next_line(ibuf.begin(), ibuf.end()) );
   TRACE() << "found line of " << (p - ibuf.begin()) << " bytes";
   if (p != ibuf.end())
   {
     string name, data;
-    size_t len( http_parser.parse_header(name, data, ibuf.begin(), p) );
+    size_t len( parse_header(name, data, ibuf.begin(), p) );
     TRACE() << "parser consumed " << len << " bytes";
     BOOST_ASSERT(!len || ibuf.begin() + len == p);
     ibuf.reset(p, ibuf.end());
@@ -148,7 +151,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
     {
       if (strcasecmp("Host", name.c_str()) == 0)
       {
-        if (!http_parser.parse_host_header(_request, data.data(), data.data() + data.size()))
+        if (!parse_host_header(_request, data.data(), data.data() + data.size()))
           return protocol_error(obuf, "Malformed <tt>Host</tt> header.\r\n");
         else
           TRACE() << "Read Host header"
@@ -158,7 +161,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
       }
       else if (strcasecmp("If-Modified-Since", name.c_str()) == 0)
       {
-        if (!http_parser.parse_if_modified_since_header(_request, data.data(), data.data() + data.size()))
+        if (!parse_if_modified_since_header(_request, data.data(), data.data() + data.size()))
           INFO() << "Ignoring malformed If-Modified-Since header '" << data << "'";
         else
           TRACE() << "Read If-Modified-Since header: timestamp = " << *_request.if_modified_since;
@@ -386,7 +389,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
   // Decide whether to use a persistent connection.
 
-  _use_persistent_connection = parser::supports_persistent_connection(_request);
+  _use_persistent_connection = supports_persistent_connection(_request);
 
   // Check whether the If-Modified-Since header applies.
 
