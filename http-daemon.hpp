@@ -15,6 +15,8 @@
 
 #include <vector>
 #include <map>
+#include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
 #include "http.hpp"
 #include "io.hpp"
 
@@ -38,10 +40,6 @@ namespace http
 
     // Content-type mapping.
     char const * get_content_type(char const * filename) const;
-
-    // The error class throw in case version or usage information has
-    // been requested and we're supposed to terminate.
-    struct no_error { };
 
   private:
     struct ltstr
