@@ -15,12 +15,8 @@
 
 #include <string>
 #include <ctime>
-#include <stdexcept>
-#include <utility>
 #include <boost/cstdint.hpp>
 #include <boost/optional.hpp>
-#include <boost/spirit.hpp>
-#include <boost/noncopyable.hpp>
 
 namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 {
@@ -60,81 +56,48 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
   std::string to_rfcdate(std::time_t ts);
   std::string escape_html_specials(std::string const & input);
 
-  class parser : private boost::noncopyable
+  /**
+   *  Find the end of an RFC-style line (and consequently the begin of the next
+   *  one). Lines may be continued by beginning the next line with a
+   *  whitespace. Return iterator positioned _after_ the CRLF, or end to signal
+   *  an incomplete line.
+   */
+  template <class iteratorT>
+  inline iteratorT find_next_line(iteratorT begin, iteratorT end)
   {
-  public:
-    parser();
-
-    // Find the end of an RFC-style line (and consequently the begin of
-    // the next one). Lines may be continued by beginning the next line
-    // with a whitespace. Return iterator positioned _after_ the CRLF,
-    // or end to signal an incomplete line.
-
-    template <class iteratorT>
-    static inline iteratorT find_next_line(iteratorT begin, iteratorT end)
+    for (/**/; begin != end; ++begin)
     {
-      for (/**/; begin != end; ++begin)
+      if (*begin == '\r')
       {
-        if (*begin == '\r')
+        iteratorT p( begin );
+        if (++p == end) return end;
+        if (*p == '\n')
         {
-          iteratorT p( begin );
-          if (++p == end) return end;
-          if (*p == '\n')
-          {
-            ++begin;
-            if ( ++p == end || (*p != ' ' && *p != '\t') )
-              return p;
-          }
+          ++begin;
+          if ( ++p == end || (*p != ' ' && *p != '\t') )
+            return p;
         }
       }
-      return begin;
     }
+    return begin;
+  }
 
-    // Does the given request allow a persistent connection?
+  // Does the given request allow a persistent connection?
 
-    static bool supports_persistent_connection(Request const &);
+  bool supports_persistent_connection(Request const &);
 
-    // Parse an HTTP request line.
+  // Parse an HTTP request line.
 
-    std::size_t parse_request_line(Request &, char const *, char const *) const;
+  std::size_t parse_request_line(Request &, char const *, char const *);
 
-    // Split an HTTP header into the header's name and data part.
+  // Split an HTTP header into the header's name and data part.
 
-    std::size_t parse_header(std::string& name, std::string& data, char const *, char const *) const;
+  std::size_t parse_header(std::string& name, std::string& data, char const *, char const *);
 
-    // Parse various headers.
+  // Parse various headers.
 
-    std::size_t parse_host_header(Request &, char const *, char const *) const;
-    std::size_t parse_if_modified_since_header(Request &, char const *, char const *) const;
-
-  private:
-    typedef char                                    value_t;
-    typedef const value_t*                          iterator_t;
-    typedef boost::spirit::chlit<value_t>           chlit_t;
-    typedef boost::spirit::range<value_t>           range_t;
-    typedef boost::spirit::chset<value_t>           chset_t;
-    typedef boost::spirit::rule<>                   rule_t;
-    typedef boost::spirit::symbols<int, value_t>    symbol_t;
-    typedef boost::spirit::parse_info<iterator_t>   parse_info_t;
-
-    rule_t http_URL, Request_URI, HTTP_Version,
-      Request_Line, Header, Host_Header,
-      date1, date2, date3, time, rfc1123_date, rfc850_date,
-      asctime_date, HTTP_date, If_Modified_Since_Header;
-    symbol_t weekday, month, wkday;
-
-    // Because the parsers dereference pointers at construction time,
-    // we need an layer of indirection to assign the parser's results
-    // to the variables the caller has given us.
-
-    mutable std::string* name_ptr;
-    mutable std::string* data_ptr;
-    mutable URL*         url_ptr;
-    mutable Request *    req_ptr;
-    mutable struct tm    tm_date;
-  };
-
-  extern parser const http_parser;
+  std::size_t parse_host_header(Request &, char const *, char const *);
+  std::size_t parse_if_modified_since_header(Request &, char const *, char const *);
 
 } // namespace http
 
