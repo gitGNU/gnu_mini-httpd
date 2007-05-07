@@ -231,7 +231,7 @@ http::daemon::state_t http::daemon::restart(input_buffer & ibuf, output_buffer &
  * Greetings to Ralph!
  */
 
-static inline bool is_path_in_hierarchy(char const * hierarchy, char const * path)
+static bool is_path_in_hierarchy(char const * hierarchy, char const * path)
 {
   char resolved_hierarchy[PATH_MAX];
   char resolved_path[PATH_MAX];
@@ -243,15 +243,6 @@ static inline bool is_path_in_hierarchy(char const * hierarchy, char const * pat
   if (strncmp(resolved_hierarchy, resolved_path, strlen(resolved_hierarchy)) != 0)
     return false;
   return true;
-}
-
-inline string to_rfcdate(time_t t)
-{
-  char buffer[64];
-  size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
-  if (len == 0 || len >= sizeof(buffer))
-    throw length_error("strftime() failed because an internal buffer is too small!");
-  return buffer;
 }
 
 struct mmapped_buffer : public boost::shared_ptr<char const>
@@ -451,13 +442,13 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
 // ----- Logging --------------------------------------------------------------
 
-inline string & escape_quotes(string & input)
+static string & escape_quotes(string & input)
 {
   boost::algorithm::replace_all(input, "\"", "\\\"");
   return input;
 }
 
-inline string to_logdate(time_t t)
+static string to_logdate(time_t t)
 {
   char buffer[64];
   size_t len = strftime(buffer, sizeof(buffer), "%d/%b/%Y:%H:%M:%S %z", localtime(&t));

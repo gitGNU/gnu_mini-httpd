@@ -10,6 +10,7 @@
  * provided the copyright notice and this notice are preserved.
  */
 
+#include "rfc2616.hpp"
 #include "http.hpp"
 #include <stdexcept>
 
@@ -114,7 +115,8 @@ inline member_assign<classT,memberT> assign(classT** dst, memberT classT::* var)
 
 http::parser::parser() : name_ptr(0), data_ptr(0), url_ptr(0), req_ptr(0)
 {
-  using namespace spirit;
+  using namespace rfc2616;
+  using namespace rfc2616::spirit;
 
   http_URL      = nocase_d["http://"]
                   >> host_p[assign(&url_ptr, &URL::host)]
@@ -257,3 +259,87 @@ size_t http::parser::parse_if_modified_since_header(Request & request, char cons
 // The global parser instance.
 
 http::parser const        http::http_parser;
+
+
+/**
+ * Throwing an exception in case the URL contains a syntax error may
+ * seem a bit harsh, but consider that this should never happen as all
+ * URL stuff we see went through the HTTP parser, who would not let
+ * the URL pass if it contained an error.
+ */
+
+std::string http::urldecode(std::string const & input)
+{
+  std::string url = input;
+  for(std::string::iterator i = url.begin(); i != url.end(); ++i)
+  {
+    if (*i == '+')
+      *i = ' ';
+    else if(*i == '%')
+    {
+      unsigned char c;
+      std::string::size_type start = i - url.begin();
+
+      if (++i == url.end())
+        throw std::runtime_error("Invalid encoded character in URL!");
+
+      if (*i >= '0' && *i <= '9')
+        c = *i - '0';
+      else if (*i >= 'a' && *i <= 'f')
+        c = *i - 'a' + 10;
+      else if (*i >= 'A' && *i <= 'F')
+        c = *i - 'A' + 10;
+      else
+        throw std::runtime_error("Invalid encoded character in URL!");
+      c = c << 4;
+
+      if (++i == url.end())
+        throw std::runtime_error("Invalid encoded character in URL!");
+
+      if (*i >= '0' && *i <= '9')
+        c += *i - '0';
+      else if (*i >= 'a' && *i <= 'f')
+        c += *i - 'a' + 10;
+      else if (*i >= 'A' && *i <= 'F')
+        c += *i - 'A' + 10;
+      else
+        throw std::runtime_error("Invalid encoded character in URL!");
+
+      url.replace(start, 3, 1, c);
+    }
+  }
+  return url;
+}
+
+std::string http::escape_html_specials(std::string const & input)
+{
+  std::string tmp = input;
+  for (std::string::size_type pos = 0; pos <= tmp.size(); ++pos)
+  {
+    switch(tmp[pos])
+    {
+      case '<':
+        tmp.replace(pos, 1, "&lt;");
+        pos += 3;
+        break;
+      case '>':
+        tmp.replace(pos, 1, "&gt;");
+        pos += 3;
+        break;
+      case '&':
+        tmp.replace(pos, 1, "&amp;");
+        pos += 4;
+        break;
+    }
+  }
+  return tmp;
+}
+
+std::string http::to_rfcdate(std::time_t t)
+{
+  char buffer[64];
+  size_t len = strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
+  if (len == 0 || len >= sizeof(buffer))
+    throw length_error("strftime() failed because an internal buffer is too small!");
+  return buffer;
+}
