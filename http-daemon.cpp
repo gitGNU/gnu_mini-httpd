@@ -20,10 +20,6 @@
 #  include <sys/mman.h>         // mmap(2)
 #endif
 
-#ifdef _GNU_SOURCE
-#  include <getopt.h>           // getopt_long(3)
-#endif
-
 using namespace std;
 
 // ----- Construction/Destruction ---------------------------------------------
