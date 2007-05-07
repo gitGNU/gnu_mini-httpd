@@ -33,15 +33,15 @@ mini_httpd_SOURCES	= $(HTTPD_SOURCES)
 mini_httpd_CXXFLAGS	= -pthread
 mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
 			  -DBOOST_SPIRIT_THREADSAFE
-mini_httpd_LDADD	= -lboost_thread-gcc34-mt-d-1_35		\
-			  -lboost_system-gcc34-mt-d-1_35		\
-			  -lboost_program_options-gcc34-mt-d-1_35	\
-			  -lboost_prg_exec_monitor-gcc34-mt-d-1_35
+mini_httpd_LDADD	= -lboost_thread-gcc34-mt-1_35			\
+			  -lboost_system-gcc34-mt-1_35			\
+			  -lboost_program_options-gcc34-mt-1_35		\
+			  -lboost_prg_exec_monitor-gcc34-mt-1_35
 
 micro_httpd_SOURCES	= $(HTTPD_SOURCES)
 micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
 			  -DBOOST_DISABLE_THREADS			\
 			  -DBOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
-micro_httpd_LDADD	= -lboost_system-gcc34-d-1_35			\
-			  -lboost_program_options-gcc34-d-1_35		\
-			  -lboost_prg_exec_monitor-gcc34-d-1_35
+micro_httpd_LDADD	= -lboost_system-gcc34-1_35			\
+			  -lboost_program_options-gcc34-1_35		\
+			  -lboost_prg_exec_monitor-gcc34-1_35
