@@ -14,7 +14,8 @@ noinst_HEADERS		 = http-daemon.hpp		\
 			   io-input-buffer.hpp		\
 			   io-output-buffer.hpp		\
 			   io.hpp			\
-			   logging.hpp
+			   logging.hpp			\
+			   rfc2616.hpp
 
 BOOST_LOG_SOURCES	= ../boost/log/functions.cpp	\
 			  ../boost/log/log.cpp		\
