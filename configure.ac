@@ -3,7 +3,7 @@ dnl configure.ac for mini-httpd
 dnl
 AC_PREREQ(2.59)
 AC_INIT([mini-httpd], [2007-05-07], [simons@cryp.to])
-AM_INIT_AUTOMAKE([foreign 1.10 std-options])
+AM_INIT_AUTOMAKE([foreign 1.10])
 AC_CONFIG_SRCDIR([http-daemon.hpp])
 dnl
 dnl This software is best installed in a hierarchy of its own.
