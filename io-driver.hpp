@@ -45,54 +45,58 @@ inline void io_driver<Handler>::start( shared_socket const & sin
   ctx_ptr ctx(new context);
   ctx->insock  = sin;
   ctx->outsock = sout ? sout : sin;
-  start_read(ctx);
+  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, true));
 }
 
 /**
  *  \brief todo
  */
 template <class Handler>
-inline void io_driver<Handler>::start_read(ctx_ptr ctx)
+inline void io_driver<Handler>::run(ctx_ptr ctx, bool more_input)
 {
-  ctx->outbuf.flush();
-  size_t const space( ctx->inbuf.flush() );
-  BOOST_ASSERT(space);
-  using boost::asio::placeholders::bytes_transferred;
-  ctx->insock->async_read_some
-    ( boost::asio::buffer(ctx->inbuf.end(), space)
-    , boost::bind( &io_driver<Handler>::new_input, ctx, bytes_transferred )
-    );
+  scatter_vector const & outbuf( ctx->outbuf.commit() );
+  if (outbuf.empty())           // no output data available
+  {
+    if (more_input)             // read more input
+    {
+      size_t const space( ctx->inbuf.flush() );
+      BOOST_ASSERT(space);
+      using boost::asio::placeholders::bytes_transferred;
+      ctx->insock->async_read_some
+        ( boost::asio::buffer(ctx->inbuf.end(), space)
+        , boost::bind( &io_driver<Handler>::handle_read, ctx, bytes_transferred )
+        );
+    }
+  }
+  else                          // perform async write
+    boost::asio::async_write
+      ( *ctx->outsock
+      , outbuf
+      , boost::bind( more_input ? &io_driver<Handler>::handle_write
+                                : &io_driver<Handler>::stop
+                   , ctx
+                   )
+      );
 }
 
 /**
  *  \brief todo
  */
 template <class Handler>
-inline void io_driver<Handler>::new_input(ctx_ptr ctx, std::size_t i)
+inline void io_driver<Handler>::handle_read(ctx_ptr ctx, std::size_t i)
 {
   ctx->inbuf.append(i);
-  bool const more_input( ctx->f(ctx->inbuf, i, ctx->outbuf) && i );
-  scatter_vector const & outbuf( ctx->outbuf.commit() );
-  if (more_input)
-  {
-    if (outbuf.empty())
-      start_read(ctx);
-    else
-      boost::asio::async_write
-        ( *ctx->outsock
-        , outbuf
-        , boost::bind( &io_driver<Handler>::start_read, ctx )
-        );
-  }
-  else
-  {
-    if (!outbuf.empty())
-      boost::asio::async_write
-        ( *ctx->outsock
-        , outbuf
-        , boost::bind( &io_driver<Handler>::stop, ctx )
-        );
-  }
+  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, i != 0u) && i);
+}
+
+/**
+ *  \brief todo
+ */
+template <class Handler>
+inline void io_driver<Handler>::handle_write(ctx_ptr ctx)
+{
+  ctx->outbuf.flush();
+  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, true));
 }
 
 /**

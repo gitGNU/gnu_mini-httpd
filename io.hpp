@@ -255,19 +255,22 @@ typedef boost::asio::ip::tcp::acceptor  tcp_acceptor;
 /**
  *  \brief Iterate a given callback function over the input stream.
  */
-template <class Handler>        // bool (input_buffer &, size_t, output_buffer &)
-struct io_driver
+template <class Handler> //    bool (input_buffer &, output_buffer &, bool)
+class io_driver          // true == more                           true == more
 {
-  struct context;
-  typedef boost::shared_ptr<context> ctx_ptr;
-
+public:
   static void start( shared_socket const & sin
                    , shared_socket const & sout = shared_socket()
                    );
 
-  static void start_read(ctx_ptr ctx);
-  static void new_input(ctx_ptr ctx, std::size_t i);
-  static void stop(ctx_ptr ctx);
+private:
+  struct context;
+  typedef boost::shared_ptr<context> ctx_ptr;
+
+  static void run(ctx_ptr, bool);
+  static void handle_read(ctx_ptr, std::size_t);
+  static void handle_write(ctx_ptr);
+  static void stop(ctx_ptr);
 };
 
 /**
