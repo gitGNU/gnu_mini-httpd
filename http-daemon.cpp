@@ -15,8 +15,8 @@
 #include "io-output-buffer.hpp"
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <sanity/system-error.hpp>
 #include <unistd.h>             // close(2)
+#include "system-error.hpp"
 
 using namespace std;
 
