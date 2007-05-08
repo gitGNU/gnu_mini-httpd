@@ -34,11 +34,13 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
 
   struct Request
   {
-    Request() : port(0u) { }
+    Request() : startup_time(0), major_version(0u), minor_version(0u), port(0u)
+    {
+    }
 
     std::string                         method;
     URL                                 url;
-    std::time_t                         start_up_time;
+    std::time_t                         startup_time;
     unsigned int                        major_version;
     unsigned int                        minor_version;
     std::string                         host;
@@ -50,26 +52,40 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     std::string                         referer;
     boost::optional<unsigned int>       status_code;
     boost::optional<std::size_t>        object_size;
+
+    std::size_t parse_request_line(char const *, char const *);
+    std::size_t parse_host_header(char const *, char const *);
+    std::size_t parse_if_modified_since_header(char const *, char const *);
+
+    bool supports_persistent_connection() const;
   };
 
   std::string urldecode(std::string const & input);
   std::string to_rfcdate(std::time_t ts);
   std::string escape_html_specials(std::string const & input);
 
+  // Split an HTTP header into the header's name and data part.
+
+  std::size_t parse_header(std::string& name, std::string& data, char const *, char const *);
+
   /**
-   *  Find the end of an RFC-style line (and consequently the begin of the next
-   *  one). Lines may be continued by beginning the next line with a
-   *  whitespace. Return iterator positioned _after_ the CRLF, or end to signal
-   *  an incomplete line.
+   *  \brief Find the end of an RFC2616 line.
+   *
+   *  Find the end of an RFC2616. RFC lines may continue over more than one
+   *  text line if \c CRLF is followed by more whitespace.
+   *
+   *  \param  begin begin of input range
+   *  \param  end   end of input range
+   *  \return Begin of next RCF line or \p end to signify an incomplete buffer.
    */
-  template <class iteratorT>
-  inline iteratorT find_next_line(iteratorT begin, iteratorT end)
+  template <class Iterator>
+  inline Iterator find_next_line(Iterator begin, Iterator end)
   {
     for (/**/; begin != end; ++begin)
     {
+      Iterator p( begin );
       if (*begin == '\r')
       {
-        iteratorT p( begin );
         if (++p == end) return end;
         if (*p == '\n')
         {
@@ -81,23 +97,6 @@ namespace http                  // http://www.faqs.org/rfcs/rfc2616.html
     }
     return begin;
   }
-
-  // Does the given request allow a persistent connection?
-
-  bool supports_persistent_connection(Request const &);
-
-  // Parse an HTTP request line.
-
-  std::size_t parse_request_line(Request &, char const *, char const *);
-
-  // Split an HTTP header into the header's name and data part.
-
-  std::size_t parse_header(std::string& name, std::string& data, char const *, char const *);
-
-  // Parse various headers.
-
-  std::size_t parse_host_header(Request &, char const *, char const *);
-  std::size_t parse_if_modified_since_header(Request &, char const *, char const *);
 
 } // namespace http
 

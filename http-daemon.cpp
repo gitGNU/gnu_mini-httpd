@@ -47,7 +47,7 @@ void http::daemon::reset()
     TRACE() << _payload.size() << " responses queued";
   _use_persistent_connection = false;
   _request = Request();
-  _request.start_up_time = time(0);
+  _request.startup_time = time(0);
   _state = READ_REQUEST_LINE;
 }
 
@@ -98,7 +98,7 @@ http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output
     if (p[0] == '\r' && p + 1 != ibuf.end() && p[1] == '\n')
     {
       ++p;
-      size_t const len( parse_request_line(_request, ibuf.begin(), p + 1) );
+      size_t const len( _request.parse_request_line(ibuf.begin(), p + 1) );
       BOOST_ASSERT(!len || len == static_cast<size_t>(p + 1 - ibuf.begin()));
       if (len > 0)
       {
@@ -151,7 +151,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
     {
       if (strcasecmp("Host", name.c_str()) == 0)
       {
-        if (!parse_host_header(_request, data.data(), data.data() + data.size()))
+        if (!_request.parse_host_header(data.data(), data.data() + data.size()))
           return protocol_error(obuf, "Malformed <tt>Host</tt> header.\r\n");
         else
           TRACE() << "Read Host header"
@@ -161,7 +161,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
       }
       else if (strcasecmp("If-Modified-Since", name.c_str()) == 0)
       {
-        if (!parse_if_modified_since_header(_request, data.data(), data.data() + data.size()))
+        if (!_request.parse_if_modified_since_header(data.data(), data.data() + data.size()))
           INFO() << "Ignoring malformed If-Modified-Since header '" << data << "'";
         else
           TRACE() << "Read If-Modified-Since header: timestamp = " << *_request.if_modified_since;
@@ -389,7 +389,7 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
 
   // Decide whether to use a persistent connection.
 
-  _use_persistent_connection = supports_persistent_connection(_request);
+  _use_persistent_connection = _request.supports_persistent_connection();
 
   // Check whether the If-Modified-Since header applies.
 
@@ -477,7 +477,7 @@ void http::daemon::log_access()
     throw system_error((string("Can't open logfile '") + logfile + "'"));
 
   // "%s - - [%s] \"%s %s HTTP/%u.%u\" %u %s \"%s\" \"%s\"\n"
-  os   << "peer-name-here" << " - - [" << to_logdate(_request.start_up_time) << "]"
+  os   << "peer-name-here" << " - - [" << to_logdate(_request.startup_time) << "]"
        << " \"" << _request.method
        << " "  << escape_quotes(_request.url.path)
        << " HTTP/" << _request.major_version
