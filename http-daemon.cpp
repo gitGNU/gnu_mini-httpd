@@ -56,9 +56,10 @@ void http::daemon::reset()
 /**
  *  \todo protocol_error("Aborting because of excessively long header lines.\r\n");
  */
-bool http::daemon::operator() (input_buffer & ibuf, size_t i, output_buffer & obuf)
+bool http::daemon::operator() (input_buffer & ibuf, output_buffer & obuf, bool more_input)
 {
-  if (i)
+  TRACE_VAR3(ibuf, obuf, more_input);
+  if (more_input)
     try
     {
       if (!_payload.empty() && obuf.empty())
@@ -70,7 +71,7 @@ bool http::daemon::operator() (input_buffer & ibuf, size_t i, output_buffer & ob
       _state = (this->*state_handlers[_state])(ibuf, obuf);
       return _state != TERMINATE;
     }
-    catch(system_error const & e)       { INFO()  << e.what(); }
+    catch(system_error const & e)       { INFO() << e.what(); }
     catch(std::runtime_error const & e) { INFO() << "run-time error: " << e.what(); }
     catch(std::exception const & e)     { INFO() << "program error: " << e.what(); }
     catch(...)                          { INFO() << "unspecified error condition"; }

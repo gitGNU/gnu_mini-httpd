@@ -73,7 +73,7 @@ namespace http
     daemon();
     ~daemon();
 
-    bool operator() (input_buffer &, size_t, output_buffer &);
+    bool operator() (input_buffer &, output_buffer &, bool);
 
     static configuration _config;
 
