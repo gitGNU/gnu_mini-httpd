@@ -23,4 +23,4 @@ ${DISTDIR}:
 	mkdir $@
 
 redate:
-	redate configure.ac main.cpp Doxyfile
+	redate main.cpp Doxyfile
