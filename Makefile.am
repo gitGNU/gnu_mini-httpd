@@ -41,6 +41,7 @@ sbin_PROGRAMS		= mini-httpd micro-httpd
 
 mini_httpd_SOURCES	= $(HTTPD_SOURCES)
 mini_httpd_CXXFLAGS	= -pthread
+mini_httpd_LDFLAGS	= -pthread
 mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				 \
 			  -DBOOST_SPIRIT_THREADSAFE
 mini_httpd_LDADD	= $(BOOST_STAGE)thread$(BOOST_MTLIB_ID)		 \
