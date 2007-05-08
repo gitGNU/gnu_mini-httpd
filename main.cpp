@@ -108,6 +108,7 @@ int cpp_main(int argc, char ** argv)
     ( "server-string",     po::value<string>(&cfg.server_string)->default_value(PACKAGE_NAME),  "set value of HTTP's \"Server:\" header" )
     ( "default-hostname",  po::value<string>(&cfg.default_hostname),                            "hostname to use for pre HTTP/1.1")
     ( "default-page",      po::value<string>(&cfg.default_page)->default_value("index.html"),   "filename of directory index page" )
+    ( "io-block-size",     po::value<size_t>(&cfg.io_block_size)->default_value(4096u),         "i/o buffer size for streaming" )
     ;
   //
   // Run command line parser. Obvious errors are thrown as exceptions.
@@ -130,6 +131,7 @@ int cpp_main(int argc, char ** argv)
   if (listen_addrs.empty())      { cout << "no listen addresses configured" << endl;         return 1; }
   if (cfg.default_page.empty())  { cout << "invalid argument --default-page=\"\"" << endl;   return 1; }
   if (cfg.document_root.empty()) { cout << "invalid argument --document-root=\"\"" << endl;  return 1; }
+  if (cfg.io_block_size < 1024)  { cout << "--io-block-size too small (min: 1024)" << endl;  return 1; }
   bool const detach( !vm.count("no-detach") );
   //
   // Setup the system and log configuration.

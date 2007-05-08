@@ -13,21 +13,16 @@
 #include "http-daemon.hpp"
 #include "io-input-buffer.hpp"
 #include "io-output-buffer.hpp"
-#include <fstream>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <sanity/system-error.hpp>
 #include <unistd.h>             // close(2)
 
-#if defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
-#  include <sys/mman.h>         // mmap(2)
-#endif
-
 using namespace std;
 
 // ----- Construction/Destruction ---------------------------------------------
 
-http::daemon::daemon()
+http::daemon::daemon() : _data_fd(-1)
 {
   TRACE() << "accepting new connection";
   reset();
@@ -36,6 +31,7 @@ http::daemon::daemon()
 http::daemon::~daemon()
 {
   TRACE() << "closing connection";
+  if (_data_fd >= 0) close(_data_fd);
 }
 
 /**
@@ -43,11 +39,11 @@ http::daemon::~daemon()
  */
 void http::daemon::reset()
 {
-  if (!_payload.empty())
-    TRACE() << _payload.size() << " responses queued";
   _use_persistent_connection = false;
   _request = Request();
   _request.startup_time = time(0);
+  if (_data_fd >= 0) { close(_data_fd); _data_fd = -1; }
+  _data_buffer.clear();
   _state = READ_REQUEST_LINE;
 }
 
@@ -59,22 +55,16 @@ void http::daemon::reset()
 bool http::daemon::operator() (input_buffer & ibuf, output_buffer & obuf, bool more_input)
 {
   TRACE_VAR3(ibuf, obuf, more_input);
-  if (more_input)
-    try
-    {
-      if (!_payload.empty() && obuf.empty())
-      {
-        TRACE() << "flush " << _payload.size() << " shared buffers";
-        _payload.resize(0u);
-      }
-      BOOST_ASSERT(_state < TERMINATE);
-      _state = (this->*state_handlers[_state])(ibuf, obuf);
-      return _state != TERMINATE;
-    }
-    catch(system_error const & e)       { INFO() << e.what(); }
-    catch(std::runtime_error const & e) { INFO() << "run-time error: " << e.what(); }
-    catch(std::exception const & e)     { INFO() << "program error: " << e.what(); }
-    catch(...)                          { INFO() << "unspecified error condition"; }
+  try
+  {
+    BOOST_ASSERT(_state < TERMINATE);
+    _state = (this->*state_handlers[_state])(ibuf, obuf);
+    return _state != TERMINATE;
+  }
+  catch(system_error const & e)       { INFO() << e.what(); }
+  catch(std::runtime_error const & e) { INFO() << "run-time error: " << e.what(); }
+  catch(std::exception const & e)     { INFO() << "program error: " << e.what(); }
+  catch(...)                          { INFO() << "unspecified error condition"; }
   return false;
 }
 
@@ -87,7 +77,8 @@ http::daemon::state_fun_t const http::daemon::state_handlers[TERMINATE] =
   { &http::daemon::get_request_line
   , &http::daemon::get_request_header
   , &http::daemon::get_request_body
-  , &http::daemon::respond
+  , &http::daemon::setup_response
+  , &http::daemon::write_response
   };
 
 http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output_buffer & obuf)
@@ -204,7 +195,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
 http::daemon::state_t http::daemon::get_request_body(input_buffer & ibuf, output_buffer & obuf)
 {
   TRACE_VAR2(ibuf, obuf);
-  return respond(ibuf, obuf);
+  return setup_response(ibuf, obuf);
 }
 
 /**
@@ -249,56 +240,7 @@ static bool is_path_in_hierarchy(char const * hierarchy, char const * path)
   return true;
 }
 
-struct mmapped_buffer : public boost::shared_ptr<char const>
-{
-  mmapped_buffer(char const * path, size_t len)
-  {
-    TRACE_VAR2(path, len);
-    BOOST_ASSERT(path); BOOST_ASSERT(path[0]); BOOST_ASSERT(len);
-    int fd( ::open(path, O_RDONLY) );
-    if (fd < 0) throw system_error(std::string("cannot open ") + path);
-#if 0 && defined(_POSIX_VERSION) && (_POSIX_VERSION >= 200100)
-    void const * p( ::mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0) );
-    if (p != MAP_FAILED)
-    {
-      BOOST_ASSERT(p);
-      reset( reinterpret_cast<char const *>(p)
-           , boost::bind(&mmapped_buffer::destruct, fd, len, _1)
-           );
-    }
-    else
-    {
-      ::close(fd);
-      throw system_error(std::string("cannot mmap() file ") + path);
-    }
-#else
-    char * p( reinterpret_cast<char *>(malloc(len)) );
-    if (p)
-    {
-      reset( p, boost::bind(&::free, _1) );       /// \todo descriptor may leak here
-      ssize_t const rc( ::read(fd, p, len) );
-      ::close(fd);
-      if (rc <= 0 || static_cast<size_t>(rc) != len)
-        throw system_error(std::string("failed to read file file ") + path);
-    }
-    else
-    {
-      ::close(fd);
-      throw system_error("out of memory");
-    }
-#endif
-  }
-
-  static void destruct(int fd, size_t len, void const * p)
-  {
-    TRACE_VAR3(fd, len, p);
-    BOOST_ASSERT(fd >= 0); BOOST_ASSERT(len); BOOST_ASSERT(p);
-    ::munmap(const_cast<void *>(p), len);
-    ::close(fd);
-  }
-};
-
-http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_buffer & obuf)
 {
   TRACE_VAR2(ibuf, obuf);
 
@@ -342,8 +284,8 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   // Construct the actual file name associated with the hostname and
   // URL, then check whether we can send that file.
 
-  document_root = _config.document_root + "/" + _request.host;
-  filename = document_root + urldecode(_request.url.path);
+  string const  document_root( _config.document_root + "/" + _request.host );
+  string        filename( document_root + urldecode(_request.url.path) );
 
   if (!is_path_in_hierarchy(document_root.c_str(), filename.c_str()))
   {
@@ -431,18 +373,26 @@ http::daemon::state_t http::daemon::respond(input_buffer & ibuf, output_buffer &
   string const & iob( buf.str() );
   obuf.push_back(iob.begin(), iob.end());
 
-  // Load payload and write it.
+  // Setup access to the payload and write it.
 
-  mmapped_buffer payload( filename.c_str(), file_stat.st_size );
-  BOOST_ASSERT(payload);
-  obuf.append(payload.get(), file_stat.st_size);
-  _payload.push_back(payload);
-
+  BOOST_ASSERT(_data_fd < 0);
+  _data_fd = open(filename.c_str(), O_RDONLY);
+  if (_data_fd < 0) throw system_error((string("open(\"") + filename + "\") failed"));
+  _data_buffer.resize( min(max(1024u, _config.io_block_size), static_cast<size_t>(file_stat.st_size)) );
   log_access();
-
-  return restart(ibuf, obuf);
+  return write_response(ibuf, obuf);
 }
 
+http::daemon::state_t http::daemon::write_response(input_buffer & ibuf, output_buffer & obuf)
+{
+  TRACE_VAR2(ibuf, obuf);
+  BOOST_ASSERT(_data_fd > 0);
+  ssize_t const rc( ::read(_data_fd, &_data_buffer[0], _data_buffer.size()) );
+  if (rc < 0)   throw system_error("read(2) failed");
+  if (rc == 0)  return restart(ibuf, obuf);
+  obuf.append(&_data_buffer[0], static_cast<size_t>(rc));
+  return WRITE_RESPONSE;
+}
 
 // ----- Logging --------------------------------------------------------------
 
@@ -640,7 +590,9 @@ void http::daemon::not_modified(output_buffer & obuf)
 //       { 0, 0, 0, 0 }          // mark end of array
 //     };
 
-http::configuration::configuration() : default_content_type("application/octet-stream")
+http::configuration::configuration()
+  : default_content_type("application/octet-stream")
+  , io_block_size( 1024u )
 {
   // Initialize the content type lookup map.
 

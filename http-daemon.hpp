@@ -13,12 +13,10 @@
 #ifndef HTTPD_REQUESTHANDLER_HPP
 #define HTTPD_REQUESTHANDLER_HPP
 
-#include <vector>
-#include <map>
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
 #include "http.hpp"
 #include "io.hpp"
+#include <map>
+#include <fstream>
 
 namespace http
 {
@@ -37,6 +35,7 @@ namespace http
     std::string default_content_type;
     std::string default_hostname;
     std::string server_string;
+    std::size_t io_block_size;
 
     // Content-type mapping.
     char const * get_content_type(char const * filename) const;
@@ -59,9 +58,10 @@ namespace http
     return os
       << "access logging = " << (cfg.logfile_root.empty() ? "disabled" : cfg.logfile_root)
       << "; htdocs = " << cfg.document_root
-      << "; server id = " << (cfg.server_string.empty() ? "disabled" : cfg.server_string)
+      << "; index page = " << cfg.default_page
       << "; pre-http/1.1 host = " << (cfg.default_hostname.empty() ? "disabled" : cfg.default_hostname)
-      << "; index page = " << cfg.default_page;
+      << "; server id = " << (cfg.server_string.empty() ? "disabled" : cfg.server_string)
+      << "; i/o block size = " << cfg.io_block_size;
   }
 
   /**
@@ -82,9 +82,8 @@ namespace http
 
     Request                                     _request;
     bool                                        _use_persistent_connection;
-
-    typedef boost::shared_ptr<char const>       shared_buffer;
-    std::vector<shared_buffer>                  _payload;
+    int                                         _data_fd;
+    byte_buffer                                 _data_buffer;
 
     // state machine
 
@@ -92,11 +91,11 @@ namespace http
       { READ_REQUEST_LINE
       , READ_REQUEST_HEADER
       , READ_REQUEST_BODY
-      , RESPOND
+      , SETUP_RESPONSE
+      , WRITE_RESPONSE
       , TERMINATE
       };
     state_t _state;
-
     typedef state_t (daemon::*state_fun_t)(input_buffer &, output_buffer &);
     static state_fun_t const state_handlers[TERMINATE];
 
@@ -105,7 +104,8 @@ namespace http
     state_t get_request_line(input_buffer &, output_buffer &);
     state_t get_request_header(input_buffer &, output_buffer &);
     state_t get_request_body(input_buffer &, output_buffer &);
-    state_t respond(input_buffer &, output_buffer &);
+    state_t setup_response(input_buffer &, output_buffer &);
+    state_t write_response(input_buffer &, output_buffer &);
     state_t restart(input_buffer & ibuf, output_buffer & obuf);
 
     // standard responses
@@ -116,11 +116,6 @@ namespace http
     void    not_modified(output_buffer &);
 
     void log_access();
-
-    // file information for the request
-
-    std::string document_root;
-    std::string filename;
   };
 
 } // namespace http
