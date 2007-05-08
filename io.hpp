@@ -78,6 +78,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/range.hpp>
+#include <boost/noncopyable.hpp>
 #include <vector>
 #include <cstddef>              // std::size_t, std::ptrdiff_t, offsetof()
 
