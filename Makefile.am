@@ -20,6 +20,7 @@ noinst_HEADERS		= http-daemon.hpp		\
 			  io-output-buffer.hpp		\
 			  io.hpp			\
 			  logging.hpp			\
+			  system-error.hpp		\
 			  rfc2616.hpp
 
 HTTPD_SOURCES		= main.cpp			\
@@ -204,5 +205,28 @@ noinst_HEADERS += \
   boost/cerrno.hpp \
   boost/detail/identifier.hpp \
   boost/system/config.hpp \
+  boost/system/error_code.cpp \
   boost/system/error_code.hpp \
-  boost/system/system_error.hpp
+  boost/system/system_error.hpp \
+  boost/log/detail/defs.hpp \
+  boost/log/detail/log_fwd.hpp \
+  boost/log/detail/log_manager.hpp \
+  boost/log/detail/manipulate_logs.hpp \
+  boost/log/detail/ts.hpp \
+  boost/log/detail/ts_boost.hpp \
+  boost/log/detail/ts_none.hpp \
+  boost/log/detail/ts_posix.hpp \
+  boost/log/detail/ts_win32.hpp \
+  boost/log/extra/appenders.hpp \
+  boost/log/extra/file_appender.hpp \
+  boost/log/extra/filename_factory.hpp \
+  boost/log/extra/functions_ts.hpp \
+  boost/log/extra/periodic_file_appender.hpp \
+  boost/log/extra/rolling_file_appender.hpp \
+  boost/log/extra/shared_memory.hpp \
+  boost/log/functions.cpp \
+  boost/log/functions.hpp \
+  boost/log/log.cpp \
+  boost/log/log.hpp \
+  boost/log/log_impl.hpp \
+  boost/log/log_manager.cpp
