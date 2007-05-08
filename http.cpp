@@ -83,7 +83,7 @@ size_t http::Request::parse_host_header(char const * b, char const * e)
     (
       parse(b, e, host_p[assign_a(host)] >> !( ":" >> uint_p[assign_a(port)] ))
     );
-  return info.full ? info.length : 0u;
+  return info.hit ? info.length : 0u;
 }
 
 size_t http::Request::parse_if_modified_since_header(char const * b, char const * e)
@@ -118,7 +118,7 @@ size_t http::Request::parse_if_modified_since_header(char const * b, char const 
   BOOST_SPIRIT_DEBUG_NODE(rfc850_date_p);
   BOOST_SPIRIT_DEBUG_NODE(asctime_date_p);
   parse_info<> info( parse(b, e, rfc1123_date_p | rfc850_date_p | asctime_date_p) );
-  if (!info.full) return 0u;
+  if (!info.hit) return 0u;
 
   // Make sure the tm structure contains no nonsense.
 
