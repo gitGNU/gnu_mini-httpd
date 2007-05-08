@@ -10,8 +10,8 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#ifndef SANITY_SYSTEM_ERROR_HH_INCLUDED
-#define SANITY_SYSTEM_ERROR_HH_INCLUDED
+#ifndef MINI_HTTPD_SYSTEM_ERROR_HPP_INCLUDED
+#define MINI_HTTPD_SYSTEM_ERROR_HPP_INCLUDED
 
 #include <boost/system/system_error.hpp>
 #include <cerrno>
@@ -35,4 +35,4 @@ inline std::ostream & operator<< (std::ostream & os, system_error const & err)
   return os << err.what();
 }
 
-#endif // SANITY_SYSTEM_ERROR_HH_INCLUDED
+#endif // MINI_HTTPD_SYSTEM_ERROR_HPP_INCLUDED
