@@ -115,7 +115,7 @@ http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output
       }
       else
       {
-        return protocol_error(obuf, "The HTTP request line you sent was syntactically incorrect.\r\n");
+        return protocol_error(obuf, "Invalid HTTP request line.\r\n");
       }
     }
   }
@@ -192,7 +192,7 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
       return get_request_header(ibuf, obuf);
     }
     else
-      return protocol_error(obuf, "Your HTTP request is syntactically incorrect.\r\n");
+      return protocol_error(obuf, "Invalid HTTP request.\r\n");
   }
 
   return READ_REQUEST_HEADER;
