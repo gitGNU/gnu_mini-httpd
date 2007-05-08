@@ -19,12 +19,6 @@
 #endif
 
 #include <boost/spirit.hpp>
-// #include <boost/spirit/utility/chset.hpp>
-// #include <boost/spirit/symbols/symbols.hpp>
-// #include <boost/spirit/attribute/closure.hpp>
-// #include <boost/spirit/phoenix/binders.hpp>
-// #include <boost/noncopyable.hpp>
-// #include <boost/assert.hpp>
 
 namespace rfc2616               // http://www.faqs.org/rfcs/rfc2616.html
 {
@@ -92,6 +86,40 @@ namespace rfc2616               // http://www.faqs.org/rfcs/rfc2616.html
   GEN_PARSER(query,             *uric_p)
 
 #undef GEN_PARSER
+
+  struct wday_parser : public spirit::symbols<int>
+  {
+    wday_parser()
+    {
+      add ("Sun", 0)("Mon", 1)("Tue", 2)("Wed", 3)
+          ("Thu", 4)("Fri", 5)("Sat", 6);
+    }
+  };
+
+  wday_parser const     wday_p;
+
+  struct weekday_parser : public spirit::symbols<int>
+  {
+    weekday_parser()
+    {
+      add ("Sunday", 0)("Monday", 1)("Tuesday", 2)("Wednesday", 3)
+          ("Thursday", 4)("Friday", 5)("Saturday", 6);
+    }
+  };
+
+  weekday_parser const  weekday_p;
+
+  struct month_parser : public spirit::symbols<int>
+  {
+    month_parser()
+    {
+      add ("Jan", 0)("Feb", 1)("Mar", 2)("Apr", 3)
+          ("May", 4)("Jun", 5)("Jul", 6)("Aug", 7)
+          ("Sep", 8)("Oct", 9)("Nov", 10)("Dec", 11);
+    }
+  };
+
+  month_parser const    month_p;
 
 } // namespace rfc2616
 
