@@ -35,8 +35,7 @@ HTTPD_SOURCES		= main.cpp			\
 HTTPD_CPPFLAGS		= -DBOOST_TEST_NO_AUTO_LINK=1	\
 			  -DBOOST_SYSTEM_STATIC_LINK=1	\
 			  -DDATE_TIME_INLINE		\
-			  -UPACKAGE_NAME		\
-			  -UPACKAGE_VERSION
+			  -UPACKAGE_NAME
 
 sbin_PROGRAMS		= mini-httpd micro-httpd
 
