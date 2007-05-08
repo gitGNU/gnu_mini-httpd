@@ -16,7 +16,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <csignal>
 #include <boost/program_options.hpp>
-#include <boost/test/prg_exec_monitor.hpp>
+#include <boost/test/included/prg_exec_monitor.hpp>
 #include "sanity/system-error.hpp"
 #include "http-daemon.hpp"
 #include "io-driver.hpp"
