@@ -56,6 +56,9 @@ micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
 micro_httpd_LDADD	= $(BOOST_STAGE)program_options$(BOOST_LIB_ID)	\
 			  $(BOOST_STAGE)prg_exec_monitor$(BOOST_LIB_ID)
 
+CLEANFILES              = $(DIST_ARCHIVES)
+MAINTAINERCLEANFILES    = missing install-sh configure Makefile.in	\
+			  aclocal.m4 depcomp
 
 noinst_HEADERS += \
   boost/asio.hpp \
