@@ -18,19 +18,27 @@
 #include "logging.hpp"
 
 /**
+ *  \brief Reset buffer into empty state.
+ */
+inline void input_buffer::reset()
+{
+  byte_range::operator= (byte_range(buf_begin(), buf_begin()));
+}
+
+/**
+ *  \brief Reset the data buffer.
+ */
+inline void input_buffer::reset(byte_ptr b, byte_ptr e)
+{
+  BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
+  if (b == e) reset();
+  else        byte_range::operator= (byte_range(b, e));
+}
+
+/**
  *  \brief Magic constant lower limit for I/O buffer sizes.
  */
 inline size_t input_buffer::min_buf_size() { return 1024u; }
-
-/**
- *  \brief Debug-display an input_buffer's state.
- */
-inline std::ostream & operator<< (std::ostream & os, input_buffer const & b)
-{
-  return os << "gap = "     << b.front_gap()
-            << ", size = "  << b.size()
-            << ", space = " << b.back_space();
-}
 
 /**
  *  \brief Construct an empty input_buffer with the given capacity.
@@ -113,24 +121,6 @@ inline void input_buffer::consume(size_t i)
 }
 
 /**
- *  \brief Reset buffer into empty state.
- */
-inline void input_buffer::reset()
-{
-  byte_range::operator= (byte_range(buf_begin(), buf_begin()));
-}
-
-/**
- *  \brief Reset the data buffer.
- */
-inline void input_buffer::reset(byte_ptr b, byte_ptr e)
-{
-  BOOST_ASSERT(buf_begin() <= b && b <= e && e <= buf_end());
-  if (b == e) reset();
-  else        byte_range::operator= (byte_range(b, e));
-}
-
-/**
  *  \brief Reset the front gap.
  */
 inline size_t input_buffer::flush_gap()
@@ -181,6 +171,16 @@ inline size_t input_buffer::flush()
   }
   BOOST_ASSERT(space);
   return space;
+}
+
+/**
+ *  \brief Debug-display an input_buffer's state.
+ */
+inline std::ostream & operator<< (std::ostream & os, input_buffer const & b)
+{
+  return os << "gap = "     << b.front_gap()
+            << ", size = "  << b.size()
+            << ", space = " << b.back_space();
 }
 
 #endif // MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
