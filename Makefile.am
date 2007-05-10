@@ -44,7 +44,7 @@ mini_httpd_LDADD	= @BOOST_THREAD_LIB@ @BOOST_PROGRAM_OPTIONS_LIB@
 
 CLEANFILES		= $(DIST_ARCHIVES)
 MAINTAINERCLEANFILES	= missing install-sh configure Makefile.in	\
-			  aclocal.m4 depcomp
+			  aclocal.m4 depcomp config.guess config.sub
 
 noinst_HEADERS += \
   boost/asio.hpp \
