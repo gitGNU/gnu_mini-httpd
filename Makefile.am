@@ -1,17 +1,10 @@
 #
-# Build mini-httpd
+# Makefile.am for mini-httpd
 #
 
-#BOOST_STAGE		= /usr/local/src/boost-current/stage/lib/libboost_
-#BOOST_COMPILER_ID	= gcc34
-#BOOST_VERSION_ID	= -1_35
+ACLOCAL_AMFLAGS		= -I m4
 
-BOOST_COMPILER_ID	= gcc
-BOOST_STAGE		= /usr/lib/libboost_
-BOOST_VERSION_ID	=
-
-BOOST_LIB_ID		= -$(BOOST_COMPILER_ID)$(BOOST_VERSION_ID).a
-BOOST_MTLIB_ID		= -$(BOOST_COMPILER_ID)-mt$(BOOST_VERSION_ID).a
+sbin_PROGRAMS		= micro-httpd mini-httpd
 
 noinst_HEADERS		= http-daemon.hpp		\
 			  http.hpp			\
@@ -37,24 +30,17 @@ HTTPD_CPPFLAGS		= -DBOOST_TEST_NO_AUTO_LINK=1	\
 			  -DDATE_TIME_INLINE		\
 			  -UPACKAGE_NAME
 
-sbin_PROGRAMS		= mini-httpd micro-httpd
-
-mini_httpd_SOURCES	= $(HTTPD_SOURCES)
-mini_httpd_CXXFLAGS	= -pthread
-mini_httpd_LDFLAGS	= -pthread
-mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				 \
-			  -DBOOST_SPIRIT_THREADSAFE
-mini_httpd_LDADD	= $(BOOST_STAGE)thread$(BOOST_MTLIB_ID)		 \
-			  $(BOOST_STAGE)program_options$(BOOST_MTLIB_ID) \
-			  $(BOOST_STAGE)prg_exec_monitor$(BOOST_MTLIB_ID)
-
 micro_httpd_SOURCES	= $(HTTPD_SOURCES)
-micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS)				\
-			  -DBOOST_THREAD_BUILD_LIB=1			\
+micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS) @BOOST_CPPFLAGS@		\
 			  -DBOOST_DISABLE_THREADS			\
 			  -DBOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
-micro_httpd_LDADD	= $(BOOST_STAGE)program_options$(BOOST_LIB_ID)	\
-			  $(BOOST_STAGE)prg_exec_monitor$(BOOST_LIB_ID)
+micro_httpd_LDFLAGS	= @BOOST_LDFLAGS@
+micro_httpd_LDADD	= @BOOST_PROGRAM_OPTIONS_LIB@
+
+mini_httpd_SOURCES	= $(HTTPD_SOURCES)
+mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS) @BOOST_MT_CPPFLAGS@ -DBOOST_SPIRIT_THREADSAFE
+mini_httpd_LDLAGS	= @BOOST_MT_LDFLAGS@
+mini_httpd_LDADD	= @BOOST_THREAD_LIB@ @BOOST_PROGRAM_OPTIONS_LIB@
 
 CLEANFILES		= $(DIST_ARCHIVES)
 MAINTAINERCLEANFILES	= missing install-sh configure Makefile.in	\
