@@ -239,6 +239,27 @@ public:
 // ----- I/O Driver -----------------------------------------------------------
 
 /**
+ *  \brief Asynchronous stream buffer interface.
+ */
+struct async_streambuf : private boost::noncopyable
+{
+  typedef boost::shared_ptr<async_streambuf> pointer;
+
+  virtual ~async_streambuf() { }
+
+  virtual scatter_vector & get_input_buffer() = 0;
+  virtual scatter_vector & get_output_buffer() = 0;
+
+  virtual void append_input(size_t) = 0;
+  virtual void drop_output(size_t) = 0;
+};
+
+/**
+ *  \brief Asynchronous buffers are heap objects.
+ */
+typedef async_streambuf::pointer                stream_handler;
+
+/**
  *  \brief todo
  */
 typedef boost::asio::ip::tcp::socket            stream_socket;
@@ -298,23 +319,5 @@ inline void tcp_driver( stream_acceptor & acc
                       , Handler           f = Handler()
                       , shared_socket     s = shared_socket()
                       );
-
-/**
- *  \brief Asynchronous stream buffer interface.
- */
-struct async_streambuf : private boost::noncopyable
-{
-  virtual ~async_streambuf() = 0;
-
-  virtual scatter_vector & get_input_buffer() = 0;
-  virtual scatter_vector & get_output_buffer() = 0;
-
-  virtual void append_input(size_t) = 0;
-  virtual void drop_output(size_t) = 0;
-};
-
-inline async_streambuf::~async_streambuf()
-{
-}
 
 #endif // MINI_HTTPD_IO_HPP_INCLUDED
