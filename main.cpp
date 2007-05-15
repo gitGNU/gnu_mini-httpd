@@ -148,9 +148,8 @@ int cpp_main(int argc, char ** argv)
   // Configure TCP listeners.
   //
   using namespace boost::asio::ip;
-  typedef boost::shared_ptr<tcp_acceptor> shared_acceptor;
-  typedef vector<shared_acceptor>         acceptor_array;
-  acceptor_array                          acceptors;
+  typedef vector<shared_acceptor>               acceptor_array;
+  acceptor_array                                acceptors;
   for (vector<string>::iterator i( listen_addrs.begin() ); i != listen_addrs.end(); ++i)
   {
     tcp::endpoint addr;
@@ -176,7 +175,7 @@ int cpp_main(int argc, char ** argv)
                             );
     }
     INFO() << "listen on network address " << addr;
-    shared_acceptor const acc( new tcp_acceptor(*the_io_service, addr) );
+    shared_acceptor const acc( new stream_acceptor(*the_io_service, addr) );
     acceptors.push_back(acc);
     tcp_driver< io_driver<http::daemon> >(*acc);
   }

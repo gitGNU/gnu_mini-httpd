@@ -132,13 +132,13 @@ inline bool stream_driver<Handler>::operator()(input_buffer & inbuf, size_t i, o
  *  \brief Accept TCP connections using a callback function.
  */
 template <class Handler>
-inline void tcp_driver( tcp_acceptor &  acc
-                      , Handler         f
-                      , shared_socket   s
+inline void tcp_driver( stream_acceptor & acc
+                      , Handler           f
+                      , shared_socket     s
                       )
 {
   if (s) f.start(s);
-  s.reset(new tcp_socket( acc.io_service() ));
+  s.reset(new stream_socket( acc.io_service() ));
   acc.async_accept(*s, boost::bind(&tcp_driver<Handler>, boost::ref(acc), f, s));
 }
 

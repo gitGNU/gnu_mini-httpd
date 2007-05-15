@@ -241,17 +241,22 @@ public:
 /**
  *  \brief todo
  */
-typedef boost::asio::ip::tcp::socket    tcp_socket;
+typedef boost::asio::ip::tcp::socket            stream_socket;
 
 /**
  *  \brief todo
  */
-typedef boost::shared_ptr<tcp_socket>   shared_socket;
+typedef boost::shared_ptr<stream_socket>        shared_socket;
 
 /**
  *  \brief todo
  */
-typedef boost::asio::ip::tcp::acceptor  tcp_acceptor;
+typedef boost::asio::ip::tcp::acceptor          stream_acceptor;
+
+/**
+ *  \brief todo
+ */
+typedef boost::shared_ptr<stream_acceptor>      shared_acceptor;
 
 /**
  *  \brief Iterate a given callback function over the input stream.
@@ -289,9 +294,27 @@ struct stream_driver : public Handler
  *  \brief Accept TCP connections using a callback function.
  */
 template <class Handler>
-inline void tcp_driver( tcp_acceptor &  acc
-                      , Handler         f = Handler()
-                      , shared_socket   s = shared_socket()
+inline void tcp_driver( stream_acceptor & acc
+                      , Handler           f = Handler()
+                      , shared_socket     s = shared_socket()
                       );
+
+/**
+ *  \brief Asynchronous stream buffer interface.
+ */
+struct async_streambuf : private boost::noncopyable
+{
+  virtual ~async_streambuf() = 0;
+
+  virtual scatter_vector & get_input_buffer() = 0;
+  virtual scatter_vector & get_output_buffer() = 0;
+
+  virtual void append_input(size_t) = 0;
+  virtual void drop_output(size_t) = 0;
+};
+
+inline async_streambuf::~async_streambuf()
+{
+}
 
 #endif // MINI_HTTPD_IO_HPP_INCLUDED
