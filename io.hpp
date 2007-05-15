@@ -247,8 +247,8 @@ struct async_streambuf : private boost::noncopyable
 
   virtual ~async_streambuf() { }
 
-  virtual scatter_vector & get_input_buffer() = 0;
-  virtual scatter_vector & get_output_buffer() = 0;
+  virtual scatter_vector const & get_input_buffer() = 0;
+  virtual scatter_vector const & get_output_buffer() = 0;
 
   virtual void append_input(size_t) = 0;
   virtual void drop_output(size_t) = 0;
