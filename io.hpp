@@ -295,7 +295,7 @@ private:
   typedef boost::shared_ptr<context> ctx_ptr;
 
   static void run(ctx_ptr, bool);
-  static void handle_read(ctx_ptr, std::size_t);
+  static void handle_read(ctx_ptr, size_t);
   static void handle_write(ctx_ptr);
   static void stop(ctx_ptr);
 };
