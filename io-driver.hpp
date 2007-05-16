@@ -15,6 +15,7 @@
 
 #include "io-input-buffer.hpp"
 #include "io-output-buffer.hpp"
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/placeholders.hpp>
@@ -25,12 +26,37 @@
  *  \brief todo
  */
 template <class Handler>
-struct io_driver<Handler>::context : private boost::noncopyable
+class io_driver<Handler>::context : public async_streambuf
 {
-  shared_socket       insock, outsock;
   input_buffer        inbuf;
   output_buffer       outbuf;
+
+public:
+  shared_socket       insock, outsock;
   Handler             f;
+
+  context() { inbuf.realloc(1024u); }
+
+  byte_range get_input_buffer()
+  {
+    return byte_range(inbuf.end(), inbuf.buf_end());
+  }
+  scatter_vector const & get_output_buffer()
+  {
+    return outbuf.commit();
+  }
+  void append_input(size_t i)
+  {
+    inbuf.append(i);
+    f(inbuf, outbuf, i);
+  }
+  void drop_output(size_t /* driver uses "blocking" writes */)
+  {
+    outbuf.flush();
+    f(inbuf, outbuf, true);
+    if (outbuf.empty())
+      inbuf.flush();
+  }
 };
 
 /**
@@ -45,7 +71,7 @@ inline void io_driver<Handler>::start( shared_socket const & sin
   ctx_ptr ctx(new context);
   ctx->insock  = sin;
   ctx->outsock = sout ? sout : sin;
-  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, true));
+  run(ctx, true);
 }
 
 /**
@@ -54,18 +80,20 @@ inline void io_driver<Handler>::start( shared_socket const & sin
 template <class Handler>
 inline void io_driver<Handler>::run(ctx_ptr ctx, bool more_input)
 {
-  scatter_vector const & outbuf( ctx->outbuf.commit() );
+  scatter_vector const & outbuf( ctx->get_output_buffer() );
   if (outbuf.empty())           // no output data available
   {
     if (more_input)             // read more input
     {
-      size_t const space( ctx->inbuf.flush() );
-      BOOST_ASSERT(space);
-      using boost::asio::placeholders::bytes_transferred;
-      ctx->insock->async_read_some
-        ( boost::asio::buffer(ctx->inbuf.end(), space)
-        , boost::bind( &io_driver<Handler>::handle_read, ctx, bytes_transferred )
-        );
+      byte_range inbuf( ctx->get_input_buffer() );
+      if (!inbuf.empty()) // !inbuf.empty()
+      {
+        using boost::asio::placeholders::bytes_transferred;
+        ctx->insock->async_read_some
+          ( boost::asio::buffer(inbuf.begin(), inbuf.size())
+          , boost::bind( &io_driver<Handler>::handle_read, ctx, bytes_transferred )
+          );
+      }
     }
   }
   else                          // perform async write
@@ -83,10 +111,10 @@ inline void io_driver<Handler>::run(ctx_ptr ctx, bool more_input)
  *  \brief todo
  */
 template <class Handler>
-inline void io_driver<Handler>::handle_read(ctx_ptr ctx, std::size_t i)
+inline void io_driver<Handler>::handle_read(ctx_ptr ctx, size_t i)
 {
-  ctx->inbuf.append(i);
-  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, i != 0u) && i);
+  ctx->append_input(i);
+  run(ctx, i);
 }
 
 /**
@@ -95,8 +123,8 @@ inline void io_driver<Handler>::handle_read(ctx_ptr ctx, std::size_t i)
 template <class Handler>
 inline void io_driver<Handler>::handle_write(ctx_ptr ctx)
 {
-  ctx->outbuf.flush();
-  run(ctx, ctx->f(ctx->inbuf, ctx->outbuf, true));
+  ctx->drop_output(12u); /// \todo Use write_some?
+  run(ctx, true);
 }
 
 /**

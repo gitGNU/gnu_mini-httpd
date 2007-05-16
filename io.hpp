@@ -247,7 +247,8 @@ struct async_streambuf : private boost::noncopyable
 
   virtual ~async_streambuf() { }
 
-  virtual scatter_vector const & get_input_buffer() = 0;
+  /// \todo Can't use scatter_vector because of Asio limitations.
+  virtual byte_range get_input_buffer() = 0;
   virtual scatter_vector const & get_output_buffer() = 0;
 
   virtual void append_input(size_t) = 0;
