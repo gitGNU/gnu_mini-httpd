@@ -8,15 +8,15 @@ sbin_PROGRAMS		= micro-httpd mini-httpd
 
 noinst_HEADERS		= http-daemon.hpp		\
 			  http.hpp			\
-			  io-driver.hpp			\
-			  io-input-buffer.hpp		\
-			  io-output-buffer.hpp		\
+			  input-buffer.hpp		\
 			  io.hpp			\
 			  logging.hpp			\
-			  system-error.hpp		\
-			  rfc2616.hpp
+			  output-buffer.hpp		\
+			  rfc2616.hpp			\
+			  system-error.hpp
 
 HTTPD_SOURCES		= main.cpp			\
+			  io-driver.cpp			\
 			  logging.cpp			\
 			  http.cpp			\
 			  http-daemon.cpp		\
