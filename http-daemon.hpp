@@ -78,17 +78,14 @@ namespace http
     scatter_vector const & get_output_buffer();
     void append_input(size_t);
     void drop_output(size_t);
-    bool operator() (input_buffer &, output_buffer &, bool);
 
   public:
     struct acceptor
     {
-      void operator() (shared_socket const & s) const
-      {
-        stream_handler f( new daemon );
-        start_io(f, s);
-      }
+      void operator() (shared_socket const & s) const;
     };
+
+    void operator()();
 
     daemon();
     ~daemon();
@@ -114,24 +111,24 @@ namespace http
       , TERMINATE
       };
     state_t _state;
-    typedef state_t (daemon::*state_fun_t)(input_buffer &, output_buffer &);
+    typedef state_t (daemon::*state_fun_t)();
     static state_fun_t const state_handlers[TERMINATE];
 
     void reset();
 
-    state_t get_request_line(input_buffer &, output_buffer &);
-    state_t get_request_header(input_buffer &, output_buffer &);
-    state_t get_request_body(input_buffer &, output_buffer &);
-    state_t setup_response(input_buffer &, output_buffer &);
-    state_t write_response(input_buffer &, output_buffer &);
-    state_t restart(input_buffer & ibuf, output_buffer & obuf);
+    state_t get_request_line();
+    state_t get_request_header();
+    state_t get_request_body();
+    state_t setup_response();
+    state_t write_response();
+    state_t restart();
 
     // standard responses
 
-    state_t protocol_error(output_buffer &, const std::string& message);
-    state_t moved_permanently(output_buffer &, const std::string& path);
-    state_t file_not_found(output_buffer &, std::string const &);
-    void    not_modified(output_buffer &);
+    state_t protocol_error(const std::string& message);
+    state_t moved_permanently(const std::string& path);
+    state_t file_not_found(std::string const &);
+    void    not_modified();
 
     void log_access();
   };

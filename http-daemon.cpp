@@ -20,6 +20,12 @@ using namespace std;
 
 // ----- Construction/Destruction ---------------------------------------------
 
+void http::daemon::acceptor::operator() (shared_socket const & s) const
+{
+  stream_handler f( new daemon );
+  start_io(f, s);
+}
+
 http::daemon::daemon() : _data_fd(-1)
 {
   TRACE() << "accepting new connection";
@@ -65,7 +71,7 @@ void http::daemon::append_input(size_t i)
 {
   _inbuf.append(i);
   if (_state != TERMINATE)
-    (*this)(_inbuf, _outbuf, i);
+    (*this)();
 }
 
 void http::daemon::drop_output(size_t i)
@@ -74,7 +80,7 @@ void http::daemon::drop_output(size_t i)
   _outbuf.consume(i);
   if (_state != TERMINATE)
   {
-    (*this)(_inbuf, _outbuf, true);
+    (*this)();
     if (_outbuf.empty())
       _inbuf.flush();
   }
@@ -83,20 +89,18 @@ void http::daemon::drop_output(size_t i)
 /**
  *  \todo protocol_error("Aborting because of excessively long header lines.\r\n");
  */
-bool http::daemon::operator() (input_buffer & ibuf, output_buffer & obuf, bool more_input)
+void http::daemon::operator() ()
 {
-  TRACE_VAR3(ibuf, obuf, more_input);
+  TRACE_VAR3(_state, _inbuf, _outbuf);
   try
   {
     BOOST_ASSERT(_state < TERMINATE);
-    _state = (this->*state_handlers[_state])(ibuf, obuf);
-    return _state != TERMINATE;
+    _state = (this->*state_handlers[_state])();
   }
   catch(system_error const & e)       { INFO() << e.what(); }
   catch(std::runtime_error const & e) { INFO() << "run-time error: " << e.what(); }
   catch(std::exception const & e)     { INFO() << "program error: " << e.what(); }
   catch(...)                          { INFO() << "unspecified error condition"; }
-  return false;
 }
 
 // ----- HTTP state machine ---------------------------------------------------
@@ -112,17 +116,17 @@ http::daemon::state_fun_t const http::daemon::state_handlers[TERMINATE] =
   , &http::daemon::write_response
   };
 
-http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::get_request_line()
 {
-  TRACE_VAR2(ibuf, obuf);
+  TRACE_VAR2(_inbuf, _outbuf);
 
-  for (char const * p = ibuf.begin(); p != ibuf.end(); ++p)
+  for (char const * p = _inbuf.begin(); p != _inbuf.end(); ++p)
   {
-    if (p[0] == '\r' && p + 1 != ibuf.end() && p[1] == '\n')
+    if (p[0] == '\r' && p + 1 != _inbuf.end() && p[1] == '\n')
     {
       ++p;
-      size_t const len( _request.parse_request_line(ibuf.begin(), p + 1) );
-      BOOST_ASSERT(!len || len == static_cast<size_t>(p + 1 - ibuf.begin()));
+      size_t const len( _request.parse_request_line(_inbuf.begin(), p + 1) );
+      BOOST_ASSERT(!len || len == static_cast<size_t>(p + 1 - _inbuf.begin()));
       if (len > 0)
       {
         TRACE() << "Read request line"
@@ -133,49 +137,49 @@ http::daemon::state_t http::daemon::get_request_line(input_buffer & ibuf, output
           << ", path = '"         << _request.url.path << "'"
           << ", query = '"        << _request.url.query << "'"
           ;
-        ibuf.consume(len);
-        return get_request_header(ibuf, obuf);
+        _inbuf.consume(len);
+        return get_request_header();
       }
       else
       {
-        return protocol_error(obuf, "Invalid HTTP request line.\r\n");
+        return protocol_error("Invalid HTTP request line.\r\n");
       }
     }
   }
   return READ_REQUEST_LINE;
 }
 
-http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::get_request_header()
 {
-  TRACE_VAR2(ibuf, obuf);
+  TRACE_VAR2(_inbuf, _outbuf);
 
   // An empty line terminates the request header.
 
-  if (ibuf.size() >= 2 && ibuf[0] == '\r' && ibuf[1] == '\n')
+  if (_inbuf.size() >= 2 && _inbuf[0] == '\r' && _inbuf[1] == '\n')
   {
-    ibuf.consume(2);
+    _inbuf.consume(2);
     TRACE() << "have complete header: going into READ_REQUEST_BODY state.";
-    return get_request_body(ibuf, obuf);
+    return get_request_body();
   }
 
   // If we do have a complete header line in the read buffer,
   // process it. If not, we need more I/O before we can proceed.
 
-  char * p( find_next_line(ibuf.begin(), ibuf.end()) );
-  TRACE() << "found line of " << (p - ibuf.begin()) << " bytes";
-  if (p != ibuf.end())
+  char * p( find_next_line(_inbuf.begin(), _inbuf.end()) );
+  TRACE() << "found line of " << (p - _inbuf.begin()) << " bytes";
+  if (p != _inbuf.end())
   {
     string name, data;
-    size_t len( parse_header(name, data, ibuf.begin(), p) );
+    size_t len( parse_header(name, data, _inbuf.begin(), p) );
     TRACE() << "parser consumed " << len << " bytes";
-    BOOST_ASSERT(!len || ibuf.begin() + len == p);
-    ibuf.reset(p, ibuf.end());
+    BOOST_ASSERT(!len || _inbuf.begin() + len == p);
+    _inbuf.reset(p, _inbuf.end());
     if (len > 0)
     {
       if (strcasecmp("Host", name.c_str()) == 0)
       {
         if (!_request.parse_host_header(data.data(), data.data() + data.size()))
-          return protocol_error(obuf, "Malformed <tt>Host</tt> header.\r\n");
+          return protocol_error("Malformed <tt>Host</tt> header.\r\n");
         else
           TRACE() << "Read Host header"
             << ": host = " << _request.host
@@ -212,10 +216,10 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
       else
         TRACE() << "Ignoring unknown header: '" << name << "' = '" << data << "'";
 
-      return get_request_header(ibuf, obuf);
+      return get_request_header();
     }
     else
-      return protocol_error(obuf, "Invalid HTTP request.\r\n");
+      return protocol_error("Invalid HTTP request.\r\n");
   }
 
   return READ_REQUEST_HEADER;
@@ -223,22 +227,22 @@ http::daemon::state_t http::daemon::get_request_header(input_buffer & ibuf, outp
 
 /// \todo support request bodies
 
-http::daemon::state_t http::daemon::get_request_body(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::get_request_body()
 {
-  TRACE_VAR2(ibuf, obuf);
-  return setup_response(ibuf, obuf);
+  TRACE_VAR2(_inbuf, _outbuf);
+  return setup_response();
 }
 
 /**
  *  \brief to be written
  */
-http::daemon::state_t http::daemon::restart(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::restart()
 {
   TRACE() << (_use_persistent_connection ? "keep alive" : "shut down");
   if (_use_persistent_connection)
   {
     reset();
-    return get_request_line(ibuf, obuf);
+    return get_request_line();
   }
   else
     return TERMINATE;
@@ -271,9 +275,9 @@ static bool is_path_in_hierarchy(char const * hierarchy, char const * path)
   return true;
 }
 
-http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::setup_response()
 {
-  TRACE_VAR2(ibuf, obuf);
+  TRACE_VAR2(_inbuf, _outbuf);
 
   struct stat         file_stat;
 
@@ -282,7 +286,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
 
   if (_request.method != "GET" && _request.method != "HEAD")
   {
-    return protocol_error(obuf, string("<p>This server does not support an HTTP request called <tt>")
+    return protocol_error(string("<p>This server does not support an HTTP request called <tt>")
                          + escape_html_specials(_request.method) + "</tt>.</p>\r\n");
   }
 
@@ -298,7 +302,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
         _request.host = _config.default_hostname;
       else
       {
-        return protocol_error(obuf, "<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
+        return protocol_error("<p>Your HTTP request did not contain a <tt>Host</tt> header.</p>\r\n");
       }
     }
     else
@@ -329,7 +333,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
         << "' ('" << filename << "'), which fails the hierarchy check"
         ;
     }
-    return file_not_found(obuf, filename);
+    return file_not_found(filename);
   }
 
  stat_again:
@@ -345,7 +349,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
         << ::strerror(errno)
         ;
     }
-    return file_not_found(obuf, filename);
+    return file_not_found(filename);
   }
 
   if (S_ISDIR(file_stat.st_mode))
@@ -357,7 +361,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
     }
     else
     {
-      return moved_permanently(obuf, _request.url.path + "/");
+      return moved_permanently(_request.url.path + "/");
     }
   }
 
@@ -375,8 +379,8 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
               << " has mtime '" << file_stat.st_mtime
               << " and if-modified-since was " << *_request.if_modified_since
               << ": Not modified.";
-      not_modified(obuf);
-      return restart(ibuf, obuf);
+      not_modified();
+      return restart();
     }
     else
       TRACE() << "Requested file ('" << filename << "')"
@@ -402,7 +406,7 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
   _request.status_code = 200;
   _request.object_size = file_stat.st_size;
   string const & iob( buf.str() );
-  obuf.push_back(iob.begin(), iob.end());
+  _outbuf.push_back(iob.begin(), iob.end());
 
   // Setup access to the payload and write it.
 
@@ -411,17 +415,17 @@ http::daemon::state_t http::daemon::setup_response(input_buffer & ibuf, output_b
   if (_data_fd < 0) throw system_error((string("open(\"") + filename + "\") failed"));
   _data_buffer.resize( min(max(1024u, _config.io_block_size), static_cast<size_t>(file_stat.st_size)) );
   log_access();
-  return write_response(ibuf, obuf);
+  return write_response();
 }
 
-http::daemon::state_t http::daemon::write_response(input_buffer & ibuf, output_buffer & obuf)
+http::daemon::state_t http::daemon::write_response()
 {
-  TRACE_VAR2(ibuf, obuf);
+  TRACE_VAR2(_inbuf, _outbuf);
   BOOST_ASSERT(_data_fd > 0);
   ssize_t const rc( ::read(_data_fd, &_data_buffer[0], _data_buffer.size()) );
   if (rc < 0)   throw system_error("read(2) failed");
-  if (rc == 0)  return restart(ibuf, obuf);
-  obuf.append(&_data_buffer[0], static_cast<size_t>(rc));
+  if (rc == 0)  return restart();
+  _outbuf.append(&_data_buffer[0], static_cast<size_t>(rc));
   return WRITE_RESPONSE;
 }
 
@@ -477,7 +481,7 @@ void http::daemon::log_access()
 
 // ----- Standard Responses ---------------------------------------------------
 
-http::daemon::state_t http::daemon::protocol_error(output_buffer & obuf, std::string const & message)
+http::daemon::state_t http::daemon::protocol_error(std::string const & message)
 {
   INFO() << "protocol error: " << message;
 
@@ -506,11 +510,11 @@ http::daemon::state_t http::daemon::protocol_error(output_buffer & obuf, std::st
   _request.object_size = 0;
   _use_persistent_connection = false;
   string const & iob( buf.str() );
-  obuf.push_back(iob.begin(), iob.end());
+  _outbuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
-http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf, std::string const & path)
+http::daemon::state_t http::daemon::file_not_found(std::string const & path)
 {
   INFO() << "not found: URL '" << _request.url.path << "', path '" << path << "'";
 
@@ -538,11 +542,11 @@ http::daemon::state_t http::daemon::file_not_found(output_buffer & obuf, std::st
   _request.object_size = 0;
   _use_persistent_connection = false;
   string const & iob( buf.str() );
-  obuf.push_back(iob.begin(), iob.end());
+  _outbuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
-http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std::string const & path)
+http::daemon::state_t http::daemon::moved_permanently(std::string const & path)
 {
   INFO() << "Requested page " << _request.url.path << " has moved to '" << path << "'";
 
@@ -575,11 +579,11 @@ http::daemon::state_t http::daemon::moved_permanently(output_buffer & obuf, std:
   _request.object_size = 0;
   _use_persistent_connection = false;
   string const & iob( buf.str() );
-  obuf.push_back(iob.begin(), iob.end());
+  _outbuf.push_back(iob.begin(), iob.end());
   return TERMINATE;
 }
 
-void http::daemon::not_modified(output_buffer & obuf)
+void http::daemon::not_modified()
 {
   TRACE() << "requested page not modified";
 
@@ -593,7 +597,7 @@ void http::daemon::not_modified(output_buffer & obuf)
   buf << "\r\n";
   _request.status_code = 304;
   string const & iob( buf.str() );
-  obuf.push_back(iob.begin(), iob.end());
+  _outbuf.push_back(iob.begin(), iob.end());
 }
 
 
