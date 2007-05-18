@@ -85,6 +85,7 @@ inline bool output_buffer::empty() const
 
 /**
  *  \brief todo
+ *  \todo use paged_advance()
  */
 inline void output_buffer::consume(size_t n)
 {
@@ -108,6 +109,7 @@ inline void output_buffer::consume(size_t n)
       break;
     }
   }
+  if (_iovec.empty()) flush();
 }
 
 /**
