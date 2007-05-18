@@ -14,7 +14,7 @@
 #define MINI_HTTPD_HTTP_HPP
 
 #include <string>
-#include <ctime>
+#include <boost/compatibility/cpp_c_headers/ctime>
 #include <boost/cstdint.hpp>
 #include <boost/optional.hpp>
 

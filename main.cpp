@@ -14,7 +14,7 @@
 #  include <boost/thread/thread.hpp>
 #endif
 #include <boost/scoped_ptr.hpp>
-#include <csignal>
+#include <boost/compatibility/cpp_c_headers/csignal>
 #include <boost/program_options.hpp>
 #include <boost/test/included/prg_exec_monitor.hpp>
 #include "system-error.hpp"

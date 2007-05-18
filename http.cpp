@@ -13,7 +13,7 @@
 #include "rfc2616.hpp"
 #include "http.hpp"
 #include <stdexcept>
-#include <cstring>
+#include <boost/compatibility/cpp_c_headers/cstring>
 
 using namespace std;
 using namespace rfc2616;
