@@ -19,7 +19,6 @@
 #include <boost/test/included/prg_exec_monitor.hpp>
 #include "system-error.hpp"
 #include "http-daemon.hpp"
-#include "io-driver.hpp"
 #include "logging.hpp"
 
 #ifndef PACKAGE_NAME
@@ -177,7 +176,7 @@ int cpp_main(int argc, char ** argv)
     INFO() << "listen on network address " << addr;
     shared_acceptor const acc( new stream_acceptor(*the_io_service, addr) );
     acceptors.push_back(acc);
-    tcp_driver< io_driver<http::daemon> >(*acc);
+    start_tcp< http::daemon::acceptor >(*acc);
   }
   //
   // Drop all privileges.

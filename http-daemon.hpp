@@ -84,7 +84,7 @@ namespace http
       void operator() (shared_socket const & s) const
       {
         stream_handler f( new daemon );
-        io_driver<http::daemon>::start(f, s);
+        start_io(f, s);
       }
     };
 

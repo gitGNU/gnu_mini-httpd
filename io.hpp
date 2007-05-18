@@ -281,49 +281,28 @@ typedef boost::asio::ip::tcp::acceptor          stream_acceptor;
 typedef boost::shared_ptr<stream_acceptor>      shared_acceptor;
 
 /**
- *  \brief Iterate a given callback function over the input stream.
+ *  \brief Iterate a stream_handler over the input stream.
  */
-template <class Handler> //    bool (input_buffer &, output_buffer &, bool)
-class io_driver          // true == more                           true == more
-{
-public:
-  static void start( shared_socket const & sin
-                   , shared_socket const & sout = shared_socket()
-                   );
+void start_io( stream_handler const & f
+             , shared_socket const &  sin
+             , shared_socket const &  sout = shared_socket()
+             );
 
-  static void start( stream_handler const & f
-                   , shared_socket const &  sin
-                   , shared_socket const &  sout = shared_socket()
-                   );
 
-private:
-  struct context;
-  typedef boost::shared_ptr<context> ctx_ptr;
-
-  static void run(ctx_ptr, bool);
-  static void handle_read(ctx_ptr, size_t);
-  static void handle_write(ctx_ptr);
-  static void stop(ctx_ptr);
-};
-
-/**
- *  \brief Iterate a tokenizer function over the input stream.
- */
-template <class Handler>        // size_t (byte_ptr, byte_ptr, size_t, output_buffer &)
-struct stream_driver : public Handler
-{
-  typedef bool result_type;
-
-  bool operator()(input_buffer & inbuf, size_t i, output_buffer & outbuf);
-};
+#include <boost/bind.hpp>
 
 /**
  *  \brief Accept TCP connections using a callback function.
  */
-template <class Handler>
-inline void tcp_driver( stream_acceptor & acc
-                      , Handler           f = Handler()
-                      , shared_socket     s = shared_socket()
-                      );
+template <class socket_handler>
+void start_tcp( stream_acceptor & acc
+              , socket_handler    f   = socket_handler()
+              , shared_socket     s   = shared_socket()
+              )
+{
+  if (s) f(s);
+  s.reset(new stream_socket( acc.io_service() ));
+  acc.async_accept(*s, boost::bind(&start_tcp<socket_handler>, boost::ref(acc), f, s));
+}
 
 #endif // MINI_HTTPD_IO_HPP_INCLUDED
