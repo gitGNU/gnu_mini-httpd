@@ -36,9 +36,9 @@ namespace
     run(ctx, i);
   }
 
-  void handle_write(ctx_ptr ctx)
+  void handle_write(ctx_ptr ctx, size_t i)
   {
-    ctx->f->drop_output(12u); /// \todo Use write_some?
+    ctx->f->drop_output(i);
     run(ctx, true);
   }
 
@@ -66,11 +66,19 @@ namespace
       }
     }
     else                          // perform async write
-      boost::asio::async_write
-        ( *ctx->outsock
-        , outbuf
-        , boost::bind( more_input ? &handle_write : &stop, ctx )
-        );
+    {
+      if (more_input)
+        boost::asio::async_write /* _some */
+          ( *ctx->outsock
+          , outbuf
+          , boost::bind( &handle_write
+                       , ctx
+                       , boost::asio::placeholders::bytes_transferred
+                       )
+          );
+      else
+        boost::asio::async_write(*ctx->outsock, outbuf, boost::bind(&stop, ctx));
+    }
   }
 }
 
