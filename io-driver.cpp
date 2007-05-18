@@ -55,7 +55,7 @@ namespace
       if (more_input)             // read more input
       {
         byte_range inbuf( ctx->f->get_input_buffer() );
-        if (!inbuf.empty()) // !inbuf.empty()
+        if (!inbuf.empty())
         {
           using boost::asio::placeholders::bytes_transferred;
           ctx->insock->async_read_some
@@ -68,9 +68,8 @@ namespace
     else                          // perform async write
     {
       if (more_input)
-        boost::asio::async_write /* _some */
-          ( *ctx->outsock
-          , outbuf
+        ctx->outsock->async_write_some
+          ( outbuf
           , boost::bind( &handle_write
                        , ctx
                        , boost::asio::placeholders::bytes_transferred

@@ -50,7 +50,10 @@ void http::daemon::reset()
 
 byte_range http::daemon::get_input_buffer()
 {
-  return byte_range(_inbuf.end(), _inbuf.buf_end());
+  return _state != TERMINATE
+    ? byte_range(_inbuf.end(), _inbuf.buf_end())
+    : byte_range(_inbuf.begin(), _inbuf.begin())
+    ;
 }
 
 scatter_vector const & http::daemon::get_output_buffer()
@@ -61,12 +64,14 @@ scatter_vector const & http::daemon::get_output_buffer()
 void http::daemon::append_input(size_t i)
 {
   _inbuf.append(i);
-  (*this)(_inbuf, _outbuf, i);
+  if (_state != TERMINATE)
+    (*this)(_inbuf, _outbuf, i);
 }
 
-void http::daemon::drop_output(size_t /* driver always writes full buffer */)
+void http::daemon::drop_output(size_t i)
 {
-  _outbuf.flush();
+  BOOST_ASSERT(i);
+  _outbuf.consume(i);
   if (_state != TERMINATE)
   {
     (*this)(_inbuf, _outbuf, true);
