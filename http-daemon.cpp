@@ -11,7 +11,6 @@
  */
 
 #include "http-daemon.hpp"
-#include "io-output-buffer.hpp"
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <unistd.h>             // close(2)

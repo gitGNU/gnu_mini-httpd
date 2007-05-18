@@ -16,6 +16,7 @@
 #include "http.hpp"
 #include "io.hpp"
 #include "input-buffer.hpp"
+#include "output-buffer.hpp"
 #include <map>
 #include <fstream>
 
