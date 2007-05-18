@@ -26,37 +26,12 @@
  *  \brief todo
  */
 template <class Handler>
-class io_driver<Handler>::context : public async_streambuf
+struct io_driver<Handler>::context : private boost::noncopyable
 {
-  input_buffer        inbuf;
-  output_buffer       outbuf;
-
-public:
+  stream_handler      f;
   shared_socket       insock, outsock;
-  Handler             f;
 
-  context() { inbuf.realloc(1024u); }
-
-  byte_range get_input_buffer()
-  {
-    return byte_range(inbuf.end(), inbuf.buf_end());
-  }
-  scatter_vector const & get_output_buffer()
-  {
-    return outbuf.commit();
-  }
-  void append_input(size_t i)
-  {
-    inbuf.append(i);
-    f(inbuf, outbuf, i);
-  }
-  void drop_output(size_t /* driver uses "blocking" writes */)
-  {
-    outbuf.flush();
-    f(inbuf, outbuf, true);
-    if (outbuf.empty())
-      inbuf.flush();
-  }
+  context() : f( new Handler ) { }
 };
 
 /**
@@ -78,14 +53,31 @@ inline void io_driver<Handler>::start( shared_socket const & sin
  *  \brief todo
  */
 template <class Handler>
+inline void io_driver<Handler>::start( stream_handler const & f
+                                     , shared_socket const &  sin
+                                     , shared_socket const &  sout
+                                     )
+{
+  BOOST_ASSERT(f); BOOST_ASSERT(sin);
+  ctx_ptr ctx(new context);
+  ctx->insock  = sin;
+  ctx->outsock = sout ? sout : sin;
+  ctx->f       = f;
+  run(ctx, true);
+}
+
+/**
+ *  \brief todo
+ */
+template <class Handler>
 inline void io_driver<Handler>::run(ctx_ptr ctx, bool more_input)
 {
-  scatter_vector const & outbuf( ctx->get_output_buffer() );
+  scatter_vector const & outbuf( ctx->f->get_output_buffer() );
   if (outbuf.empty())           // no output data available
   {
     if (more_input)             // read more input
     {
-      byte_range inbuf( ctx->get_input_buffer() );
+      byte_range inbuf( ctx->f->get_input_buffer() );
       if (!inbuf.empty()) // !inbuf.empty()
       {
         using boost::asio::placeholders::bytes_transferred;
@@ -113,7 +105,7 @@ inline void io_driver<Handler>::run(ctx_ptr ctx, bool more_input)
 template <class Handler>
 inline void io_driver<Handler>::handle_read(ctx_ptr ctx, size_t i)
 {
-  ctx->append_input(i);
+  ctx->f->append_input(i);
   run(ctx, i);
 }
 
@@ -123,7 +115,7 @@ inline void io_driver<Handler>::handle_read(ctx_ptr ctx, size_t i)
 template <class Handler>
 inline void io_driver<Handler>::handle_write(ctx_ptr ctx)
 {
-  ctx->drop_output(12u); /// \todo Use write_some?
+  ctx->f->drop_output(12u); /// \todo Use write_some?
   run(ctx, true);
 }
 

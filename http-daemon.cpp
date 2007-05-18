@@ -39,6 +39,7 @@ http::daemon::~daemon()
  */
 void http::daemon::reset()
 {
+  _inbuf.realloc( 1024u );
   _use_persistent_connection = false;
   _request = Request();
   _request.startup_time = time(0);
@@ -48,6 +49,33 @@ void http::daemon::reset()
 }
 
 // ----- State Machine Driver -------------------------------------------------
+
+byte_range http::daemon::get_input_buffer()
+{
+  return byte_range(_inbuf.end(), _inbuf.buf_end());
+}
+
+scatter_vector const & http::daemon::get_output_buffer()
+{
+  return _outbuf.commit();
+}
+
+void http::daemon::append_input(size_t i)
+{
+  _inbuf.append(i);
+  (*this)(_inbuf, _outbuf, i);
+}
+
+void http::daemon::drop_output(size_t /* driver always writes full buffer */)
+{
+  _outbuf.flush();
+  if (_state != TERMINATE)
+  {
+    (*this)(_inbuf, _outbuf, true);
+    if (_outbuf.empty())
+      _inbuf.flush();
+  }
+}
 
 /**
  *  \todo protocol_error("Aborting because of excessively long header lines.\r\n");

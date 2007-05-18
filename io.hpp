@@ -291,6 +291,11 @@ public:
                    , shared_socket const & sout = shared_socket()
                    );
 
+  static void start( stream_handler const & f
+                   , shared_socket const &  sin
+                   , shared_socket const &  sout = shared_socket()
+                   );
+
 private:
   struct context;
   typedef boost::shared_ptr<context> ctx_ptr;

@@ -67,13 +67,29 @@ namespace http
   /**
    *  \brief This is the HTTP protocol driver class.
    */
-  class daemon : private boost::noncopyable
+  class daemon : public async_streambuf
   {
+    input_buffer        _inbuf;
+    output_buffer       _outbuf;
+
+    byte_range get_input_buffer();
+    scatter_vector const & get_output_buffer();
+    void append_input(size_t);
+    void drop_output(size_t);
+    bool operator() (input_buffer &, output_buffer &, bool);
+
   public:
+    struct acceptor
+    {
+      void operator() (shared_socket const & s) const
+      {
+        stream_handler f( new daemon );
+        io_driver<http::daemon>::start(f, s);
+      }
+    };
+
     daemon();
     ~daemon();
-
-    bool operator() (input_buffer &, output_buffer &, bool);
 
     static configuration _config;
 
