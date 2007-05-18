@@ -10,12 +10,48 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#ifndef MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
-#define MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
+#ifndef MINI_HTTPD_INPUT_BUFFER_HPP_INCLUDED
+#define MINI_HTTPD_INPUT_BUFFER_HPP_INCLUDED
 
-#include "io.hpp"
-#include <cstring>              // std::memmove()
+#include <boost/range/iterator_range.hpp>
+#include <boost/compatibility/cpp_c_headers/cstring> // std::memmove()
+
 #include "logging.hpp"
+
+/**
+ *  \brief A dynamically re-sizable stream buffer for input.
+ */
+class input_buffer : public byte_range
+{
+  byte_buffer _buf;
+
+  input_buffer(input_buffer const &);
+  input_buffer & operator= (input_buffer const &);
+
+  static size_t min_buf_size();
+
+public:
+  explicit input_buffer(size_t cap = 0u);
+
+  byte_ptr        buf_begin();
+  byte_const_ptr  buf_begin()   const;
+  byte_ptr        buf_end();
+  byte_const_ptr  buf_end()     const;
+
+  size_t capacity()   const;
+  size_t front_gap()  const;
+  size_t back_space() const;
+
+  void   append(size_t i);
+  void   consume(size_t i);
+
+  void   reset();
+  void   reset(byte_ptr b, byte_ptr e);
+  size_t flush();
+
+  size_t flush_gap();
+  void   realloc(size_t n);
+};
 
 /**
  *  \brief Reset buffer into empty state.
@@ -183,4 +219,4 @@ inline std::ostream & operator<< (std::ostream & os, input_buffer const & b)
             << ", space = " << b.back_space();
 }
 
-#endif // MINI_HTTPD_IO_INPUT_BUFFER_HPP_INCLUDED
+#endif // MINI_HTTPD_INPUT_BUFFER_HPP_INCLUDED

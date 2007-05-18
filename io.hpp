@@ -80,7 +80,7 @@
 #include <boost/range.hpp>
 #include <boost/noncopyable.hpp>
 #include <vector>
-#include <cstddef>              // std::size_t, std::ptrdiff_t, offsetof()
+#include <boost/compatibility/cpp_c_headers/cstddef> // std::size_t, std::ptrdiff_t
 
 // ----- Core Types -----------------------------------------------------------
 
@@ -173,41 +173,6 @@ typedef boost::asio::const_buffer               io_vector;
  *  buffer from parts of the input buffer and parts from somewhere else.
  */
 typedef std::vector<io_vector>                  scatter_vector;
-
-/**
- *  \brief A dynamically re-sizable stream buffer for input.
- */
-class input_buffer : public byte_range
-{
-  byte_buffer _buf;
-
-  input_buffer(input_buffer const &);
-  input_buffer & operator= (input_buffer const &);
-
-  static size_t min_buf_size();
-
-public:
-  explicit input_buffer(size_t cap = 0u);
-
-  byte_ptr        buf_begin();
-  byte_const_ptr  buf_begin()   const;
-  byte_ptr        buf_end();
-  byte_const_ptr  buf_end()     const;
-
-  size_t capacity()   const;
-  size_t front_gap()  const;
-  size_t back_space() const;
-
-  void   append(size_t i);
-  void   consume(size_t i);
-
-  void   reset();
-  void   reset(byte_ptr b, byte_ptr e);
-  size_t flush();
-
-  size_t flush_gap();
-  void   realloc(size_t n);
-};
 
 /**
  *  \brief A scatter I/O vector for output.
