@@ -174,32 +174,6 @@ typedef boost::asio::const_buffer               io_vector;
  */
 typedef std::vector<io_vector>                  scatter_vector;
 
-/**
- *  \brief A scatter I/O vector for output.
- */
-class output_buffer : private boost::noncopyable
-{
-  scatter_vector        _iovec;
-  byte_buffer           _buf;
-  byte_const_ptr        _base;
-
-  struct fix_base;
-  friend std::ostream & operator<< (std::ostream &, output_buffer const &);
-
-public:
-  output_buffer();
-
-  bool empty() const;
-  void consume(size_t);
-  void append(byte_const_ptr, byte_const_ptr);
-  void append(void const *, size_t);
-  void flush();
-
-  template <class Iter>
-  void push_back(Iter b, Iter e);
-
-  scatter_vector const & commit();
-};
 
 // ----- I/O Driver -----------------------------------------------------------
 

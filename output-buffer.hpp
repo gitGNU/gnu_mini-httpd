@@ -10,10 +10,37 @@
  * provided the copyright notice and this notice are preserved.
  */
 
-#ifndef MINI_HTTPD_IO_OUTPUT_BUFFER_HPP_INCLUDED
-#define MINI_HTTPD_IO_OUTPUT_BUFFER_HPP_INCLUDED
+#ifndef MINI_HTTPD_OUTPUT_BUFFER_HPP_INCLUDED
+#define MINI_HTTPD_OUTPUT_BUFFER_HPP_INCLUDED
 
 #include "io.hpp"
+
+/**
+ *  \brief A scatter I/O vector for output.
+ */
+class output_buffer : private boost::noncopyable
+{
+  scatter_vector        _iovec;
+  byte_buffer           _buf;
+  byte_const_ptr        _base;
+
+  struct fix_base;
+  friend std::ostream & operator<< (std::ostream &, output_buffer const &);
+
+public:
+  output_buffer();
+
+  bool empty() const;
+  void consume(size_t);
+  void append(byte_const_ptr, byte_const_ptr);
+  void append(void const *, size_t);
+  void flush();
+
+  template <class Iter>
+  void push_back(Iter b, Iter e);
+
+  scatter_vector const & commit();
+};
 
 /**
  *  \internal Commit the buffer address.
@@ -143,4 +170,4 @@ inline std::ostream & operator<< (std::ostream & os, output_buffer const & b)
             << ", buffered = "   << b._buf.size();
 }
 
-#endif // MINI_HTTPD_IO_OUTPUT_BUFFER_HPP_INCLUDED
+#endif // MINI_HTTPD_OUTPUT_BUFFER_HPP_INCLUDED
