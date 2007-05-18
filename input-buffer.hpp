@@ -15,6 +15,7 @@
 
 #include <boost/range/iterator_range.hpp>
 #include <boost/compatibility/cpp_c_headers/cstring> // std::memmove()
+#include <vector>               //
 
 #include "logging.hpp"
 
@@ -23,7 +24,7 @@
  */
 class input_buffer : public byte_range
 {
-  byte_buffer _buf;
+  std::vector<char>     _buf;
 
   input_buffer(input_buffer const &);
   input_buffer & operator= (input_buffer const &);
