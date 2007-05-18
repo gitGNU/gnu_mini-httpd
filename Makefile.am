@@ -46,6 +46,8 @@ CLEANFILES		= $(DIST_ARCHIVES)
 MAINTAINERCLEANFILES	= missing install-sh configure Makefile.in	\
 			  aclocal.m4 depcomp config.guess config.sub
 
+EXTRA_DISTFILES		= README
+
 noinst_HEADERS += \
   boost/asio.hpp \
   boost/asio/basic_datagram_socket.hpp \
