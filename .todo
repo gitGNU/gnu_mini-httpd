@@ -1,4 +1,7 @@
 <todo version="0.1.19">
+    <title>
+        mini-httpd
+    </title>
     <note priority="medium" time="1144456355">
         logs shouldn't be written when we're detached
     </note>
