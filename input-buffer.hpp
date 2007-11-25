@@ -15,7 +15,7 @@
 
 #include <boost/range/iterator_range.hpp>
 #include <boost/compatibility/cpp_c_headers/cstring> // std::memmove()
-#include <vector>               //
+#include <vector>
 
 #include "logging.hpp"
 

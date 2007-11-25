@@ -169,7 +169,7 @@ inline void output_buffer::push_back(Iter b, Iter e)
 inline std::ostream & operator<< (std::ostream & os, output_buffer const & b)
 {
   return os << "iovecs = "     << b._iovec.size()
-            << ", buffered = "   << b._buf.size();
+            << ", buffered = " << b._buf.size();
 }
 
 #endif // MINI_HTTPD_OUTPUT_BUFFER_HPP_INCLUDED
