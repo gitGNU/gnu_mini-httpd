@@ -29,7 +29,7 @@ static char const PACKAGE_NAME[]    = "micro-httpd";
 #  endif
 #endif
 #ifndef PACKAGE_VERSION
-static char const PACKAGE_VERSION[] = "2007-05-10";
+static char const PACKAGE_VERSION[] = "2008-12-18";
 #endif
 
 typedef boost::asio::io_service io_service;
