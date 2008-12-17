@@ -22,8 +22,7 @@ HTTPD_SOURCES		= main.cpp			\
 			  http-daemon.cpp		\
 			  boost/log/functions.cpp	\
 			  boost/log/log.cpp		\
-			  boost/log/log_manager.cpp	\
-			  boost/system/error_code.cpp
+			  boost/log/log_manager.cpp
 
 HTTPD_CPPFLAGS		= -DBOOST_TEST_NO_AUTO_LINK=1	\
 			  -DBOOST_SYSTEM_STATIC_LINK=1	\
@@ -35,12 +34,12 @@ micro_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS) @BOOST_CPPFLAGS@		\
 			  -DBOOST_DISABLE_THREADS			\
 			  -DBOOST_SPIRIT_SINGLE_GRAMMAR_INSTANCE
 micro_httpd_LDFLAGS	= @BOOST_LDFLAGS@
-micro_httpd_LDADD	= @BOOST_PROGRAM_OPTIONS_LIB@
+micro_httpd_LDADD	= @BOOST_PROGRAM_OPTIONS_LIB@ @BOOST_SYSTEM_LIB@
 
 mini_httpd_SOURCES	= $(HTTPD_SOURCES)
 mini_httpd_CPPFLAGS	= $(HTTPD_CPPFLAGS) @BOOST_MT_CPPFLAGS@ -DBOOST_SPIRIT_THREADSAFE
 mini_httpd_LDLAGS	= @BOOST_MT_LDFLAGS@
-mini_httpd_LDADD	= @BOOST_THREAD_LIB@ @BOOST_PROGRAM_OPTIONS_LIB@
+mini_httpd_LDADD	= @BOOST_THREAD_LIB@ @BOOST_PROGRAM_OPTIONS_LIB@ @BOOST_SYSTEM_LIB@
 
 CLEANFILES		= $(DIST_ARCHIVES)
 MAINTAINERCLEANFILES	= missing install-sh configure Makefile.in	\
@@ -49,156 +48,6 @@ MAINTAINERCLEANFILES	= missing install-sh configure Makefile.in	\
 EXTRA_DISTFILES		= README
 
 noinst_HEADERS += \
-  boost/asio.hpp \
-  boost/asio/basic_datagram_socket.hpp \
-  boost/asio/basic_deadline_timer.hpp \
-  boost/asio/basic_io_object.hpp \
-  boost/asio/basic_socket.hpp \
-  boost/asio/basic_socket_acceptor.hpp \
-  boost/asio/basic_socket_iostream.hpp \
-  boost/asio/basic_socket_streambuf.hpp \
-  boost/asio/basic_stream_socket.hpp \
-  boost/asio/basic_streambuf.hpp \
-  boost/asio/buffer.hpp \
-  boost/asio/buffered_read_stream.hpp \
-  boost/asio/buffered_read_stream_fwd.hpp \
-  boost/asio/buffered_stream.hpp \
-  boost/asio/buffered_stream_fwd.hpp \
-  boost/asio/buffered_write_stream.hpp \
-  boost/asio/buffered_write_stream_fwd.hpp \
-  boost/asio/completion_condition.hpp \
-  boost/asio/datagram_socket_service.hpp \
-  boost/asio/deadline_timer.hpp \
-  boost/asio/deadline_timer_service.hpp \
-  boost/asio/detail/bind_handler.hpp \
-  boost/asio/detail/buffer_resize_guard.hpp \
-  boost/asio/detail/buffered_stream_storage.hpp \
-  boost/asio/detail/call_stack.hpp \
-  boost/asio/detail/const_buffers_iterator.hpp \
-  boost/asio/detail/consuming_buffers.hpp \
-  boost/asio/detail/deadline_timer_service.hpp \
-  boost/asio/detail/epoll_reactor.hpp \
-  boost/asio/detail/epoll_reactor_fwd.hpp \
-  boost/asio/detail/event.hpp \
-  boost/asio/detail/fd_set_adapter.hpp \
-  boost/asio/detail/handler_alloc_helpers.hpp \
-  boost/asio/detail/handler_invoke_helpers.hpp \
-  boost/asio/detail/hash_map.hpp \
-  boost/asio/detail/io_control.hpp \
-  boost/asio/detail/kqueue_reactor.hpp \
-  boost/asio/detail/kqueue_reactor_fwd.hpp \
-  boost/asio/detail/local_free_on_block_exit.hpp \
-  boost/asio/detail/mutex.hpp \
-  boost/asio/detail/noncopyable.hpp \
-  boost/asio/detail/null_event.hpp \
-  boost/asio/detail/null_mutex.hpp \
-  boost/asio/detail/null_signal_blocker.hpp \
-  boost/asio/detail/null_thread.hpp \
-  boost/asio/detail/null_tss_ptr.hpp \
-  boost/asio/detail/old_win_sdk_compat.hpp \
-  boost/asio/detail/pipe_select_interrupter.hpp \
-  boost/asio/detail/pop_options.hpp \
-  boost/asio/detail/posix_event.hpp \
-  boost/asio/detail/posix_fd_set_adapter.hpp \
-  boost/asio/detail/posix_mutex.hpp \
-  boost/asio/detail/posix_signal_blocker.hpp \
-  boost/asio/detail/posix_thread.hpp \
-  boost/asio/detail/posix_tss_ptr.hpp \
-  boost/asio/detail/push_options.hpp \
-  boost/asio/detail/reactive_socket_service.hpp \
-  boost/asio/detail/reactor_op_queue.hpp \
-  boost/asio/detail/resolver_service.hpp \
-  boost/asio/detail/scoped_lock.hpp \
-  boost/asio/detail/select_interrupter.hpp \
-  boost/asio/detail/select_reactor.hpp \
-  boost/asio/detail/select_reactor_fwd.hpp \
-  boost/asio/detail/service_base.hpp \
-  boost/asio/detail/service_id.hpp \
-  boost/asio/detail/service_registry.hpp \
-  boost/asio/detail/service_registry_fwd.hpp \
-  boost/asio/detail/signal_blocker.hpp \
-  boost/asio/detail/signal_init.hpp \
-  boost/asio/detail/socket_holder.hpp \
-  boost/asio/detail/socket_ops.hpp \
-  boost/asio/detail/socket_option.hpp \
-  boost/asio/detail/socket_select_interrupter.hpp \
-  boost/asio/detail/socket_types.hpp \
-  boost/asio/detail/strand_service.hpp \
-  boost/asio/detail/task_io_service.hpp \
-  boost/asio/detail/task_io_service_fwd.hpp \
-  boost/asio/detail/thread.hpp \
-  boost/asio/detail/throw_error.hpp \
-  boost/asio/detail/timer_queue.hpp \
-  boost/asio/detail/timer_queue_base.hpp \
-  boost/asio/detail/tss_ptr.hpp \
-  boost/asio/detail/win_event.hpp \
-  boost/asio/detail/win_fd_set_adapter.hpp \
-  boost/asio/detail/win_iocp_io_service.hpp \
-  boost/asio/detail/win_iocp_io_service_fwd.hpp \
-  boost/asio/detail/win_iocp_operation.hpp \
-  boost/asio/detail/win_iocp_socket_service.hpp \
-  boost/asio/detail/win_mutex.hpp \
-  boost/asio/detail/win_signal_blocker.hpp \
-  boost/asio/detail/win_thread.hpp \
-  boost/asio/detail/win_tss_ptr.hpp \
-  boost/asio/detail/winsock_init.hpp \
-  boost/asio/detail/wrapped_handler.hpp \
-  boost/asio/error.hpp \
-  boost/asio/handler_alloc_hook.hpp \
-  boost/asio/handler_invoke_hook.hpp \
-  boost/asio/impl/io_service.ipp \
-  boost/asio/impl/read.ipp \
-  boost/asio/impl/read_until.ipp \
-  boost/asio/impl/write.ipp \
-  boost/asio/io_service.hpp \
-  boost/asio/ip/address.hpp \
-  boost/asio/ip/address_v4.hpp \
-  boost/asio/ip/address_v6.hpp \
-  boost/asio/ip/basic_endpoint.hpp \
-  boost/asio/ip/basic_resolver.hpp \
-  boost/asio/ip/basic_resolver_entry.hpp \
-  boost/asio/ip/basic_resolver_iterator.hpp \
-  boost/asio/ip/basic_resolver_query.hpp \
-  boost/asio/ip/detail/socket_option.hpp \
-  boost/asio/ip/host_name.hpp \
-  boost/asio/ip/multicast.hpp \
-  boost/asio/ip/resolver_query_base.hpp \
-  boost/asio/ip/resolver_service.hpp \
-  boost/asio/ip/tcp.hpp \
-  boost/asio/ip/udp.hpp \
-  boost/asio/ip/unicast.hpp \
-  boost/asio/ip/v6_only.hpp \
-  boost/asio/is_read_buffered.hpp \
-  boost/asio/is_write_buffered.hpp \
-  boost/asio/placeholders.hpp \
-  boost/asio/read.hpp \
-  boost/asio/read_until.hpp \
-  boost/asio/socket_acceptor_service.hpp \
-  boost/asio/socket_base.hpp \
-  boost/asio/ssl.hpp \
-  boost/asio/ssl/basic_context.hpp \
-  boost/asio/ssl/context.hpp \
-  boost/asio/ssl/context_base.hpp \
-  boost/asio/ssl/context_service.hpp \
-  boost/asio/ssl/detail/openssl_context_service.hpp \
-  boost/asio/ssl/detail/openssl_init.hpp \
-  boost/asio/ssl/detail/openssl_operation.hpp \
-  boost/asio/ssl/detail/openssl_stream_service.hpp \
-  boost/asio/ssl/detail/openssl_types.hpp \
-  boost/asio/ssl/stream.hpp \
-  boost/asio/ssl/stream_base.hpp \
-  boost/asio/ssl/stream_service.hpp \
-  boost/asio/strand.hpp \
-  boost/asio/stream_socket_service.hpp \
-  boost/asio/streambuf.hpp \
-  boost/asio/time_traits.hpp \
-  boost/asio/write.hpp \
-  boost/cerrno.hpp \
-  boost/detail/identifier.hpp \
-  boost/system/config.hpp \
-  boost/system/error_code.cpp \
-  boost/system/error_code.hpp \
-  boost/system/system_error.hpp \
   boost/log/detail/defs.hpp \
   boost/log/detail/log_fwd.hpp \
   boost/log/detail/log_manager.hpp \
