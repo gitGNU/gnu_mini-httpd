@@ -25,4 +25,4 @@ lib boost_log
   : <use>/boost <link>shared:<define>BOOST_DATE_TIME_DYN_LINK=1 <include>.
   ;
 
-use-project /boost : /usr/local/src/boost-current ;
+use-project /boost : [ modules.peek : BOOST_ROOT ] ;
