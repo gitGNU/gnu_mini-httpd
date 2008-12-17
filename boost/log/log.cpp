@@ -155,6 +155,7 @@ void logger_impl::write_msg(const logging_types::string & msg, level_type lvl) {
 
     logging_types::lock lk(cs);
     if ( !is_enabled(lvl) )
+    {
         if ( !m_is_compile_time)
             // now, we're locked - thus, really make sure we're enabled... (in other words - the is_enabled() test
             // is not locked - for speed, but this one is)
@@ -162,7 +163,7 @@ void logger_impl::write_msg(const logging_types::string & msg, level_type lvl) {
         else
             ; // this is a compile-time enabled log
               // if we ended up here, it means we're enabled at compiled time
-
+    }
     // run modifiers
     { typedef modifier_array array;
       for (array::const_iterator b = modifiers().begin(), e = modifiers().end(); b != e; ++b)

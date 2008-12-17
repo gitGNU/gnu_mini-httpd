@@ -1,4 +1,4 @@
-// functions.cpp 
+// functions.cpp
 
 // Boost Logging Template library
 //
@@ -15,11 +15,11 @@
 //
 // This software is provided "as is" without express or implied warranty,
 // and with no claim as to its suitability for any purpose.
- 
+
 // See http://www.boost.org for updates, documentation, and revision history.
 
 /*
-    Note: I supplied this as a static library, because otherwise 
+    Note: I supplied this as a static library, because otherwise
     compilation times would be too big.
 */
 
@@ -49,7 +49,7 @@ namespace boost { namespace logging {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Log functions
 
-// ... Windows only 
+// ... Windows only
 #ifdef BOOST_LOG_WIN32
     BOOST_LOG_DECL void write_to_dbg_wnd(const logging_types::string &, const logging_types::string &msg) {
         OutputDebugString( msg.c_str() );
@@ -68,8 +68,8 @@ void write_to_file::write(const logging_types::string& msg) {
     *overwrite_file = false;
 }
 
-    
-    
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Modifier functions
 
@@ -108,7 +108,7 @@ BOOST_LOG_DECL void prepend_thread_id(const logging_types::string &, logging_typ
 namespace {
     struct index_info {
         typedef logging_types::string::size_type uint;
-        
+
         index_info(uint src_idx, int *format_idx, int size = 2) : src_idx(src_idx), format_idx(format_idx), size(size) {}
         uint src_idx;
         int * format_idx;
@@ -140,11 +140,12 @@ prepend_time::prepend_time(const logging_types::string & format) : m_day(-1), m_
         indexes.push_back( index_info(month_idx, &m_month) );
 
     if ( yy_idx != logging_types::string::npos || yyyy_idx != logging_types::string::npos)
+    {
         if ( yyyy_idx  != logging_types::string::npos)
             indexes.push_back( index_info(yyyy_idx, &m_yyyy, 4) );
         else
             indexes.push_back( index_info(yy_idx, &m_yy) );
-
+    }
     if ( hour_idx != logging_types::string::npos)
         indexes.push_back( index_info(hour_idx, &m_hour ) );
     if ( min_idx != logging_types::string::npos)
@@ -152,8 +153,8 @@ prepend_time::prepend_time(const logging_types::string & format) : m_day(-1), m_
     if ( sec_idx != logging_types::string::npos)
         indexes.push_back( index_info(sec_idx, &m_sec) );
     std::sort( indexes.begin(), indexes.end(), by_index);
-    
-    // create the format logging_types::string, that we can actually pass to sprintf 
+
+    // create the format logging_types::string, that we can actually pass to sprintf
     uint prev_idx = 0;
     int idx = 0;
     for ( array::iterator begin = indexes.begin(), end = indexes.end(); begin != end; ++begin) {
@@ -168,7 +169,7 @@ prepend_time::prepend_time(const logging_types::string & format) : m_day(-1), m_
 }
 
 void prepend_time::operator()(const logging_types::string &, logging_types::string & msg) {
-    time_t t = time(0); 
+    time_t t = time(0);
     tm details = *localtime( &t);
 
     int vals[8];
@@ -179,7 +180,7 @@ void prepend_time::operator()(const logging_types::string &, logging_types::stri
     vals[m_hour + 1]     = details.tm_hour;
     vals[m_min + 1]      = details.tm_min;
     vals[m_sec + 1]      = details.tm_sec;
-  
+
     // ignore value at index 0 - it's there so that I don't have to test for an index being -1
 #ifdef UNICODE
     swprintf( m_buffer, m_format.c_str(), vals[1], vals[2], vals[3], vals[4], vals[5], vals[6], vals[7] );
@@ -196,7 +197,7 @@ prepend_time_strf::prepend_time_strf(const logging_types::string & format, bool 
 {}
 
 void prepend_time_strf::operator() (const logging_types::string&, logging_types::string& msg) {
-    m_t = time (0); 
+    m_t = time (0);
     m_tm = m_localtime ? *localtime( &m_t) : *gmtime( &m_t);
 #ifdef UNICODE
     if (0 != wcsftime (m_buffer, sizeof (m_buffer), m_format.c_str (), &m_tm))
@@ -214,11 +215,11 @@ void appender_array::operator()( const logging_types::string & log_name, const l
 }
 
 
-void write_to_cout(const logging_types::string &, const logging_types::string &msg) { 
+void write_to_cout(const logging_types::string &, const logging_types::string &msg) {
 #ifdef UNICODE
-    std::wcout << msg; 
+    std::wcout << msg;
 #else
-    std::cout << msg; 
+    std::cout << msg;
 #endif
 }
 
