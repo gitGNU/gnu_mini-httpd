@@ -11,6 +11,7 @@
  */
 
 #include "logging.hpp"
+#include <cstdio>
 
 #ifndef BOOST_DISABLE_THREADS
 #  include <boost/thread/thread.hpp>
