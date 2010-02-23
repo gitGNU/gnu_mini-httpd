@@ -1,10 +1,5 @@
-                           mini-httpd
-
-                   http://cryp.to/mini-httpd/
-
-                ********************************
-                *** This file is out of date ***
-                ********************************
+                                   mini-httpd
+                                   ==========
 
 SYNOPSIS
 
@@ -15,21 +10,19 @@ SYNOPSIS
     gid | --gid gid] [--default-page filename] [-D | --no-detach]
     [-H string | --default-hostname string]
 
-Description
+DESCRIPTION
 
-  mini-httpd is a mini-malistic web server designed for optimal
-  performance, high security, and as little use of system
-  resources as possible. Unlike most other web servers,
-  mini-httpd does not require more than one process or system
-  thread in order to handle several requests concurrently.
-  Instead, it uses the poll(2) system call to multiplex an
-  arbitrary number of connections internally.
+  mini-httpd is a mini-malistic web server designed for optimal performance,
+  high security, and as little use of system resources as possible. Unlike most
+  other web servers, mini-httpd does not require more than one process or system
+  thread in order to handle several requests concurrently. Instead, it uses the
+  poll(2) system call to multiplex an arbitrary number of connections
+  internally.
 
-  The downside is, of course, that mini-httpd has zero fancy
-  features. All it can do is hand out static files from the hard
-  disk. There is no support for CGI scripts or any kind of
-  dynamic content. If you need a more sophisticated set-up, this
-  software is not for you. If you really, really need additional
+  The downside is, of course, that mini-httpd has zero fancy features. All it
+  can do is hand out static files from the hard disk. There is no support for
+  CGI scripts or any kind of dynamic content. If you need a more sophisticated
+  set-up, this software is not for you. If you really, really need additional
   features, well, you have the source code.
 
   In brief, here is an overview of what mini-httpd can do:
@@ -38,176 +31,175 @@ Description
 
    2. Virtual hosting
 
-   3. Record successful requests in the common Apache-style
-      log-file format
+   3. Record successful requests in the common Apache-style log-file format
 
    4. Run in a chroot(2) sandbox
 
-   5. Drop all super-user privileges after acquiring the
-      listening socket
+   5. Drop all super-user privileges after acquiring the listening socket
 
-  Furthermore, mini-httpd is configured completely through the
-  command line, there is no config file. For further details on
-  how to set-up the web server, refer to the section "Setting
-  mini-httpd up" section below.
+  Furthermore, mini-httpd is configured completely through the command line,
+  there is no config file. For further details on how to set-up the web server,
+  refer to the section "Setting mini-httpd up" section below.
 
-Command-line Options
+COMMAND-LINE OPTIONS
 
   -h
       Show command line syntax and exit.
 
   -d, --debug
-      Enable additional debugging messages. Debugging is only
-      available if mini-httpd has been compiled with the
-      --with-debug configure option. Otherwise, the debug messages
-      are not included in the binary.
+      Enable additional debugging messages. Debugging is only available if
+      mini-httpd has been compiled with the --with-debug configure option.
+      Otherwise, the debug messages are not included in the binary.
 
   --version
       Show mini-httpd's version string and exit.
 
   -p number, --port number
-      Tell mini-httpd on which port to listen for incoming
-      requests. The default port number is 80.
+      Tell mini-httpd on which port to listen for incoming requests. The default
+      port number is 80.
 
   -r path, --change-root path
-      When started with super-user privileges, mini-httpd will
-      chroot(2) to the directory provided with this option. Please
-      note that once the process's root directory has been changed,
-      all other paths are interpreted relative to the new root
-      directory! If you specify -r /usr/local/mini-httpd, for
-      example, the document root /usr/local/httpd/htdocs has to be
-      given as /htdocs. Keep that in mind when specifying the other
-      paths!
+      When started with super-user privileges, mini-httpd will chroot(2) to the
+      directory provided with this option. Please note that once the process's
+      root directory has been changed, all other paths are interpreted relative
+      to the new root directory! If you specify -r /usr/local/mini-httpd, for
+      example, the document root /usr/local/httpd/htdocs has to be given as
+      /htdocs. Keep that in mind when specifying the other paths!
 
 
-      The default chroot-directory is the prefix provided to
-      configure when mini-httpd was built. Usually, that is
-      /usr/local/mini-httpd.
+      The default chroot-directory is the prefix provided to configure when
+      mini-httpd was built. Usually, that is /usr/local/mini-httpd.
 
-      If you want to disable chroot()ing altogether, provide the
-      empty string: -r "". This is not recommended, however.
+      If you want to disable chroot()ing altogether, provide the empty string:
+      -r "". This is not recommended, however.
 
   --document-root path
-      This option sets the document root directory. When an access
-      to, say, http://example.org/index.html comes in, mini-httpd
-      will try to access the file example.org/index.html in this
-      directory. Note that hostnames must be spelled in all
-      lower-case in the file system!
+      This option sets the document root directory. When an access to, say,
+      http://example.org/index.html comes in, mini-httpd will try to access the
+      file example.org/index.html in this directory. Note that hostnames must be
+      spelled in all lower-case in the file system!
 
       The default location is /htdocs.
 
   -l path, --logfile-directory path
-      This option sets the directory mini-httpd uses to create the
-      access-log files. In this directory, one file per hostname
-      will be created. The default location is /logs.
+      This option sets the directory mini-httpd uses to create the access-log
+      files. In this directory, one file per hostname will be created. The
+      default location is /logs.
 
   -s string, --server-string string
-      This option sets the version string mini-httpd returns with
-      the Server: header in HTTP replies. The default string is
-      "mini-httpd" -- no actual version number is revealed. If you
-      want to disable the Server: header altogether, specify the
-      empty string: -s "".
+      This option sets the version string mini-httpd returns with the Server:
+      header in HTTP replies. The default string is "mini-httpd" -- no actual
+      version number is revealed. If you want to disable the Server: header
+      altogether, specify the empty string: -s "".
 
   -u uid, --uid uid
-      This option sets the numeric user id mini-httpd will setuid()
-      to when called with super-user privileges. This is necessary
-      because mini-httpd must be started as root in order to be
-      able to bind() to port 80. But you don't want the server to
-      run as root the whole time! A good choice is usually user id
-      "2" (daemon). If this option is unset, mini-httpd will
+      This option sets the numeric user id mini-httpd will setuid() to when
+      called with super-user privileges. This is necessary because mini-httpd
+      must be started as root in order to be able to bind() to port 80. But you
+      don't want the server to run as root the whole time! A good choice is
+      usually user id "2" (daemon). If this option is unset, mini-httpd will
       continue to use the user id is has been started under.
 
   -g uid, --gid uid
-      This option sets the numeric group id mini-httpd will
-      setgid() to when called with super-user privileges. (See
-      --uid for further details.)
+      This option sets the numeric group id mini-httpd will setgid() to when
+      called with super-user privileges. (See --uid for further details.)
 
   --default-page filename
-      This option sets the filename mini-httpd accesses when a
-      request for a directory is received. The default is
-      index.html. This means, that a request for
-      http://example.org/ will result in the file
+      This option sets the filename mini-httpd accesses when a request for a
+      directory is received. The default is index.html. This means, that a
+      request for http://example.org/ will result in the file
       example.org/index.html being returned.
 
   -D, --no-detach
-      This option tells mini-httpd not to detach from the
-      controlling terminal, but to run in the foreground. This is
-      useful mostly for debugging purposes. The default is to
-      detach.
+      This option tells mini-httpd not to detach from the controlling terminal,
+      but to run in the foreground. This is useful mostly for debugging
+      purposes. The default is to detach.
 
   -H string, --default-hostname string
-      This option sets default hostname mini-httpd uses when a
-      pre-HTTP/1.1 request comes in, which does not provide the
-      Host: header. If the default hostname is empty or this option
-      is omitted, mini-httpd will reject such requests.
+      This option sets default hostname mini-httpd uses when a pre-HTTP/1.1
+      request comes in, which does not provide the Host: header. If the default
+      hostname is empty or this option is omitted, mini-httpd will reject such
+      requests.
 
-Setting mini-httpd up
+SETTING MINI-HTTPD UP
 
-  Setting mini-httpd up is pretty easy, because the program does
-  have the least possible set of features. It may look weird at
-  first, especially if you know other web servers like Apache,
-  but it's really not that difficult. The following instructions
-  assume you've installed mini-httpd using the default prefix,
-  /usr/local/mini-httpd. Not that it matters much, though,
-  because you can set all paths at the command line.
+  Setting mini-httpd up is pretty easy, because the program does have the least
+  possible set of features. It may look weird at first, especially if you know
+  other web servers like Apache, but it's really not that difficult. The
+  following instructions assume you've installed mini-httpd using the default
+  prefix, /usr/local/mini-httpd. Not that it matters much, though, because you
+  can set all paths at the command line.
 
-  It's important to understand that mini-httpd changes the
-  process's root directory to /usr/local/mini-httpd once it has
-  initialized its internals. Thus, all files related to your web
-  service must reside within this directory (or below). You
-  cannot symlink to some path outside that hierarchy, or some
+  It's important to understand that mini-httpd changes the process's root
+  directory to /usr/local/mini-httpd once it has initialized its internals.
+  Thus, all files related to your web service must reside within this directory
+  (or below). You cannot symlink to some path outside that hierarchy, or some
   thing.
 
-  First of all, choose an user id you'll run mini-httpd under. A
-  sensible choice is daemon, but you can as well use nobody or
-  any other user id you see fit. Find out which numeric user id
-  this user has on your system by calling the id(1) command:
+  First of all, choose an user id you'll run mini-httpd under. A sensible choice
+  is daemon, but you can as well use nobody or any other user id you see fit.
+  Find out which numeric user id this user has on your system by calling the
+  id(1) command:
 
   $ id daemon
   uid=2(daemon) gid=2(daemon) groups=2(daemon),1(bin)
 
-  Now you'll need to create two directories in
-  /usr/local/mini-httpd: htdocs and logs. The first directory
-  will contain the actual web documents in one subdirectory per
-  (virtual) host you want to provide. The second directory will
-  contain the access logs written by mini-httpd. Consequently,
-  mini-httpd's user must be allowed to read htdocs and to write
-  to logs. The following commands will ensure that:
+  Now you'll need to create two directories in /usr/local/mini-httpd: htdocs and
+  logs. The first directory will contain the actual web documents in one
+  subdirectory per (virtual) host you want to provide. The second directory will
+  contain the access logs written by mini-httpd. Consequently, mini-httpd's user
+  must be allowed to read htdocs and to write to logs. The following commands
+  will ensure that:
 
   # mkdir htdocs logs
   # chown daemon.daemon htdocs logs
 
-  Now create a directory in htdocs, which is called like the
-  hostname, your web service should be provided under. Make sure
-  you use all lower-case characters! If your web server is
-  accessed as, say, example.com and www.example.com, do the
-  following:
+  Now create a directory in htdocs, which is called like the hostname, your web
+  service should be provided under. Make sure you use all lower-case characters!
+  If your web server is accessed as, say, example.com and www.example.com, do
+  the following:
 
   # mkdir htdocs/example.org
   # ln -s htdocs/example.org htdocs/www.example.org
   # chown daemon.daemon htdocs/example.org htdocs/www.example.org
 
-  If you're unsure what hostname to use for testing purposes,
-  localhost is usually a safe bet. :-)
+  If you're unsure what hostname to use for testing purposes, localhost is
+  usually a safe bet. :-)
 
-  Copy the HTML documents to the htdocs/example.org directory and
-  ensure that mini-httpd has permission to access them! Finally,
-  start mini-httpd as root, using the following command line:
+  Copy the HTML documents to the htdocs/example.org directory and ensure that
+  mini-httpd has permission to access them! Finally, start mini-httpd as root,
+  using the following command line:
 
   # /usr/local/mini-httpd/bin/httpd --uid 2
 
-  That's it. You may now direct your favorite browser to
-  http://example.org/ and see what happens.
+  That's it. You may now direct your favorite browser to http://example.org/ and
+  see what happens.
 
-  In case you want to try mini-httpd with some port other than
-  80, add the --port option to the command line: --port 8080.
-  Furthermore, you might want to add the --debug switch to turn
-  on the debugging messages in mini-httpd. That is particularly
-  helpful in case mini-httpd is not behaving as you're expecting.
+  In case you want to try mini-httpd with some port other than 80, add the
+  --port option to the command line: --port 8080. Furthermore, you might want to
+  add the --debug switch to turn on the debugging messages in mini-httpd. That
+  is particularly helpful in case mini-httpd is not behaving as you're
+  expecting.
 
-  Once you have accessed the web site, you'll find the
-  appropriate access-log file in the logs directory; one file per
-  virtual host.
+  Once you have accessed the web site, you'll find the appropriate access-log
+  file in the logs directory; one file per virtual host.
 
-  If you want to add more virtual hosts to mini-httpd, just
-  create the corresponding directory in htdocs.
+  If you want to add more virtual hosts to mini-httpd, just create the
+  corresponding directory in htdocs.
+
+LICENSE
+
+  Copyright (c) 2010 by Peter Simons <simons@cryp.to>.
+
+  This program is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later
+  version.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+  details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program. If not, see <http://www.gnu.org/licenses/>.
