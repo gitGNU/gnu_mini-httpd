@@ -1,5 +1,7 @@
 # build mini-httpd
 
+project mini-httpd ;
+
 exe httpd
   : main.cpp logging.cpp io-driver.cpp http.cpp http-daemon.cpp
   : <use>/boost
