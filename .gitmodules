@@ -1,0 +1,3 @@
+[submodule "libscheduler"]
+	path = libscheduler
+	url = git://git.savannah.nongnu.org/ioxx.git
