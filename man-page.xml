@@ -4,14 +4,23 @@
   ]>
 
 <refentry lang="en">
+  <refentryinfo>
+    <productname>mini-httpd</productname>
+    <author>
+      <firstname>Peter</firstname>
+      <surname>Simons</surname>
+      <authorblurb><simpara><ulink url="http://cryp.to/">http://cryp.to/</ulink></simpara></authorblurb>
+      <email>simons@cryp.to</email>
+    </author>
+  </refentryinfo>
   <refmeta>
     <refentrytitle>httpd</refentrytitle>
     <manvolnum>8</manvolnum>
+    <refmiscinfo class="manual">Network Daemon</refmiscinfo>
   </refmeta>
-
   <refnamediv>
     <refname>httpd</refname>
-    <refpurpose>A simple high-performance Web Server</refpurpose>
+    <refpurpose>a minimalistic high-performance web server</refpurpose>
   </refnamediv>
 
   <!--==================== Synopsis ====================-->
@@ -361,26 +370,19 @@ corresponding directory in <filename>htdocs</filename>.</para>
   <refsect1>
     <title>License</title>
 
-    <para>This software is copyrighted by Peter Simons
-<email>simons@cryp.to</email>. Permission is granted to use all parts of this
-distribution according to the GNU General Public License. The full text can be
-found in the file <filename>COPYING</filename>, which is included in the
-distribution.</para>
+    <para>This program is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.</para>
+
+    <para>This program is distributed in the hope that it will be
+    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    General Public License for more details.</para>
+
+    <para>You should have received a copy of the GNU General Public
+    License along with this program. If not, see <ulink
+    url="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</ulink>.</para>
   </refsect1>
 
 </refentry>
-
-<!--
-Local Variables:
-mode: sgml
-fill-column:80
-End:
--->
-
-<!--
-Local Variables:
-mode: sgml
-fill-column:80
-sgml-parent-document:("httpd.sgml" "article" "sect1" "title" "para")
-End:
--->
