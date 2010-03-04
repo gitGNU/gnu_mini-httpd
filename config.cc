@@ -276,15 +276,15 @@ const char* configuration::get_content_type(const char* filename) const
     const char* last_dot;
     const char* current;
     for (current = filename, last_dot = 0; *current != '\0'; ++current)
-	if (*current == '.')
-	    last_dot = current;
+        if (*current == '.')
+            last_dot = current;
     if (last_dot == 0)
-	return default_content_type;
+        return default_content_type;
     else
-	++last_dot;
+        ++last_dot;
     map_t::const_iterator i = content_types.find(last_dot);
     if (i != content_types.end())
- 	return i->second;
+        return i->second;
     else
-	return default_content_type;
+        return default_content_type;
     }

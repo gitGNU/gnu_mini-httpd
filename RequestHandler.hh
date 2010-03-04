@@ -71,15 +71,15 @@ class RequestHandler : public scheduler::event_handler
     // reported via exceptions.
 
     enum state_t
-	{
-	READ_REQUEST_LINE,
-	READ_REQUEST_HEADER,
-	READ_REQUEST_BODY,
+        {
+        READ_REQUEST_LINE,
+        READ_REQUEST_HEADER,
+        READ_REQUEST_BODY,
         SETUP_REPLY,
-	COPY_FILE,
-	FLUSH_BUFFER,
-	TERMINATE
-	};
+        COPY_FILE,
+        FLUSH_BUFFER,
+        TERMINATE
+        };
     state_t state;
 
     typedef bool (RequestHandler::*state_fun_t)();

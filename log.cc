@@ -25,16 +25,16 @@ std::string Tracer::indent;
 namespace
     {
     struct init_logging
-	{
-	init_logging()
-	    {
-	    openlog("httpd", LOG_CONS | LOG_PERROR | LOG_PID, LOG_DAEMON);
-	    }
-	~init_logging()
-	    {
-	    closelog();
-	    }
-	};
+        {
+        init_logging()
+            {
+            openlog("httpd", LOG_CONS | LOG_PERROR | LOG_PID, LOG_DAEMON);
+            }
+        ~init_logging()
+            {
+            closelog();
+            }
+        };
     static init_logging sentry;
     }
 

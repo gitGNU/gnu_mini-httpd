@@ -34,7 +34,7 @@ void RequestHandler::fd_is_readable(int)
     {
     TRACE();
     try
-	{
+        {
         // Protect against flooding.
 
         if (read_buffer.size() > config->max_line_length)
@@ -68,15 +68,15 @@ void RequestHandler::fd_is_readable(int)
         call_state_handler();
         }
     catch(const exception& e)
-	{
-	error("Run-time error on connection to %s: %s", peer_address, e.what());
-	delete this;
-	}
+        {
+        error("Run-time error on connection to %s: %s", peer_address, e.what());
+        delete this;
+        }
     catch(...)
-	{
-	error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
-	delete this;
-	}
+        {
+        error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+        delete this;
+        }
     }
 
 /*
@@ -89,7 +89,7 @@ void RequestHandler::fd_is_writable(int)
     {
     TRACE();
     try
- 	{
+        {
         // If there is output waiting in the write buffer, write it.
 
         if (state != TERMINATE && !write_buffer.empty())
@@ -116,15 +116,15 @@ void RequestHandler::fd_is_writable(int)
         call_state_handler();
         }
     catch(const exception& e)
-	{
-	error("Run-time error on connection to %s: %s", peer_address, e.what());
-	delete this;
-	}
+        {
+        error("Run-time error on connection to %s: %s", peer_address, e.what());
+        delete this;
+        }
     catch(...)
-	{
-	error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
-	delete this;
-	}
+        {
+        error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+        delete this;
+        }
     }
 
 // These callbacks have rather descriptive names ...

@@ -42,7 +42,7 @@ const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
     };
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-	: mysched(sched), sockfd(fd), filefd(-1)
+        : mysched(sched), sockfd(fd), filefd(-1)
     {
     TRACE();
 
@@ -83,7 +83,7 @@ void RequestHandler::reset()
 
     if (filefd >= 0)
         {
-	close(filefd);
+        close(filefd);
         filefd = -1;
         }
 
@@ -106,5 +106,5 @@ RequestHandler::~RequestHandler()
     close(sockfd);
 
     if (filefd >= 0)
-	close(filefd);
+        close(filefd);
     }

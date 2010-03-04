@@ -68,10 +68,10 @@ class configuration
     configuration& operator= (const configuration&);
 
     struct ltstr
-	{
-	bool operator()(const char* lhs, const char* rhs) const
-	    { return strcasecmp(lhs, rhs) < 0; }
-	};
+        {
+        bool operator()(const char* lhs, const char* rhs) const
+            { return strcasecmp(lhs, rhs) < 0; }
+        };
     typedef std::map<const char*, const char*, ltstr> map_t;
     map_t content_types;
     };

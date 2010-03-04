@@ -112,7 +112,7 @@ try
 
     while(!got_terminate_sig && !sched.empty())
         {
-	sched.schedule();
+        sched.schedule();
 
         if (RequestHandler::instances > config->hard_poll_interval_threshold)
             {

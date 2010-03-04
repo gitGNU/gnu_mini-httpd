@@ -34,11 +34,11 @@ class TCPListener : public scheduler::event_handler
     {
   public:
     explicit TCPListener(scheduler& sched, short port_no, int queue_backlog = 50)
-	    : mysched(sched)
-	{
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1)
-	    throw system_error("socket() failed");
+            : mysched(sched)
+        {
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd == -1)
+            throw system_error("socket() failed");
         try
             {
             int true_flag = 1;
@@ -68,38 +68,38 @@ class TCPListener : public scheduler::event_handler
             close(sockfd);
             throw;
             }
-	}
+        }
 
     virtual ~TCPListener()
-	{
-	mysched.remove_handler(sockfd);
-	close(sockfd);
-	}
+        {
+        mysched.remove_handler(sockfd);
+        close(sockfd);
+        }
 
   private:
     virtual void fd_is_readable(int)
-	{
-	int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
-	if (streamfd == -1)
-	    {
-	    error("TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
-	    return;
-	    }
-	try
+        {
+        int streamfd = accept(sockfd, (sockaddr*)&sin, &sin_size);
+        if (streamfd == -1)
+            {
+            error("TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
+            return;
+            }
+        try
             {
             new connection_handlerT(mysched, streamfd, sin);
             }
-	catch(const std::exception& e)
-	    {
+        catch(const std::exception& e)
+            {
             close(streamfd);
-	    error("TCPListener: Caught exception while creating connection handler: %s", e.what());
-	    }
-	catch(...)
-	    {
+            error("TCPListener: Caught exception while creating connection handler: %s", e.what());
+            }
+        catch(...)
+            {
             close(streamfd);
-	    error("TCPListener: Caught unknown exception while creating connection handler.");
-	    }
-	}
+            error("TCPListener: Caught unknown exception while creating connection handler.");
+            }
+        }
     virtual void fd_is_writable(int)
         {
         throw std::logic_error("This routine should not be called.");
@@ -114,12 +114,12 @@ class TCPListener : public scheduler::event_handler
         }
     virtual void error_condition(int)
         {
-	error("TCPListener get on error condition on the socket. Terminating.");
-	delete this;
+        error("TCPListener get on error condition on the socket. Terminating.");
+        delete this;
         }
     virtual void pollhup(int fd)
         {
-	error_condition(fd);
+        error_condition(fd);
         }
 
     scheduler&   mysched;
