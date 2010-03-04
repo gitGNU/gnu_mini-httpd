@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <boost/scoped_array.hpp>
 #include "libscheduler/scheduler.hh"
 #include "HTTPRequest.hh"
 
@@ -119,7 +120,7 @@ class RequestHandler : public scheduler::event_handler
     int         sockfd;
     std::string read_buffer;
     std::string write_buffer;
-    char*       line_buffer;
+    boost::scoped_array<char> line_buffer;
 
   private:
     // Information associated with the HTTP request.

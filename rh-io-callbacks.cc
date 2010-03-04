@@ -46,7 +46,7 @@ void RequestHandler::fd_is_readable(int)
 
         // Read sockfd stuff into the line buffer.
 
-        ssize_t rc = read(sockfd, line_buffer, config->max_line_length);
+        ssize_t rc = read(sockfd, line_buffer.get(), config->max_line_length);
         if (rc < 0)
             {
             if (errno != EINTR)
@@ -61,7 +61,7 @@ void RequestHandler::fd_is_readable(int)
             state = TERMINATE;
             }
         else
-            read_buffer.append(line_buffer, rc);
+            read_buffer.append(line_buffer.get(), rc);
 
         // Call the state handler.
 

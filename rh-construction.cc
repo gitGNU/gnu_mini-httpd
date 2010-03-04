@@ -21,7 +21,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
-#include "ScopeGuard/ScopeGuard.hh"
 #include "system-error.hh"
 #include "RequestHandler.hh"
 #include "config.hh"
@@ -65,17 +64,13 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
 
     // Allocate our line buffer for reading.
 
-    line_buffer = static_cast<char*>(malloc(config->max_line_length));
-    if (line_buffer == 0)
-        throw runtime_error("Failed to allocate memory for the internal line buffer.");
-    ScopeGuard sg_line_buffer = MakeGuard(free, line_buffer);
+    line_buffer.reset( new char[config->max_line_length] );
 
     // Initialize internal variables.
 
     reset();
     debug(("%d: Accepted new connection from peer '%s'.", sockfd, peer_address));
     ++instances;
-    sg_line_buffer.Dismiss();
     }
 
 void RequestHandler::reset()
@@ -112,6 +107,4 @@ RequestHandler::~RequestHandler()
 
     if (filefd >= 0)
 	close(filefd);
-
-    free(line_buffer);
     }
