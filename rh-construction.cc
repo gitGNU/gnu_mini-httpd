@@ -31,80 +31,80 @@ using namespace std;
 unsigned int RequestHandler::instances = 0;
 
 const RequestHandler::state_fun_t RequestHandler::state_handlers[] =
-    {
-    &RequestHandler::get_request_line,
-    &RequestHandler::get_request_header,
-    &RequestHandler::get_request_body,
-    &RequestHandler::setup_reply,
-    &RequestHandler::copy_file,
-    &RequestHandler::flush_buffer,
-    &RequestHandler::terminate
-    };
+{
+  &RequestHandler::get_request_line,
+  &RequestHandler::get_request_header,
+  &RequestHandler::get_request_body,
+  &RequestHandler::setup_reply,
+  &RequestHandler::copy_file,
+  &RequestHandler::flush_buffer,
+  &RequestHandler::terminate
+};
 
 RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
-        : mysched(sched), sockfd(fd), filefd(-1)
-    {
-    TRACE();
+    : mysched(sched), sockfd(fd), filefd(-1)
+{
+  TRACE();
 
-    // Store the peer's address as ASCII string.
+  // Store the peer's address as ASCII string.
 
-    if (inet_ntop(AF_INET, &sin.sin_addr, peer_address, sizeof(peer_address)) == 0)
-        throw system_error("inet_ntop() failed");
+  if (inet_ntop(AF_INET, &sin.sin_addr, peer_address, sizeof(peer_address)) == 0)
+    throw system_error("inet_ntop() failed");
 
-    // Set socket parameters.
+  // Set socket parameters.
 
-    linger ling;
-    ling.l_onoff  = 0;
-    ling.l_linger = 0;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
-        throw system_error("Can't switch LINGER mode off");
+  linger ling;
+  ling.l_onoff  = 0;
+  ling.l_linger = 0;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
+    throw system_error("Can't switch LINGER mode off");
 
-    if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
-        throw system_error("Can set non-blocking mode");
+  if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
+    throw system_error("Can set non-blocking mode");
 
-    // Allocate our line buffer for reading.
+  // Allocate our line buffer for reading.
 
-    line_buffer.reset( new char[config->max_line_length] );
+  line_buffer.reset( new char[config->max_line_length] );
 
-    // Initialize internal variables.
+  // Initialize internal variables.
 
-    reset();
-    debug(("%d: Accepted new connection from peer '%s'.", sockfd, peer_address));
-    ++instances;
-    }
+  reset();
+  debug(("%d: Accepted new connection from peer '%s'.", sockfd, peer_address));
+  ++instances;
+}
 
 void RequestHandler::reset()
-    {
-    TRACE();
+{
+  TRACE();
 
-    // Freshen up the internal variables.
+  // Freshen up the internal variables.
 
-    state = READ_REQUEST_LINE;
+  state = READ_REQUEST_LINE;
 
-    if (filefd >= 0)
-        {
-        close(filefd);
-        filefd = -1;
-        }
+  if (filefd >= 0)
+  {
+    close(filefd);
+    filefd = -1;
+  }
 
-    request = HTTPRequest();
-    request.start_up_time = time(0);
+  request = HTTPRequest();
+  request.start_up_time = time(0);
 
-    go_to_read_mode();
-    }
+  go_to_read_mode();
+}
 
 RequestHandler::~RequestHandler()
-    {
-    TRACE();
+{
+  TRACE();
 
-    debug(("%d: Closing connection to peer '%s'.", sockfd, peer_address));
+  debug(("%d: Closing connection to peer '%s'.", sockfd, peer_address));
 
-    --instances;
+  --instances;
 
-    mysched.remove_handler(sockfd);
+  mysched.remove_handler(sockfd);
 
-    close(sockfd);
+  close(sockfd);
 
-    if (filefd >= 0)
-        close(filefd);
-    }
+  if (filefd >= 0)
+    close(filefd);
+}

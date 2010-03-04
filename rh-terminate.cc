@@ -21,8 +21,8 @@
 using namespace std;
 
 bool RequestHandler::terminate()
-    {
-    TRACE();
-    delete this;
-    return false;
-    }
+{
+  TRACE();
+  delete this;
+  return false;
+}

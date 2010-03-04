@@ -15,8 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LOG_HH
-#define LOG_HH
+#ifndef LOG_HH_INCLUDED
+#define LOG_HH_INCLUDED
 
 #include <string>
 #include <sys/time.h>
@@ -45,22 +45,22 @@ void info(const char* fmt, ...)  throw();
 void error(const char* fmt, ...) throw();
 
 class Tracer
-    {
-  public:
-    Tracer(const char* funcname) : name(funcname)
-        {
-        trace(("%sEntering %s ...", indent.c_str(), name));
-        indent.append("    ");
-        }
-    ~Tracer()
-        {
-        indent.erase(indent.size()-4, std::string::npos);
-        trace(("%sLeaving %s ...", indent.c_str(), name));
-        }
+{
+public:
+  Tracer(const char* funcname) : name(funcname)
+  {
+    trace(("%sEntering %s ...", indent.c_str(), name));
+    indent.append("    ");
+  }
+  ~Tracer()
+  {
+    indent.erase(indent.size() - 4, std::string::npos);
+    trace(("%sLeaving %s ...", indent.c_str(), name));
+  }
 
-  private:
-    const char*        name;
-    static std::string indent;
-    };
+private:
+  const char*        name;
+  static std::string indent;
+};
 
-#endif
+#endif // LOG_HH_INCLUDED

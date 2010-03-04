@@ -29,32 +29,32 @@ using namespace std;
 */
 
 bool RequestHandler::copy_file()
+{
+  TRACE();
+
+  if (write_buffer.empty())
+  {
+    char buf[4096];
+    ssize_t rc = read(filefd, buf, sizeof(buf));
+    if (rc < 0)
     {
-    TRACE();
-
-    if (write_buffer.empty())
-        {
-        char buf[4096];
-        ssize_t rc = read(filefd, buf, sizeof(buf));
-        if (rc < 0)
-            {
-            if (errno != EINTR)
-                throw system_error(string("read() from file '") + filename + "' failed");
-            else
-                return true;
-            }
-        else if (rc == 0)
-            {
-            debug(("%d: The complete file is copied: going into FLUSH_BUFFER state.", sockfd));
-            state = FLUSH_BUFFER;
-            close(filefd);
-            filefd = -1;
-            }
-        else
-            {
-            write_buffer.assign(buf, rc);
-            }
-        }
-
-    return false;
+      if (errno != EINTR)
+        throw system_error(string("read() from file '") + filename + "' failed");
+      else
+        return true;
     }
+    else if (rc == 0)
+    {
+      debug(("%d: The complete file is copied: going into FLUSH_BUFFER state.", sockfd));
+      state = FLUSH_BUFFER;
+      close(filefd);
+      filefd = -1;
+    }
+    else
+    {
+      write_buffer.assign(buf, rc);
+    }
+  }
+
+  return false;
+}

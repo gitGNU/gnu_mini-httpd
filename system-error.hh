@@ -15,8 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SYSTEM_ERROR_HH
-#define SYSTEM_ERROR_HH
+#ifndef SYSTEM_ERROR_HH_INCLUDED
+#define SYSTEM_ERROR_HH_INCLUDED
 
 #include <stdexcept>
 #include <cerrno>
@@ -31,7 +31,7 @@ public:
   }
 
   explicit system_error(std::string const & msg)
-    : runtime_error(msg + ": " + str())
+      : runtime_error(msg + ": " + str())
   {
   }
 
@@ -43,4 +43,4 @@ private:
   }
 };
 
-#endif
+#endif // SYSTEM_ERROR_HH_INCLUDED

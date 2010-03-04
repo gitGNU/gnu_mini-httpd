@@ -15,6 +15,9 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef URLDECODE_HH_INCLUDED
+#define URLDECODE_HH_INCLUDED
+
 #include <string>
 #include <stdexcept>
 
@@ -28,44 +31,46 @@
 */
 
 inline std::string urldecode(const std::string& input)
+{
+  std::string url = input;
+  for (std::string::iterator i = url.begin(); i != url.end(); ++i)
+  {
+    if (*i == '+')
+      *i = ' ';
+    else if (*i == '%')
     {
-    std::string url = input;
-    for(std::string::iterator i = url.begin(); i != url.end(); ++i)
-        {
-        if (*i == '+')
-            *i = ' ';
-        else if(*i == '%')
-            {
-            unsigned char c;
-            std::string::size_type start = i - url.begin();
+      unsigned char c;
+      std::string::size_type start = i - url.begin();
 
-            if (++i == url.end())
-                throw std::runtime_error("Invalid encoded character in URL!");
+      if (++i == url.end())
+        throw std::runtime_error("Invalid encoded character in URL!");
 
-            if (*i >= '0' && *i <= '9')
-                c = *i - '0';
-            else if (*i >= 'a' && *i <= 'f')
-                c = *i - 'a' + 10;
-            else if (*i >= 'A' && *i <= 'F')
-                c = *i - 'A' + 10;
-            else
-                throw std::runtime_error("Invalid encoded character in URL!");
-            c = c << 4;
+      if (*i >= '0' && *i <= '9')
+        c = *i - '0';
+      else if (*i >= 'a' && *i <= 'f')
+        c = *i - 'a' + 10;
+      else if (*i >= 'A' && *i <= 'F')
+        c = *i - 'A' + 10;
+      else
+        throw std::runtime_error("Invalid encoded character in URL!");
+      c = c << 4;
 
-            if (++i == url.end())
-                throw std::runtime_error("Invalid encoded character in URL!");
+      if (++i == url.end())
+        throw std::runtime_error("Invalid encoded character in URL!");
 
-            if (*i >= '0' && *i <= '9')
-                c += *i - '0';
-            else if (*i >= 'a' && *i <= 'f')
-                c += *i - 'a' + 10;
-            else if (*i >= 'A' && *i <= 'F')
-                c += *i - 'A' + 10;
-            else
-                throw std::runtime_error("Invalid encoded character in URL!");
+      if (*i >= '0' && *i <= '9')
+        c += *i - '0';
+      else if (*i >= 'a' && *i <= 'f')
+        c += *i - 'a' + 10;
+      else if (*i >= 'A' && *i <= 'F')
+        c += *i - 'A' + 10;
+      else
+        throw std::runtime_error("Invalid encoded character in URL!");
 
-            url.replace(start, 3, 1, c);
-            }
-        }
-    return url;
+      url.replace(start, 3, 1, c);
     }
+  }
+  return url;
+}
+
+#endif // URLDECODE_HH_INCLUDED

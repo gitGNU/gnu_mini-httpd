@@ -21,12 +21,12 @@
 using namespace std;
 
 bool RequestHandler::get_request_body()
-    {
-    TRACE();
+{
+  TRACE();
 
-    // We ain't reading any bodies yet.
+  // We ain't reading any bodies yet.
 
-    debug(("%d: No request body; going into SETUP_REPLY state.", sockfd));
-    state = SETUP_REPLY;
-    return true;
-    }
+  debug(("%d: No request body; going into SETUP_REPLY state.", sockfd));
+  state = SETUP_REPLY;
+  return true;
+}

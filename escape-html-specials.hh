@@ -15,33 +15,33 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ESCAPE_HTML_SPECIALS_HH
-#define ESCAPE_HTML_SPECIALS_HH
+#ifndef ESCAPE_HTML_SPECIALS_HH_INCLUDED
+#define ESCAPE_HTML_SPECIALS_HH_INCLUDED
 
 #include <string>
 
 inline std::string escape_html_specials(const std::string& input)
+{
+  std::string tmp = input;
+  for (std::string::size_type pos = 0; pos <= tmp.size(); ++pos)
+  {
+    switch (tmp[pos])
     {
-    std::string tmp = input;
-    for (std::string::size_type pos = 0; pos <= tmp.size(); ++pos)
-        {
-        switch(tmp[pos])
-            {
-            case '<':
-                tmp.replace(pos, 1, "&lt;");
-                pos += 3;
-                break;
-            case '>':
-                tmp.replace(pos, 1, "&gt;");
-                pos += 3;
-                break;
-            case '&':
-                tmp.replace(pos, 1, "&amp;");
-                pos += 4;
-                break;
-            }
-        }
-    return tmp;
+      case '<':
+        tmp.replace(pos, 1, "&lt;");
+        pos += 3;
+        break;
+      case '>':
+        tmp.replace(pos, 1, "&gt;");
+        pos += 3;
+        break;
+      case '&':
+        tmp.replace(pos, 1, "&amp;");
+        pos += 4;
+        break;
     }
+  }
+  return tmp;
+}
 
-#endif
+#endif // ESCAPE_HTML_SPECIALS_HH_INCLUDED

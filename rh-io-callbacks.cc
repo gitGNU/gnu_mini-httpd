@@ -31,53 +31,53 @@ using namespace std;
 */
 
 void RequestHandler::fd_is_readable(int)
+{
+  TRACE();
+  try
+  {
+    // Protect against flooding.
+
+    if (read_buffer.size() > config->max_line_length)
     {
-    TRACE();
-    try
-        {
-        // Protect against flooding.
-
-        if (read_buffer.size() > config->max_line_length)
-            {
-            protocol_error("This server won't process excessively long\r\n" \
-                           "request header lines.\r\n");
-            return;
-            }
-
-        // Read sockfd stuff into the line buffer.
-
-        ssize_t rc = read(sockfd, line_buffer.get(), config->max_line_length);
-        if (rc < 0)
-            {
-            if (errno != EINTR)
-                throw system_error("read() failed");
-            else
-                return;
-            }
-        else if (rc == 0)
-            {
-            if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
-                info("Connection to %s was terminated by peer.", peer_address);
-            state = TERMINATE;
-            }
-        else
-            read_buffer.append(line_buffer.get(), rc);
-
-        // Call the state handler.
-
-        call_state_handler();
-        }
-    catch(const exception& e)
-        {
-        error("Run-time error on connection to %s: %s", peer_address, e.what());
-        delete this;
-        }
-    catch(...)
-        {
-        error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
-        delete this;
-        }
+      protocol_error("This server won't process excessively long\r\n" \
+                     "request header lines.\r\n");
+      return;
     }
+
+    // Read sockfd stuff into the line buffer.
+
+    ssize_t rc = read(sockfd, line_buffer.get(), config->max_line_length);
+    if (rc < 0)
+    {
+      if (errno != EINTR)
+        throw system_error("read() failed");
+      else
+        return;
+    }
+    else if (rc == 0)
+    {
+      if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+        info("Connection to %s was terminated by peer.", peer_address);
+      state = TERMINATE;
+    }
+    else
+      read_buffer.append(line_buffer.get(), rc);
+
+    // Call the state handler.
+
+    call_state_handler();
+  }
+  catch (const exception& e)
+  {
+    error("Run-time error on connection to %s: %s", peer_address, e.what());
+    delete this;
+  }
+  catch (...)
+  {
+    error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+    delete this;
+  }
+}
 
 /*
   The "writable" callback will sent any data waiting in write_buffer
@@ -86,98 +86,98 @@ void RequestHandler::fd_is_readable(int)
 */
 
 void RequestHandler::fd_is_writable(int)
+{
+  TRACE();
+  try
+  {
+    // If there is output waiting in the write buffer, write it.
+
+    if (state != TERMINATE && !write_buffer.empty())
     {
-    TRACE();
-    try
-        {
-        // If there is output waiting in the write buffer, write it.
-
-        if (state != TERMINATE && !write_buffer.empty())
-            {
-            ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
-            if (rc < 0)
-                {
-                if (errno != EINTR)
-                    throw system_error("write() failed");
-                else
-                    return;
-                }
-            else if (rc == 0)
-                {
-                info("Connection to %s was terminated by peer.", peer_address);
-                state = TERMINATE;
-                }
-            else
-                write_buffer.erase(0, rc);
-            }
-
-        // Call state handler.
-
-        call_state_handler();
-        }
-    catch(const exception& e)
-        {
-        error("Run-time error on connection to %s: %s", peer_address, e.what());
-        delete this;
-        }
-    catch(...)
-        {
-        error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
-        delete this;
-        }
+      ssize_t rc = write(sockfd, write_buffer.data(), write_buffer.size());
+      if (rc < 0)
+      {
+        if (errno != EINTR)
+          throw system_error("write() failed");
+        else
+          return;
+      }
+      else if (rc == 0)
+      {
+        info("Connection to %s was terminated by peer.", peer_address);
+        state = TERMINATE;
+      }
+      else
+        write_buffer.erase(0, rc);
     }
+
+    // Call state handler.
+
+    call_state_handler();
+  }
+  catch (const exception& e)
+  {
+    error("Run-time error on connection to %s: %s", peer_address, e.what());
+    delete this;
+  }
+  catch (...)
+  {
+    error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+    delete this;
+  }
+}
 
 // These callbacks have rather descriptive names ...
 
 void RequestHandler::read_timeout(int)
-    {
-    TRACE();
-    if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
-        info("No activity on connection to %s for %u seconds; shutting down.",
-             peer_address, config->network_read_timeout);
-    delete this;
-    }
+{
+  TRACE();
+  if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+    info("No activity on connection to %s for %u seconds; shutting down.",
+         peer_address, config->network_read_timeout);
+  delete this;
+}
 
 void RequestHandler::write_timeout(int)
-    {
-    TRACE();
-    info("Couldn't send any data to %s for %u seconds; shutting down.",
-         peer_address, config->network_write_timeout);
-    delete this;
-    }
+{
+  TRACE();
+  info("Couldn't send any data to %s for %u seconds; shutting down.",
+       peer_address, config->network_write_timeout);
+  delete this;
+}
 
 void RequestHandler::error_condition(int)
-    {
-    TRACE();
-    error("Unspecified error on connection to %s; shutting down.", peer_address);
-    delete this;
-    }
+{
+  TRACE();
+  error("Unspecified error on connection to %s; shutting down.", peer_address);
+  delete this;
+}
 
 void RequestHandler::pollhup(int)
-    {
-    TRACE();
-    if (state == TERMINATE)
-        call_state_handler();
-    else
-        {
-        if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
-            info("Connection to %s was terminated by peer.", peer_address);
-        delete this;
-        }
-    }
+{
+  TRACE();
+  if (state == TERMINATE)
+    call_state_handler();
+  else
+  {
+    if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
+      info("Connection to %s was terminated by peer.", peer_address);
+    delete this;
+  }
+}
 
 void RequestHandler::go_to_read_mode()
-    {
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLIN;
-    prop.read_timeout  = config->network_read_timeout;
-    mysched.register_handler(sockfd, *this, prop);
-    }
+{
+  scheduler::handler_properties prop;
+  prop.poll_events   = POLLIN;
+  prop.read_timeout  = config->network_read_timeout;
+  mysched.register_handler(sockfd, *this, prop);
+}
 
 void RequestHandler::go_to_write_mode()
-    {
-    scheduler::handler_properties prop;
-    prop.poll_events   = POLLOUT;
-    prop.write_timeout = config->network_write_timeout;
-    mysched.register_handler(sockfd, *this, prop);
-    }
+{
+  scheduler::handler_properties prop;
+  prop.poll_events   = POLLOUT;
+  prop.write_timeout = config->network_write_timeout;
+  mysched.register_handler(sockfd, *this, prop);
+}
