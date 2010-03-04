@@ -16,6 +16,8 @@
  */
 
 #include <stdexcept>
+#include <cstring>
+#include <strings.h>
 #include "HTTPParser.hh"
 
 using namespace std;
@@ -360,6 +362,7 @@ size_t HTTPParser::parse_host_header(HTTPRequest& request, const std::string& in
 
 size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const std::string& input) const
     {
+    using namespace std;
     memset(&tm_date, 0, sizeof(tm_date));
 
     parse_info_t info = parse(input.data(), input.data() + input.size(), If_Modified_Since_Header);
