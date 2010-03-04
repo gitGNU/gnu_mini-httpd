@@ -20,6 +20,7 @@
 
 #include <map>
 #include <string>
+#include <strings.h>
 #include <sys/types.h>
 #include "resetable-variable.hh"
 
@@ -46,7 +47,7 @@ class configuration
     static std::string  default_page;
 
     // Run-time stuff.
-    static char*                      default_content_type;
+    static char const *               default_content_type;
     static std::string                default_hostname;
     static unsigned int               http_port;
     static std::string                server_string;

@@ -46,7 +46,7 @@ string configuration::default_page                       = "index.html";
 // Run-time stuff.
 string configuration::server_string                      = PACKAGE_NAME;
 string configuration::default_hostname;
-char* configuration::default_content_type                = "application/octet-stream";
+char const * configuration::default_content_type         = "application/octet-stream";
 unsigned int configuration::http_port                    = 80;
 resetable_variable<uid_t> configuration::setuid_user;
 resetable_variable<gid_t> configuration::setgid_group;
