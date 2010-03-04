@@ -47,7 +47,7 @@ string configuration::default_page                       = "index.html";
 string configuration::server_string                      = PACKAGE_NAME;
 string configuration::default_hostname;
 char const * configuration::default_content_type         = "application/octet-stream";
-unsigned int configuration::http_port                    = 80;
+long int configuration::http_port                        = 80;
 resetable_variable<uid_t> configuration::setuid_user;
 resetable_variable<gid_t> configuration::setgid_group;
 bool configuration::debugging                            = false;
@@ -100,15 +100,15 @@ configuration::configuration(int argc, char** argv)
                 debugging = true;
                 break;
             case 'p':
-                http_port = atoi(optarg);
-                if (http_port > 65535)
+                http_port = strtol(optarg, 0, 10);
+                if (http_port <= 0 || http_port > 65535)
                     throw runtime_error("The specified port number is out of range!");
                 break;
             case 'g':
-                setgid_group = atoi(optarg);
+                setgid_group = strtol(optarg, 0, 10);
                 break;
             case 'u':
-                setuid_user = atoi(optarg);
+                setuid_user = strtol(optarg, 0, 10);
                 break;
             case 'r':
                 chroot_directory = optarg;

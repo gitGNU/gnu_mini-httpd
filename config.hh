@@ -49,7 +49,7 @@ class configuration
     // Run-time stuff.
     static char const *               default_content_type;
     static std::string                default_hostname;
-    static unsigned int               http_port;
+    static long int                   http_port;
     static std::string                server_string;
     static resetable_variable<uid_t>  setuid_user;
     static resetable_variable<gid_t>  setgid_group;
