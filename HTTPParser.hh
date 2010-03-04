@@ -20,13 +20,13 @@
 
 #include <string>
 #include <ctime>
-#include <boost/spirit.hpp>
-#include <boost/spirit/utility/chset.hpp>
-#include <boost/spirit/symbols/symbols.hpp>
-
-using namespace boost;
+#include <boost/spirit/include/classic.hpp>
+#include <boost/spirit/include/classic_chset.hpp>
+#include <boost/spirit/include/classic_symbols.hpp>
 
 #include "HTTPRequest.hh"
+
+namespace spirit = boost::spirit::classic;
 
 class HTTPParser
     {
