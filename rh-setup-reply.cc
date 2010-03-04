@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "system-error/system-error.hh"
+#include "system-error.hh"
 #include "HTTPParser.hh"
 #include "RequestHandler.hh"
 #include "timestamp-to-string.hh"

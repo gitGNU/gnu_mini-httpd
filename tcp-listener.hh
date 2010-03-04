@@ -26,7 +26,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "ScopeGuard/ScopeGuard.hh"
-#include "system-error/system-error.hh"
+#include "system-error.hh"
 #include "libscheduler/scheduler.hh"
 #include "log.hh"
 

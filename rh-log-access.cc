@@ -17,7 +17,7 @@
 
 #include <stdexcept>
 #include <cstdio>
-#include "system-error/system-error.hh"
+#include "system-error.hh"
 #include "RequestHandler.hh"
 #include "timestamp-to-string.hh"
 #include "search-and-replace.hh"

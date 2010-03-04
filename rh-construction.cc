@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "ScopeGuard/ScopeGuard.hh"
-#include "system-error/system-error.hh"
+#include "system-error.hh"
 #include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"

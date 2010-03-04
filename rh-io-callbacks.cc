@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "system-error/system-error.hh"
+#include "system-error.hh"
 #include "RequestHandler.hh"
 #include "config.hh"
 #include "log.hh"
