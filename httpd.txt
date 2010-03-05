@@ -14,30 +14,27 @@ DESCRIPTION
 mini-httpd is a minimalistic web server designed for optimal performance, high
 security, and as little use of system resources as possible. Unlike most other
 web servers, mini-httpd does not require more than one process or system thread
-in order to handle several requests concurrently. Instead, it uses the poll(2)
-system call to multiplex an arbitrary number of connections internally.
-
-The downside is, of course, that mini-httpd has zero fancy features. All it can
-do is hand out static files from the hard disk. There is no support for CGI
-scripts or any kind of dynamic content. If you need a more sophisticated set-up,
-this software is not for you. If you really, really need additional features,
-well, you have the source code.
-
-In brief, here is an overview of what mini-httpd can do:
+in order to handle an arbitrary number of requests concurrently. The current set
+of features includes:
 
 1. HTTP/1.1 compliant "keep-connection" support.
 
 2. Virtual hosting.
 
-3. Record successful requests in the common Apache-style log-file format.
+3. Recording all successful requests in the common Apache-style log-file format.
 
-4. Run in a chroot(2) sandbox.
+4. The ability to run in a chroot(2) sandbox.
 
-5. Drop all super-user privileges after acquiring the listening socket.
+5. Dropping all super-user privileges after acquiring the listening socket.
 
-Furthermore, mini-httpd is configured completely through the command line, there
-is no config file. For further details on how to set-up the web server, refer to
-the section "Setting mini-httpd up" section below.
+6. mini-httpd is configured entirely through the command line. There is no config file.
+
+mini-httpd is limited to serving *static* pages from the hard disk. There is no
+support for CGI scripts or any kind of dynamic content. If you need a more
+sophisticated set-up, this software is not for you. If you really, really need
+additional features, well, you have the source code. For further details on how
+to configure the web server, refer to the section "Setting up mini-httpd"
+section below.
 
 OPTIONS
 -------
@@ -120,7 +117,7 @@ OPTIONS
 
 SETTING UP MINI-HTTPD
 ---------------------
-Setting mini-httpd up is pretty easy, because the program does have the
+Setting up mini-httpd is pretty easy, because the program does have the
 least possible set of features. It may look weird at first, especially
 if you know other web servers like Apache, but it's really not that
 difficult. The following instructions assume you've installed mini-httpd
@@ -196,5 +193,5 @@ Main web site: <http://www.nongnu.org/mini-httpd/>
 
 COPYING
 -------
-Copyright \(C) 2001-2010 Peter Simons. Free use of this software is
-granted under the terms of the GNU General Public License (GPL).
+Copyright \(C) 2001-2010 Peter Simons. Free use of this software is granted
+under the terms of the GNU General Public License version 3 or later (GPLv3+).

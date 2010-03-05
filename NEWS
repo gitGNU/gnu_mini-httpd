@@ -1,9 +1,9 @@
 #+TITLE: mini-httpd                            -*- mode:org;fill-column:79; -*-
 #+STARTUP: showall
 
-* Noteworthy changes in release 1.1 (2010-03-04) [stable]
+* Noteworthy changes in release 1.1 (2010-03-05) [stable]
 
-  The project has moved to Savannah at <http:/www.nongnu.org/mini-httpd>.
+  The project has moved to Savannah at <http:/www.nongnu.org/mini-httpd/>.
 
 * Noteworthy changes in release 1.0 (2004-01-20) [stable]
 
