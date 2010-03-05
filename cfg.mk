@@ -2,7 +2,7 @@
 
 gnu_rel_host    := dl.sv.nongnu.org
 upload_dest_dir_:= /releases/mini-httpd/
-old_NEWS_hash   := af0e7009fb0519c60c0639bdf57e3aea
+old_NEWS_hash   := b9c5aa6710ad161493097a91d2f62a5f
 gpg_key_ID      := 99089D72
 url_dir_list    := http://download.savannah.nongnu.org/releases/mini-httpd
 today           := $(date "+%Y-%m-%d")
