@@ -37,7 +37,7 @@ noinst_HEADERS  = HTTPParser.hh HTTPRequest.hh RequestHandler.hh        \
                   system-error.hh
 
 man_MANS        = httpd.8
-EXTRA_DIST      = $(man_MANS) README man-page.xml build-aux/gnulib-cache.m4
+EXTRA_DIST      = $(man_MANS) README httpd.txt build-aux/gnulib-cache.m4
 
-httpd.8:	man-page.xml
-	xmlto man $<
+httpd.8:	httpd.txt
+	a2x -f manpage $<
