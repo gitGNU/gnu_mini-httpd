@@ -23,3 +23,4 @@ Makefile.in
 /maint.mk
 /httpd.8
 /httpd
+/html/*
