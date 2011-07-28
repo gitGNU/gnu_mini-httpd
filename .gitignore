@@ -6,6 +6,8 @@
 /aclocal.m4
 /autom4te.cache/*
 /build-aux
+/config.h
+/config.h.in
 /config.log
 /config.status
 /configure
@@ -13,6 +15,7 @@
 /libgnu
 /mini-httpd-*.tar.gz
 /mini-httpd-*.tar.gz.sig
+/stamp-h1
 Makefile
 Makefile.in
 

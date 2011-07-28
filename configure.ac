@@ -32,5 +32,6 @@ AC_ARG_WITH(debug, [  --with-debug            Support debugging? (default: yes)]
     AC_MSG_RESULT(yes)
     ])
 
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile libgnu/Makefile])
 AC_OUTPUT

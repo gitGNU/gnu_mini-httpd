@@ -21,6 +21,7 @@
 #include <getopt.h>
 #include "log.hh"
 #include "config.hh"
+#include "config.h"
 using namespace std;
 
 #define kb * 1024

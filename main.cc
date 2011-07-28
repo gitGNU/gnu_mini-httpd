@@ -26,6 +26,7 @@
 #include "RequestHandler.hh"
 #include "log.hh"
 #include "config.hh"
+#include "config.h"
 using namespace std;
 
 const configuration* config;
