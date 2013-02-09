@@ -15,12 +15,15 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
+
 #include "RequestHandler.hh"
 #include "HTTPParser.hh"
 #include "escape-html-specials.hh"
 #include "timestamp-to-string.hh"
 #include "config.hh"
 #include "log.hh"
+
 using namespace std;
 
 void RequestHandler::protocol_error(const string& message)
@@ -157,5 +160,3 @@ void RequestHandler::not_modified()
   state = FLUSH_BUFFER;
   go_to_write_mode();
 }
-
-

@@ -15,6 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
+
 #include <stdexcept>
 #include <csignal>
 #include <ctime>
@@ -26,7 +28,7 @@
 #include "RequestHandler.hh"
 #include "log.hh"
 #include "config.hh"
-#include "config.h"
+
 using namespace std;
 
 const configuration* config;

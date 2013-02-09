@@ -15,13 +15,15 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
 #include <getopt.h>
 #include "log.hh"
 #include "config.hh"
-#include "config.h"
+
 using namespace std;
 
 #define kb * 1024

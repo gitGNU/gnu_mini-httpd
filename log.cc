@@ -15,6 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
+
 #include <syslog.h>
 #include <stdarg.h>
 #include "log.hh"
