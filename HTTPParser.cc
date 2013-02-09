@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2011 Peter Simons <simons@cryp.to>
+ * Copyright (c) 2001-2013 Peter Simons <simons@cryp.to>
  *
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
