@@ -42,7 +42,7 @@ void RequestHandler::log_access()
 
   if (request.status_code.empty())
   {
-    error("Can't write access log entry for connection with %d because there is no status code.", peer_address);
+    error("can't write access log entry for connection with %d because there is no status code", peer_address);
     return;
   }
 
@@ -66,7 +66,7 @@ void RequestHandler::log_access()
     int len = snprintf(object_size, sizeof(object_size), "%u", request.object_size.data());
     if (len < 0 || len > static_cast<int>(sizeof(object_size)))
     {
-      error("Internal error: While formatting object_size, snprintf() exceeded the internal buffer.");
+      error("internal error while formatting object_size, snprintf() exceeded the internal buffer");
       // Just kidding.
     }
   }
@@ -74,7 +74,7 @@ void RequestHandler::log_access()
 
   FILE* fh = fopen(logfile.c_str(), "a");
   if (fh == 0)
-    throw system_error(string("Can't open logfile '") + logfile + "'");
+    throw system_error(string("cannot open logfile '") + logfile + "'");
 
   try
   {

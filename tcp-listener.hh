@@ -43,10 +43,10 @@ public:
     {
       int true_flag = 1;
       if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &true_flag, sizeof(int)) == -1)
-        throw system_error("Can't set listen socket to REUSEADDR mode");
+        throw system_error("cannot set listen socket to REUSEADDR mode");
 
       if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
-        throw system_error("Can't set listen socket to non-blocking mode");
+        throw system_error("cannot set listen socket to non-blocking mode");
 
       sin.sin_family      = AF_INET;
       sin.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -82,7 +82,7 @@ private:
     int streamfd = accept(sockfd, (sockaddr*) & sin, &sin_size);
     if (streamfd == -1)
     {
-      error("TCPListener: Failed to accept new connection with accept(): %s.", strerror(errno));
+      error("TCPListener: failed to accept() new connection: %s", strerror(errno));
       return;
     }
     try
@@ -92,29 +92,29 @@ private:
     catch (const std::exception& e)
     {
       close(streamfd);
-      error("TCPListener: Caught exception while creating connection handler: %s", e.what());
+      error("TCPListener: caught exception while creating connection handler: %s", e.what());
     }
     catch (...)
     {
       close(streamfd);
-      error("TCPListener: Caught unknown exception while creating connection handler.");
+      error("TCPListener: caught unknown exception while creating connection handler");
     }
   }
   virtual void fd_is_writable(int)
   {
-    throw std::logic_error("This routine should not be called.");
+    throw std::logic_error("this routine should not have be called");
   }
   virtual void read_timeout(int)
   {
-    throw std::logic_error("This routine should not be called.");
+    throw std::logic_error("this routine should not have been be called");
   }
   virtual void write_timeout(int)
   {
-    throw std::logic_error("This routine should not be called.");
+    throw std::logic_error("this routine should not have been be called");
   }
   virtual void error_condition(int)
   {
-    error("TCPListener get on error condition on the socket. Terminating.");
+    error("TCPListener received an error condition by its socket: terminating");
     delete this;
   }
   virtual void pollhup(int fd)

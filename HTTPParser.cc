@@ -408,7 +408,7 @@ size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const st
         return 0;
       break;
     default:
-      throw logic_error("The month in HTTPParser::tm_date is screwed badly.");
+      throw logic_error("unexpected month in HTTPParser::tm_date");
   }
 
   // The date is fine. Now turn it into a time_t.

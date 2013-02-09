@@ -59,10 +59,10 @@ RequestHandler::RequestHandler(scheduler& sched, int fd, const sockaddr_in& sin)
   ling.l_onoff  = 0;
   ling.l_linger = 0;
   if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(linger)) == -1)
-    throw system_error("Can't switch LINGER mode off");
+    throw system_error("cannot switch LINGER mode off");
 
   if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
-    throw system_error("Can set non-blocking mode");
+    throw system_error("cannot set non-blocking mode");
 
   // Allocate our line buffer for reading.
 

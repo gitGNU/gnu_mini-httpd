@@ -105,7 +105,7 @@ configuration::configuration(int argc, char** argv)
       case 'p':
         http_port = strtol(optarg, 0, 10);
         if (http_port <= 0 || http_port > 65535)
-          throw runtime_error("The specified port number is out of range!");
+          throw runtime_error("specified port number is out of range");
         break;
       case 'g':
         setgid_group = strtol(optarg, 0, 10);
@@ -136,7 +136,7 @@ configuration::configuration(int argc, char** argv)
         break;
       default:
         fprintf(stderr, USAGE_MSG);
-        throw runtime_error("Incorrect command line syntax.");
+        throw runtime_error("incorrect command line syntax");
     }
 
     // Consistency checks on the configured parameters.

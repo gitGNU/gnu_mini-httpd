@@ -207,7 +207,7 @@ stat_again:
     filefd = open(filename.c_str(), O_RDONLY, 0);
     if (filefd == -1)
     {
-      error("Can't open requested file %s: %s", filename.c_str(), strerror(errno));
+      error("cannot open requested file %s: %s", filename.c_str(), strerror(errno));
       file_not_found();
       return false;
     }

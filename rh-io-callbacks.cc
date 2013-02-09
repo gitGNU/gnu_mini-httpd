@@ -71,12 +71,12 @@ void RequestHandler::fd_is_readable(int)
   }
   catch (const exception& e)
   {
-    error("Run-time error on connection to %s: %s", peer_address, e.what());
+    error("run-time error on connection to %s: %s", peer_address, e.what());
     delete this;
   }
   catch (...)
   {
-    error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+    error("unspecified run-time error on connection to %s; shutting down", peer_address);
     delete this;
   }
 }
@@ -119,12 +119,12 @@ void RequestHandler::fd_is_writable(int)
   }
   catch (const exception& e)
   {
-    error("Run-time error on connection to %s: %s", peer_address, e.what());
+    error("run-time error on connection to %s: %s", peer_address, e.what());
     delete this;
   }
   catch (...)
   {
-    error("Unspecified run-time error on connection to %s; shutting down.", peer_address);
+    error("unspecified run-time error on connection to %s; shutting down", peer_address);
     delete this;
   }
 }
@@ -135,7 +135,7 @@ void RequestHandler::read_timeout(int)
 {
   TRACE();
   if (state != READ_REQUEST_LINE || read_buffer.empty() == false)
-    info("No activity on connection to %s for %u seconds; shutting down.",
+    info("no activity on connection to %s for %u seconds; shutting down",
          peer_address, config->network_read_timeout);
   delete this;
 }
@@ -143,7 +143,7 @@ void RequestHandler::read_timeout(int)
 void RequestHandler::write_timeout(int)
 {
   TRACE();
-  info("Couldn't send any data to %s for %u seconds; shutting down.",
+  info("couldn't send any data to %s for %u seconds; shutting down",
        peer_address, config->network_write_timeout);
   delete this;
 }
@@ -151,7 +151,7 @@ void RequestHandler::write_timeout(int)
 void RequestHandler::error_condition(int)
 {
   TRACE();
-  error("Unspecified error on connection to %s; shutting down.", peer_address);
+  error("unspecified error on connection to %s; shutting down", peer_address);
   delete this;
 }
 

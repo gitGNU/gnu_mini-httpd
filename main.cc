@@ -66,7 +66,7 @@ try
   if (!config->chroot_directory.empty())
   {
     if (chdir(config->chroot_directory.c_str()) == -1 || chroot(".") == -1)
-      throw system_error(string("Can't change root to '") + config->chroot_directory + "'");
+      throw system_error(string("cannot change root to '") + config->chroot_directory + "'");
   }
 
   // Drop super user priviledges.
@@ -150,11 +150,11 @@ catch (const configuration::no_error&)
 }
 catch (const exception& e)
 {
-  error("Caught exception: %s", e.what());
+  error("caught exception: %s", e.what());
   return 1;
 }
 catch (...)
 {
-  error("Caught unknown exception.");
+  error("caught unknown exception");
   return 1;
 }
