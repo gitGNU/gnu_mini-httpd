@@ -39,5 +39,16 @@ noinst_HEADERS  = HTTPParser.hh HTTPRequest.hh RequestHandler.hh        \
 man_MANS        = httpd.8
 EXTRA_DIST      = $(man_MANS) README httpd.txt build-aux/gnulib-cache.m4
 
+DISTCLEANFILES  = httpd.8
+
+MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure ChangeLog	\
+		       maint.mk GNUmakefile config.h.in INSTALL
+
+maintainer-clean-local:
+	-rm -rf build-aux libgnu
+
+distclean-local:
+	-rm -rf autom4te.cache
+
 httpd.8:	httpd.txt
 	a2x -f manpage $<
