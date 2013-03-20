@@ -24,12 +24,12 @@ found in the file INSTALL.
 GNU gcc users may want to enable the template optimizer to produce much smaller
 binaries by passing the '-frepo' flag via configure like this:
 
-    ./configure CFLAGS="-O3" CXXFLAGS='-O3 -frepo' LDFLAGS='-s -frepo'
+    ./configure CPPFLAGS=-DNDEBUG CFLAGS=-O3 CXXFLAGS='-O3 -frepo' LDFLAGS='-s -frepo'
 
-The non-standard configure flag '--with-debug' allows you to include support for
-debugging messages into the binary. You can still enable or disable them at
-run-time, but you're binary will be a bit larger and probably slightly less
-performant. Choose '--without-debug' if you don't wont to use any of this.
+The non-standard configure flag '--with-debug' compiles various debug messages
+into the binary. Debugging can be enabled or disabled at run-time, but the
+resulting is going to be a bit larger than one compiled without debugging
+capabilities.
 
 All further documentation can be found in mini-httpd's manual page. If you want
 to read to without installing the software fist, run this command:
