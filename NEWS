@@ -1,6 +1,8 @@
 #+TITLE: mini-httpd                            -*- mode:org;fill-column:79; -*-
 #+STARTUP: showall
 
+* Noteworthy changes in release ?.? (????-??-??) [?]
+
 * Noteworthy changes in release 1.3 (2013-03-20) [stable]
 
   Fix build on BSD Unix.
