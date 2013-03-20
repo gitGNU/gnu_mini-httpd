@@ -51,4 +51,4 @@ distclean-local:
 	-rm -rf autom4te.cache
 
 httpd.8:	httpd.txt
-	a2x -f manpage $<
+	a2x -f manpage httpd.txt
