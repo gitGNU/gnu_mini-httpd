@@ -16,9 +16,8 @@
  */
 
 #include <config.h>
-
+#include <signal.h>
 #include <stdexcept>
-#include <csignal>
 #include <ctime>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,10 +48,10 @@ try
 
   // Install signal handler.
 
-  signal(SIGTERM, (sighandler_t)&set_sig_term);
-  signal(SIGINT, (sighandler_t)&set_sig_term);
-  signal(SIGHUP, (sighandler_t)&set_sig_term);
-  signal(SIGQUIT, (sighandler_t)&set_sig_term);
+  signal(SIGTERM, reinterpret_cast<sighandler_t>(&set_sig_term));
+  signal(SIGINT, reinterpret_cast<sighandler_t>(&set_sig_term));
+  signal(SIGHUP, reinterpret_cast<sighandler_t>(&set_sig_term));
+  signal(SIGQUIT, reinterpret_cast<sighandler_t>(&set_sig_term));
   signal(SIGPIPE, SIG_IGN);
 
   // Start-up scheduler and listener.

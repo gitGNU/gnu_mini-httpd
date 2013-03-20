@@ -3,6 +3,8 @@
 
 * Noteworthy changes in release ?.? (????-??-??) [?]
 
+  Fix build on BSD Unix.
+
 * Noteworthy changes in release 1.2 (2013-02-09) [stable]
 
   Minor portability fixes for recent versions of GCC and gnulib.
