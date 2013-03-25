@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 
 set -eu
 
@@ -8,10 +8,10 @@ else
   gnulibtool=gnulib-tool
 fi
 
-gnulib_modules=( git-version-gen gitlog-to-changelog gnupload signal-h
-                 maintainer-makefile announce-gen getopt-gnu )
+gnulib_modules="git-version-gen gitlog-to-changelog gnupload signal-h
+                maintainer-makefile announce-gen getopt-gnu"
 
-$gnulibtool --m4-base build-aux --source-base libgnu --import "${gnulib_modules[@]}"
+$gnulibtool --m4-base build-aux --source-base libgnu --import $gnulib_modules
 
 sed -e 's/^sc_error_message_uppercase/disabled_sc_error_message_uppercase/' \
     -e 's/^sc_prohibit_path_max_allocation/disabled_sc_prohibit_path_max_allocation/' \
