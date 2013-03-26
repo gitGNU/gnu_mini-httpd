@@ -7,13 +7,14 @@
 let
   pkgs = import <nixpkgs> { };
   version = miniHttpdSrc.gitTag;
+  versionSuffix = "";
 in
 rec {
 
   tarball = pkgs.releaseTools.sourceTarball {
     name = "mini-httpd-tarball";
     src = miniHttpdSrc;
-    inherit version officialRelease;
+    inherit version versionSuffix officialRelease;
     buildInputs = with pkgs; [ git perl asciidoc libxml2 asciidoc texinfo xmlto docbook2x
                                docbook_xsl docbook_xml_dtd_45 libxslt boostHeaders
                              ];
@@ -31,7 +32,7 @@ rec {
   };
 
   build = { system ? "x86_64-linux" }: pkgs.releaseTools.nixBuild {
-    name = "mini-httpd-${version}";
+    name = "mini-httpd";
     src = tarball;
     buildInputs = with pkgs; [ boostHeaders ];
   };
