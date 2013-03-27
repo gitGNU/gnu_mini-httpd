@@ -31,10 +31,11 @@ rec {
     '';
   };
 
-  build = { system ? "x86_64-linux" }: pkgs.releaseTools.nixBuild {
-    name = "mini-httpd";
-    src = tarball;
-    buildInputs = with (import <nixpkgs> { inherit system; }); [ boostHeaders ];
-  };
-
+  build = pkgs.lib.genAttrs [ "x86_64-linux" "x86_64-freebsd" ] (system:
+    with import <nixpkgs> { inherit system; };
+    releaseTools.nixBuild {
+      name = "mini-httpd";
+      src = tarball;
+      buildInputs = with (import <nixpkgs> { inherit system; }); [ boostHeaders ];
+    });
 }
