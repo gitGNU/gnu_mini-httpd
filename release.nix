@@ -34,7 +34,7 @@ rec {
   build = { system ? "x86_64-linux" }: pkgs.releaseTools.nixBuild {
     name = "mini-httpd";
     src = tarball;
-    buildInputs = with pkgs; [ boostHeaders ];
+    buildInputs = with (import <nixpkgs> { inherit system; }); [ boostHeaders ];
   };
 
 }
