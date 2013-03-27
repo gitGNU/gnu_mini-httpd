@@ -1,6 +1,8 @@
 #+TITLE: mini-httpd                            -*- mode:org;fill-column:79; -*-
 #+STARTUP: showall
 
+* Noteworthy changes in release ?.? (????-??-??) [?]
+
 * Noteworthy changes in release 1.4 (2013-03-27) [stable]
 
   Work around broken 'timezone' variable in FreeBSD. POSIX says that this
