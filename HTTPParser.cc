@@ -299,6 +299,10 @@ HTTPParser::HTTPParser()
   // local time.
 
   tzset();
+  time_t ts   = 0;
+  tm gmt      = *gmtime(&ts);
+  tm local    = *localtime(&ts);
+  my_timezone = mktime(&local) - mktime(&gmt);
 }
 
 bool HTTPParser::have_complete_header_line(const string& input)
@@ -414,7 +418,7 @@ size_t HTTPParser::parse_if_modified_since_header(HTTPRequest& request, const st
   // The date is fine. Now turn it into a time_t.
 
   tm_date.tm_year -= 1900;
-  request.if_modified_since = mktime(&tm_date) - timezone;
+  request.if_modified_since = mktime(&tm_date) - my_timezone;
 
   // Done.
 

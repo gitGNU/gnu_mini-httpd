@@ -93,6 +93,11 @@ private:
   mutable URL*         url_ptr;
   mutable HTTPRequest* req_ptr;
   mutable struct tm    tm_date;
+
+private:
+  // FreeBSD doesn't have the POSIX variable timezone. To work around this
+  // issue, we figure out the timezone ourselves and store it here.
+  int my_timezone;
 };
 
 extern const HTTPParser http_parser;
