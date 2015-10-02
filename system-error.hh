@@ -18,28 +18,18 @@
 #ifndef SYSTEM_ERROR_HH_INCLUDED
 #define SYSTEM_ERROR_HH_INCLUDED
 
-#include <stdexcept>
-#include <cerrno>
-#include <string>
-#include <cstring>
+#include <boost/system/system_error.hpp>
 
-class system_error : public std::runtime_error
+struct system_error : boost::system::system_error
 {
-public:
-  system_error() : runtime_error(str())
+  system_error()
+  : boost::system::system_error(errno, boost::system::system_category())
   {
   }
 
   explicit system_error(std::string const & msg)
-      : runtime_error(msg + ": " + str())
+  : boost::system::system_error(errno, boost::system::system_category(), msg)
   {
-  }
-
-private:
-  static std::string str()
-  {
-    using namespace std;
-    return string(strerror(errno));
   }
 };
 

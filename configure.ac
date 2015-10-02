@@ -14,6 +14,8 @@ AC_PROG_RANLIB
 AC_LANG([C++])
 AC_CHECK_HEADER(boost/spirit.hpp, :,
     AC_MSG_ERROR([Cannot find the Boost library headers! See the README for details.]))
+AC_CHECK_LIB([boost_system], [main], [LIBS="-lboost_system"],
+    [AC_MSG_ERROR([cannot link required boost.system library])])
 gl_INIT
 AC_SYS_LARGEFILE
 
