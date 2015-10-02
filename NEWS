@@ -1,7 +1,9 @@
 #+TITLE: mini-httpd                            -*- mode:org;fill-column:79; -*-
 #+STARTUP: showall
 
-* Noteworthy changes in release ?.? (????-??-??) [?]
+* Noteworthy changes in release 1.5 (2015-10-02) [stable]
+
+  Fix build with recent versions of Boost, i.e. version 1.59 or later.
 
 * Noteworthy changes in release 1.4 (2013-03-27) [stable]
 
