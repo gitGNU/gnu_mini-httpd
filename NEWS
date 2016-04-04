@@ -1,7 +1,9 @@
 #+TITLE: mini-httpd                            -*- mode:org;fill-column:79; -*-
 #+STARTUP: showall
 
-* Noteworthy changes in release ?.? (????-??-??) [?]
+* Noteworthy changes in release 1.6 (2016-04-04) [stable]
+
+  Update gnulib to fix build errors with GCC version 5.3.x.
 
 * Noteworthy changes in release 1.5 (2015-10-02) [stable]
 
