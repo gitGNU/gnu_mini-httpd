@@ -193,5 +193,5 @@ Main web site: <http://www.nongnu.org/mini-httpd/>
 
 COPYING
 -------
-Copyright \(C) 2001-2013 Peter Simons. Free use of this software is granted
+Copyright \(C) 2001-2016 Peter Simons. Free use of this software is granted
 under the terms of the GNU General Public License version 3 or later (GPLv3+).
