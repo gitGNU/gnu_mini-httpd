@@ -75,12 +75,12 @@ OPTIONS
   +
   The default location is /htdocs.
 
-*-l, --logfile-directory='PATH'::
+*-l, --logfile-directory*='PATH'::
   This option sets the directory mini-httpd uses to create the access-log
   files. In this directory, one file per hostname will be created. The default
   location is /logs.
 
-*-s, --server-string='STRING'::
+*-s, --server-string*='STRING'::
   This option sets the version string mini-httpd returns with the Server:
   header in HTTP replies. The default string is “mini-httpd” -- no actual
   version number is revealed. If you want to disable the Server: header
